@@ -45,7 +45,12 @@ tracking_assets = {
 portfolio_assets = {
     "YPF": "YPF",
     "GGAL": "Grupo Financiero Galicia",
-    "MELI": "MercadoLibre"
+    "PAM": "Pampa Energia",
+    "MELI": "MercadoLibre",
+    "PFE": "Pfizer",
+    "VIST": "Vistal&Gas",
+    "AMD": "AMD",
+    "BABA": "Alibaba"
 }
 
 # --- Funciones de Lógica de Datos ---
