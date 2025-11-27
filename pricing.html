@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pricing - Apertura Finance">
+    <title>Pricing - Apertura Finance</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/pricing.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="16" fill="#28a745" />
+                        <path d="M16 8L20 14H12L16 8Z" fill="white" />
+                        <path d="M12 18H20V24H12V18Z" fill="white" />
+                    </svg>
+                </div>
+                <span class="brand-name">Apertura <span class="brand-highlight">Finance</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Inicio</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="news.html" class="nav-link">Noticias</a></li>
+                <li><a href="rules.html" class="nav-link">Reglas</a></li>
+                <li><a href="pricing.html" class="nav-link active">Pricing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Pricing Header -->
+    <header class="pricing-header">
+        <div class="container">
+            <h1 class="page-title">💰 Planes y Precios</h1>
+            <p class="page-subtitle">Elige el plan perfecto para tus necesidades de inversión</p>
+        </div>
+    </header>
+
+    <!-- Pricing Content -->
+    <main class="pricing-main">
+        <div class="container">
+            <div class="pricing-grid">
+                <!-- Plan Básico -->
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3 class="plan-name">Plan Básico</h3>
+                        <p class="plan-description">Freemium (Adquisición)</p>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price">Gratis</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✅ Dashboard básico</li>
+                        <li>✅ Seguimiento de hasta 10 activos</li>
+                        <li>✅ Alertas por email (solo Gmail o Outlook)</li>
+                        <li>✅ 3 reglas máximo</li>
+                        <li>✅ Resumen general (blog)</li>
+                        <li>❌ Reglas condicionales</li>
+                        <li>❌ Canales de alerta avanzados</li>
+                        <li>❌ Agente de IA</li>
+                    </ul>
+                    <button class="btn btn-outline">Empezar Gratis</button>
+                </div>
+
+                <!-- Plan Plus -->
+                <div class="pricing-card featured">
+                    <div class="badge">Más Popular</div>
+                    <div class="plan-header">
+                        <h3 class="plan-name">Plan Plus</h3>
+                        <p class="plan-description">Usuario Avanzado (Retención)</p>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price">$9.99 - $14.99</span>
+                        <span class="period">/mes</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✅ Todo del Plan Básico</li>
+                        <li>✅ Seguimiento ilimitado</li>
+                        <li>✅ 25 reglas máximo</li>
+                        <li>✅ Reglas condicionales (IF X THEN Y)</li>
+                        <li>✅ Email + Push Notifications</li>
+                        <li>✅ Precio/Volumen + 25 indicadores técnicos</li>
+                        <li>✅ Resúmenes personalizados semanales</li>
+                        <li>✅ Agente de IA (GPT-3.5)</li>
+                    </ul>
+                    <button class="btn btn-primary">Comenzar Ahora</button>
+                </div>
+
+                <!-- Plan Pro -->
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3 class="plan-name">Plan Pro</h3>
+                        <p class="plan-description">Inversor Experto (Valor Premium)</p>
+                    </div>
+                    <div class="plan-price">
+                        <span class="price">$29.99 - $49.99</span>
+                        <span class="period">/mes</span>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✅ Todo del Plan Plus</li>
+                        <li>✅ Reglas ilimitadas</li>
+                        <li>✅ Email + Push + Slack/Telegram</li>
+                        <li>✅ Todas las fuentes de datos</li>
+                        <li>✅ Resúmenes personalizados diarios + semanales</li>
+                        <li>✅ Agente de configuración de reglas (GPT-4)</li>
+                        <li>✅ Automatización completa</li>
+                        <li>✅ Soporte prioritario</li>
+                    </ul>
+                    <button class="btn btn-outline">Contactar Ventas</button>
+                </div>
+            </div>
+
+            <!-- Feature Comparison Table -->
+            <section class="comparison-section">
+                <h2 class="section-title">Comparación Detallada</h2>
+                <div class="comparison-table-wrapper">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Característica</th>
+                                <th>Plan Básico</th>
+                                <th>Plan Plus</th>
+                                <th>Plan Pro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Reglas Simples</td>
+                                <td>3 Máx.</td>
+                                <td>25 Máx.</td>
+                                <td>Ilimitadas</td>
+                            </tr>
+                            <tr>
+                                <td>Reglas Condicionales (IF X THEN Y)</td>
+                                <td>❌</td>
+                                <td>✅</td>
+                                <td>✅</td>
+                            </tr>
+                            <tr>
+                                <td>Canales de Alerta</td>
+                                <td>Email (Gmail/Outlook)</td>
+                                <td>Email + Push</td>
+                                <td>Email + Push + Slack/Telegram</td>
+                            </tr>
+                            <tr>
+                                <td>Fuente de Datos</td>
+                                <td>Precio/Volumen (Yahoo Finance)</td>
+                                <td>Precio/Volumen + 25 Indicadores Téc.</td>
+                                <td>Todas (Técnico, Fundamental, Noticias, Macro)</td>
+                            </tr>
+                            <tr>
+                                <td>Resúmenes</td>
+                                <td>General (Blog)</td>
+                                <td>Personalizados Semanales</td>
+                                <td>Personalizados Diarios + Semanales</td>
+                            </tr>
+                            <tr>
+                                <td>Agente de IA</td>
+                                <td>❌</td>
+                                <td>GPT-3.5</td>
+                                <td>GPT-4 (Configuración de Reglas)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">© 2025 Apertura Finance. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+</body>
+
+</html>

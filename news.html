@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Noticias financieras - Apertura Finance">
+    <title>Noticias - Apertura Finance</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/news.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="16" fill="#28a745" />
+                        <path d="M16 8L20 14H12L16 8Z" fill="white" />
+                        <path d="M12 18H20V24H12V18Z" fill="white" />
+                    </svg>
+                </div>
+                <span class="brand-name">Apertura <span class="brand-highlight">Finance</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Inicio</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="news.html" class="nav-link active">Noticias</a></li>
+                <li><a href="rules.html" class="nav-link">Reglas</a></li>
+                <li><a href="pricing.html" class="nav-link">Pricing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- News Header -->
+    <header class="news-header">
+        <div class="container">
+            <h1 class="page-title">📰 Noticias Financieras</h1>
+            <p class="page-subtitle">Mantente informado con las últimas noticias del mercado</p>
+        </div>
+    </header>
+
+    <!-- News Content -->
+    <main class="news-main">
+        <div class="container">
+            <div class="loading" id="newsLoading">
+                <div class="spinner"></div>
+                <p>Cargando noticias...</p>
+            </div>
+
+            <div class="news-grid" id="newsGrid" style="display: none;">
+                <!-- News cards will be inserted here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">Noticias obtenidas de Yahoo Finance. © 2025 Apertura Finance.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/news.js"></script>
+</body>
+
+</html>

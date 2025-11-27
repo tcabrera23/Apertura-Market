@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reglas de Notificación - Apertura Finance">
+    <title>Reglas - Apertura Finance</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/rules.css">
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <div class="logo">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="16" cy="16" r="16" fill="#28a745" />
+                        <path d="M16 8L20 14H12L16 8Z" fill="white" />
+                        <path d="M12 18H20V24H12V18Z" fill="white" />
+                    </svg>
+                </div>
+                <span class="brand-name">Apertura <span class="brand-highlight">Finance</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Inicio</a></li>
+                <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+                <li><a href="news.html" class="nav-link">Noticias</a></li>
+                <li><a href="rules.html" class="nav-link active">Reglas</a></li>
+                <li><a href="pricing.html" class="nav-link">Pricing</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Rules Header -->
+    <header class="rules-header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1 class="page-title">🔔 Reglas de Notificación</h1>
+                    <p class="page-subtitle">Configura alertas personalizadas para tus inversiones</p>
+                </div>
+                <button class="btn btn-primary" id="createRuleBtn">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    Nueva Regla
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Rules Content -->
+    <main class="rules-main">
+        <div class="container">
+            <!-- Examples Section -->
+            <section class="examples-section">
+                <h2 class="section-title">Ejemplos de Reglas</h2>
+                <div class="examples-grid">
+                    <div class="example-card">
+                        <div class="example-icon">📉</div>
+                        <h3>Alerta de Compra</h3>
+                        <p>NVIDIA 25% debajo de su máximo histórico</p>
+                    </div>
+                    <div class="example-card">
+                        <div class="example-icon">💰</div>
+                        <h3>P/E Ratio Bajo</h3>
+                        <p>Apple en un P/E ratio debajo de 25</p>
+                    </div>
+                    <div class="example-card">
+                        <div class="example-icon">📊</div>
+                        <h3>Alerta de Venta</h3>
+                        <p>Acción 'x' en un P/E de 30 o más</p>
+                    </div>
+                    <div class="example-card">
+                        <div class="example-icon">📅</div>
+                        <h3>Calendario de Resultados</h3>
+                        <p>Notificación cuando una acción presenta resultados del Q</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Rules -->
+            <section class="rules-section">
+                <h2 class="section-title">Tus Reglas Activas</h2>
+
+                <div class="loading" id="rulesLoading">
+                    <div class="spinner"></div>
+                    <p>Cargando reglas...</p>
+                </div>
+
+                <div id="rulesContainer" style="display: none;">
+                    <div class="rules-list" id="rulesList">
+                        <!-- Rules will be inserted here -->
+                    </div>
+
+                    <div class="empty-state" id="emptyState" style="display: none;">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="32" cy="32" r="32" fill="#f8f9fa" />
+                            <path d="M32 20V44M20 32H44" stroke="#28a745" stroke-width="4" stroke-linecap="round" />
+                        </svg>
+                        <h3>No tienes reglas configuradas</h3>
+                        <p>Crea tu primera regla para recibir alertas personalizadas</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('createRuleBtn').click()">
+                            Crear Primera Regla
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Create Rule Modal -->
+    <div class="modal" id="ruleModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Crear Nueva Regla</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="form-group">
+                        <label for="ruleName">Nombre de la Regla</label>
+                        <input type="text" id="ruleName" class="form-input" placeholder="Ej: Alerta NVIDIA bajo máximo"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ruleType">Tipo de Regla</label>
+                        <select id="ruleType" class="form-input" required>
+                            <option value="">Selecciona un tipo</option>
+                            <option value="price_below">Precio debajo de umbral</option>
+                            <option value="price_above">Precio encima de umbral</option>
+                            <option value="pe_below">P/E Ratio debajo de umbral</option>
+                            <option value="pe_above">P/E Ratio encima de umbral</option>
+                            <option value="max_distance">Distancia del máximo histórico</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ruleTicker">Ticker del Activo</label>
+                        <input type="text" id="ruleTicker" class="form-input" placeholder="Ej: NVDA, AAPL, BTC-USD"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ruleValue">Valor de Referencia</label>
+                        <input type="number" id="ruleValue" class="form-input" placeholder="Ej: 25, 500, 0.25"
+                            step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ruleEmail">Email para Notificaciones</label>
+                        <input type="email" id="ruleEmail" class="form-input" placeholder="tu@email.com" required>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline"
+                            onclick="document.getElementById('closeModal').click()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            Crear Regla
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">© 2025 Apertura Finance. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/rules.js"></script>
+</body>
+
+</html>
