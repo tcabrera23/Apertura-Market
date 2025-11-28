@@ -15,5 +15,28 @@ rules.html
 una mejor experiencia de usuario, que al clickear "Crear Primera Regla" entonces aparezca tipo pop-up la interfaz de la definicion de la regla en una friendly card
 
 
+pricing.html 
+- Ahora hace el merge de pricing.html dentro de index.html ya que tengo la informacion de los planes duplicada en diferentes sitios. el que importa es el de pricing.html pero debe presentarse en la landing page con index.html
 
-Ahora hace el merge de pricing.html dentro de index.html
+news.html
+- La seccion general de news esta bien, pero me gustaria agregar cards con imagenes aunque no se que tan complicado seria estilos. literalmente me gusta como esta en google finance, sacar screenshot
+- agregar filtro por fecha? y al menos poner categorias tipo sub-headers (USA, CHINA, Europa, etc, crypto, tech, ai)
+
+
+
+
+
+Mantene los tonos de colores (blanco, verde y negro) pero agrega gradientes, degradados, sombras, etc para que quede mas profesional
+Ahora vamos a refactorizar los estilos de la pagina con Tailwind  para que quede mas profesional y los dashboards sean mas profesionales
+Agrega un modo oscuro y responsive de toda la web
+
+
+quizas este repo puede ayudarte
+https://github.com/TailAdmin/free-nextjs-admin-dashboard/
+
+
+quiero mejorar la UX de la web
+a lo mejor falta un panek "Account" donde se pueda ver el historial de alertas, cuenta, etc y el cliente pueda actualizar de plan o darse de baja
+
+Nombres:
+BullAgent - BullAnalytics (no existe, puedo comprarlo)

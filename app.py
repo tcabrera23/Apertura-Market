@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -228,13 +228,17 @@ async def get_watchlist(name: str):
     
     return results
 
+class WatchlistCreate(BaseModel):
+    name: str
+    assets: Dict[str, str]
+
 @app.post("/api/watchlist")
-async def create_watchlist(name: str, assets: Dict[str, str]):
+async def create_watchlist(watchlist: WatchlistCreate):
     """Create or update a custom watchlist"""
     watchlists = load_watchlists()
-    watchlists[name] = assets
+    watchlists[watchlist.name] = watchlist.assets
     save_watchlists(watchlists)
-    return {"message": f"Watchlist '{name}' created successfully", "name": name}
+    return {"message": f"Watchlist '{watchlist.name}' created successfully", "name": watchlist.name}
 
 @app.delete("/api/watchlist/{name}")
 async def delete_watchlist(name: str):
@@ -269,28 +273,57 @@ async def get_asset(ticker: str):
 
 # News endpoint
 @app.get("/api/news")
-async def get_news():
-    """Get financial news from Yahoo Finance RSS"""
+async def get_news(category: str = "general"):
+    """Get financial news from Yahoo Finance RSS with category support"""
     import feedparser
+    import re
     
-    # Cache key for news
-    cache_key = f"news_{int(datetime.now().timestamp() // 1800)}"  # 30 min cache
+    # Map categories to RSS URLs
+    rss_urls = {
+        "general": "https://finance.yahoo.com/news/rssindex",
+        "crypto": "https://finance.yahoo.com/topic/crypto/rss",
+        "tech": "https://finance.yahoo.com/topic/tech/rss",
+        "usa": "https://finance.yahoo.com/topic/stock-market-news/rss",
+        "china": "https://finance.yahoo.com/topic/china/rss", # Best effort
+        "europe": "https://finance.yahoo.com/topic/europe/rss", # Best effort
+        "ai": "https://finance.yahoo.com/topic/tech/rss" # Fallback to tech for AI if no specific feed
+    }
+    
+    feed_url = rss_urls.get(category.lower(), rss_urls["general"])
+    
+    # Cache key includes category
+    cache_key = f"news_{category}_{int(datetime.now().timestamp() // 1800)}"
     
     if cache_key in cache:
         return cache[cache_key]
     
     try:
-        # Yahoo Finance RSS feed
-        feed_url = "https://finance.yahoo.com/news/rssindex"
         feed = feedparser.parse(feed_url)
         
+        # If feed is empty or error, fallback to general
+        if not feed.entries and category != "general":
+            feed = feedparser.parse(rss_urls["general"])
+        
         news_items = []
-        for entry in feed.entries[:20]:  # Get top 20 news
+        for entry in feed.entries[:20]:
+            # Try to find image
+            image_url = None
+            if 'media_content' in entry:
+                image_url = entry.media_content[0]['url']
+            elif 'media_thumbnail' in entry:
+                image_url = entry.media_thumbnail[0]['url']
+            
+            # Clean summary (remove HTML tags if any)
+            summary = entry.get('summary', '')
+            summary = re.sub('<[^<]+?>', '', summary)
+            
             news_items.append({
                 "title": entry.title,
                 "link": entry.link,
                 "published": entry.get('published', ''),
-                "summary": entry.get('summary', '')[:200] + '...' if len(entry.get('summary', '')) > 200 else entry.get('summary', '')
+                "summary": summary[:200] + '...' if len(summary) > 200 else summary,
+                "image": image_url,
+                "source": entry.get('source', {}).get('title', 'Yahoo Finance')
             })
         
         cache[cache_key] = news_items

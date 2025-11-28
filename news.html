@@ -52,6 +52,22 @@
     <!-- News Content -->
     <main class="news-main">
         <div class="container">
+            <!-- News Controls -->
+            <div class="news-controls">
+                <div class="news-categories">
+                    <button class="category-pill active" data-category="general">General</button>
+                    <button class="category-pill" data-category="usa">USA</button>
+                    <button class="category-pill" data-category="china">China</button>
+                    <button class="category-pill" data-category="europe">Europa</button>
+                    <button class="category-pill" data-category="crypto">Crypto</button>
+                    <button class="category-pill" data-category="tech">Tech</button>
+                    <button class="category-pill" data-category="ai">AI</button>
+                </div>
+                <div class="news-filter">
+                    <input type="date" id="dateFilter" class="date-input" title="Filtrar por fecha">
+                </div>
+            </div>
+
             <div class="loading" id="newsLoading">
                 <div class="spinner"></div>
                 <p>Cargando noticias...</p>

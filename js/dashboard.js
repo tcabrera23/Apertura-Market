@@ -38,26 +38,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Add watchlist button
-    document.getElementById('addWatchlistBtn').addEventListener('click', () => {
-        document.getElementById('watchlistModal').style.display = 'flex';
+    const watchlistModal = document.getElementById('watchlistModal');
+    const addWatchlistBtn = document.getElementById('addWatchlistBtn');
+    const closeModalBtn = document.getElementById('closeModal');
+    const cancelWatchlistBtn = document.getElementById('cancelWatchlistBtn');
+
+    function closeWatchlistModal() {
+        watchlistModal.style.display = 'none';
         document.getElementById('watchlistName').value = '';
         document.getElementById('assetSearch').value = '';
         document.getElementById('searchResults').style.display = 'none';
         document.getElementById('selectedAssets').innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
         selectedAssetsList = [];
+        document.body.style.overflow = ''; // Restore scrolling
+    }
+
+    addWatchlistBtn.addEventListener('click', () => {
+        watchlistModal.style.display = 'flex';
+        document.getElementById('watchlistName').value = '';
+        document.getElementById('assetSearch').value = '';
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('selectedAssets').innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
+        selectedAssetsList = [];
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
     });
 
-    document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('watchlistModal').style.display = 'none';
+    closeModalBtn.addEventListener('click', closeWatchlistModal);
+
+    cancelWatchlistBtn.addEventListener('click', closeWatchlistModal);
+
+    // Close modal when clicking outside
+    watchlistModal.addEventListener('click', (e) => {
+        if (e.target === watchlistModal) {
+            closeWatchlistModal();
+        }
     });
 
-    document.getElementById('cancelWatchlistBtn').addEventListener('click', () => {
-        document.getElementById('closeModal').click();
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && watchlistModal.style.display === 'flex') {
+            closeWatchlistModal();
+        }
     });
 
     // Initialize watchlist functionality
     initializeWatchlistModal();
-    
+
     // Load custom watchlists
     loadCustomWatchlists();
 });
@@ -74,7 +100,7 @@ function initializeWatchlistModal() {
     // Search with debounce (2 seconds)
     assetSearch.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-        
+
         // Clear previous timeout
         if (searchTimeout) {
             clearTimeout(searchTimeout);
@@ -100,9 +126,14 @@ function initializeWatchlistModal() {
     });
 
     // Save watchlist
-    saveBtn.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        console.log('Save button clicked');
+
         const watchlistName = document.getElementById('watchlistName').value.trim();
-        
+        console.log('Watchlist name:', watchlistName);
+        console.log('Selected assets:', selectedAssetsList);
+
         if (!watchlistName) {
             alert('Por favor, ingresa un nombre para la lista');
             return;
@@ -113,19 +144,20 @@ function initializeWatchlistModal() {
             return;
         }
 
+        console.log('Calling saveWatchlist...');
         await saveWatchlist(watchlistName, selectedAssetsList);
     });
 }
 
 async function searchAssets(query) {
     const searchResults = document.getElementById('searchResults');
-    
+
     try {
         searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-gray);">Buscando...</div>';
         searchResults.style.display = 'block';
 
         const response = await fetch(`${API_BASE_URL}/search-assets?query=${encodeURIComponent(query)}`);
-        
+
         if (!response.ok) {
             throw new Error('Error en la búsqueda');
         }
@@ -169,6 +201,12 @@ function selectAsset(asset) {
 
     selectedAssetsList.push(asset);
     updateSelectedAssetsDisplay();
+
+    // Auto-fill watchlist name if empty
+    const nameInput = document.getElementById('watchlistName');
+    if (!nameInput.value.trim()) {
+        nameInput.value = asset.name;
+    }
 }
 
 function removeAsset(symbol) {
@@ -178,7 +216,7 @@ function removeAsset(symbol) {
 
 function updateSelectedAssetsDisplay() {
     const container = document.getElementById('selectedAssets');
-    
+
     if (selectedAssetsList.length === 0) {
         container.innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
         return;
@@ -204,30 +242,57 @@ window.removeAsset = removeAsset;
 
 async function saveWatchlist(name, assets) {
     try {
+        console.log('saveWatchlist called with:', { name, assets });
+
         // Convert assets to the format expected by the backend
         const assetsDict = {};
         assets.forEach(asset => {
             assetsDict[asset.symbol] = asset.name;
         });
 
-        const response = await fetch(`${API_BASE_URL}/watchlist?name=${encodeURIComponent(name)}`, {
+        const requestBody = {
+            name: name,
+            assets: assetsDict
+        };
+
+        console.log('Request body:', requestBody);
+        console.log('API URL:', `${API_BASE_URL}/watchlist`);
+
+        const response = await fetch(`${API_BASE_URL}/watchlist`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(assetsDict)
+            body: JSON.stringify(requestBody)
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+
         if (!response.ok) {
-            throw new Error('Error al guardar la lista');
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error(`Error al guardar la lista: ${errorText}`);
         }
 
+        const result = await response.json();
+        console.log('Watchlist created successfully:', result);
+
         // Close modal
-        document.getElementById('closeModal').click();
-        
+        const modal = document.getElementById('watchlistModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+
+        // Reset form
+        document.getElementById('watchlistName').value = '';
+        document.getElementById('assetSearch').value = '';
+        document.getElementById('searchResults').style.display = 'none';
+        selectedAssetsList = [];
+        updateSelectedAssetsDisplay();
+
         // Reload watchlists
         await loadCustomWatchlists();
-        
+
         // Show success message
         alert(`Lista "${name}" creada exitosamente`);
 
@@ -240,14 +305,14 @@ async function saveWatchlist(name, assets) {
 async function loadCustomWatchlists() {
     try {
         const response = await fetch(`${API_BASE_URL}/watchlists`);
-        
+
         if (!response.ok) {
             throw new Error('Error al cargar listas');
         }
 
         const watchlists = await response.json();
         const tabsContainer = document.getElementById('tabsContainer');
-        
+
         // Remove existing custom watchlist tabs (keep default ones)
         const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina'];
         const existingTabs = Array.from(tabsContainer.querySelectorAll('.tab-button'));
@@ -281,7 +346,7 @@ async function loadCustomWatchlists() {
             tabContent.className = 'tab-content';
             tabContent.id = `${watchlistName}-tab`;
             tabContent.setAttribute('data-category', watchlistName);
-            
+
             tabContent.innerHTML = `
                 <div class="section-header">
                     <h2 class="section-title">${watchlistName}</h2>
@@ -330,7 +395,7 @@ async function loadCustomWatchlists() {
             // Add click handler for the new tab
             tabButton.addEventListener('click', () => {
                 const tabName = tabButton.getAttribute('data-tab');
-                
+
                 // Remove active class from all buttons and contents
                 document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(content => {
@@ -481,10 +546,10 @@ async function loadAssets(category, silent = false) {
 
     try {
         // Use different endpoint for custom watchlists
-        const endpoint = isCustomWatchlist 
+        const endpoint = isCustomWatchlist
             ? `${API_BASE_URL}/watchlist/${encodeURIComponent(category)}`
             : `${API_BASE_URL}/${category}-assets`;
-        
+
         const response = await fetch(endpoint);
 
         if (!response.ok) {
@@ -523,7 +588,7 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
 
     // Determine if this is a crypto category or if assets are crypto
     const isCryptoCategory = category === 'crypto';
-    
+
     // Populate table
     data.forEach(asset => {
         // Check if asset is crypto by ticker pattern (ends with -USD) or if category is crypto
