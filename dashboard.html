@@ -100,6 +100,7 @@
                     <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="portfolio">Portafolio</button>
                     <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="crypto">Crypto</button>
                     <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="argentina">Argentina</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="analisis">Análisis</button>
                     <!-- Custom watchlist tabs will be added here dynamically -->
                 </div>
                 <button class="ml-auto flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 hover:scale-110 transition-all" id="addWatchlistBtn" title="Crear nueva lista">
@@ -132,11 +133,19 @@
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="roe">ROE <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="beta">Beta <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="rsi">RSI <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="tracking-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -168,11 +177,19 @@
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="roe">ROE <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="beta">Beta <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="rsi">RSI <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="portfolio-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -202,10 +219,12 @@
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="market_cap">Market Cap <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="crypto-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -235,15 +254,94 @@
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="roe">ROE <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="beta">Beta <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="rsi">RSI <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="argentina-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
                         </table>
+                    </div>
+                </div>
+            <!-- Análisis Tab -->
+            <div class="tab-content hidden" id="analisis-tab" data-category="analisis">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Análisis Visual</h2>
+                    <div class="flex items-center gap-4 mb-6">
+                        <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Seleccionar categoría:</label>
+                        <select id="analisisCategory" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+                            <option value="tracking">Seguimiento</option>
+                            <option value="portfolio">Portafolio</option>
+                            <option value="crypto">Crypto</option>
+                            <option value="argentina">Argentina</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Charts Container -->
+                <div class="space-y-6">
+                    <!-- Treemap Chart -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" id="treemapTitle">Treemap - Capitalización Bursátil y Cash Flow</h3>
+                        <div class="flex gap-4 mb-4">
+                            <button class="treemap-metric px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-sm" data-metric="market_cap">Capitalización Bursátil</button>
+                            <button class="treemap-metric px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-metric="cash_flow">Cash Flow</button>
+                        </div>
+                        <div class="h-96" id="treemapChart">
+                            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                                Selecciona una categoría para ver el gráfico
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bar Chart -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" id="barChartTitle">Gráfico de Barras</h3>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <button class="bar-metric px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-sm" data-metric="revenue_growth">Revenue Growth</button>
+                            <button class="bar-metric px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-metric="profit_margin">Profit Margin</button>
+                            <button class="bar-metric px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-metric="roe">ROE</button>
+                            <button class="bar-metric px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-metric="pe">P/E Ratio</button>
+                            <button class="bar-metric px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-metric="diff_max">Diff vs Máx</button>
+                        </div>
+                        <div class="h-96" id="barChart">
+                            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                                Selecciona una categoría para ver el gráfico
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Line Chart -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Gráfico de Líneas - Precio Histórico</h3>
+                        <div class="flex flex-wrap items-center gap-4 mb-4">
+                            <select id="lineChartAsset" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+                                <option value="">Selecciona un activo</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <button class="line-period px-3 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-sm" data-period="1d">1 día</button>
+                                <button class="line-period px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-period="5d">5 D</button>
+                                <button class="line-period px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-period="1mo">1 mes</button>
+                                <button class="line-period px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-period="6mo">6 M</button>
+                                <button class="line-period px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-period="1y">1 año</button>
+                                <button class="line-period px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold text-sm" data-period="max">MÁX</button>
+                            </div>
+                        </div>
+                        <div class="h-96" id="lineChart">
+                            <div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                                Selecciona un activo para ver el gráfico
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -298,8 +396,10 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/dark-mode.js"></script>
     <script src="js/dashboard.js"></script>
+    <script src="js/analisis.js"></script>
 </body>
 
 </html>

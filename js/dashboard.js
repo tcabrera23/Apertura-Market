@@ -408,11 +408,19 @@ async function loadCustomWatchlists() {
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="roe">ROE <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="beta">Beta <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="rsi">RSI <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="${watchlistName}-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -463,6 +471,11 @@ async function loadCustomWatchlists() {
 
         // Re-initialize tabs to include new ones
         initializeTabs();
+
+        // Update analysis category selector if it exists
+        if (typeof updateCategorySelector === 'function') {
+            updateCategorySelector();
+        }
 
     } catch (error) {
         console.error('Error loading watchlists:', error);
@@ -535,6 +548,25 @@ function setCurrentDate() {
 // Initialize tab functionality
 function initializeTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
+    
+    // Set first tab (tracking) as active by default
+    const firstTab = document.querySelector('.tab-button[data-tab="tracking"]');
+    if (firstTab) {
+        firstTab.classList.remove('text-gray-600', 'dark:text-gray-400');
+        firstTab.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
+    }
+    
+    // Hide all tab contents except tracking
+    document.querySelectorAll('.tab-content').forEach(content => {
+        const tabId = content.id;
+        if (tabId === 'tracking-tab') {
+            content.classList.remove('hidden');
+            content.classList.add('block');
+        } else {
+            content.classList.add('hidden');
+            content.classList.remove('block');
+        }
+    });
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -554,13 +586,23 @@ function initializeTabs() {
             button.classList.remove('text-gray-600', 'dark:text-gray-400');
             button.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
             const tabContent = document.getElementById(`${tabName}-tab`);
-            tabContent.classList.remove('hidden');
-            tabContent.classList.add('block');
-
-            // Data should already be loaded from preload
-            const category = tabContent.getAttribute('data-category');
-            if (category && !currentData[category]) {
-                loadAssets(category, false);
+            if (tabContent) {
+                tabContent.classList.remove('hidden');
+                tabContent.classList.add('block');
+                
+                // Special handling for analysis tab
+                if (tabName === 'analisis') {
+                    // Load analysis data if function exists
+                    if (typeof loadAnalysisData === 'function') {
+                        loadAnalysisData();
+                    }
+                } else {
+                    // Data should already be loaded from preload
+                    const category = tabContent.getAttribute('data-category');
+                    if (category && !currentData[category]) {
+                        loadAssets(category, false);
+                    }
+                }
             }
         });
     });
@@ -661,50 +703,160 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
-    row.setAttribute('data-max', asset.all_time_high);
-    row.setAttribute('data-diff', asset.diff_from_max);
+    row.setAttribute('data-revenue', asset.revenue || 0);
+    row.setAttribute('data-revenue_growth', asset.revenue_growth || 0);
+    row.setAttribute('data-profit_margin', asset.profit_margin || 0);
+    row.setAttribute('data-roe', asset.return_on_equity || 0);
+    row.setAttribute('data-debt_to_equity', asset.debt_to_equity || 0);
+    row.setAttribute('data-price_to_book', asset.price_to_book || 0);
+    row.setAttribute('data-beta', asset.beta || 0);
+    row.setAttribute('data-volume', asset.volume || 0);
+    row.setAttribute('data-rsi', asset.rsi || 0);
+
+    // Helper function to create a cell
+    const createCell = (value, formatter = null, colorClass = null) => {
+        const cell = document.createElement('td');
+        cell.className = 'px-4 py-3 text-sm text-gray-600 dark:text-gray-400';
+        if (colorClass) cell.className += ' ' + colorClass;
+        
+        if (value === null || value === undefined) {
+            cell.textContent = 'N/A';
+        } else if (formatter) {
+            cell.textContent = formatter(value);
+        } else {
+            cell.textContent = value;
+        }
+        return cell;
+    };
 
     // Asset name
     const nameCell = document.createElement('td');
-    nameCell.className = 'px-6 py-4 font-semibold text-gray-900 dark:text-white';
+    nameCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
     nameCell.textContent = asset.name;
     row.appendChild(nameCell);
 
     // Current price
-    const priceCell = document.createElement('td');
-    priceCell.className = 'px-6 py-4 font-semibold text-gray-700 dark:text-gray-300';
-    priceCell.textContent = formatCurrency(asset.price);
-    row.appendChild(priceCell);
+    row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300'));
 
-    // P/E Ratio (skip for crypto)
-    if (!isCrypto) {
-        const peCell = document.createElement('td');
-        peCell.className = 'px-6 py-4 text-gray-600 dark:text-gray-400';
-        peCell.textContent = asset.pe_ratio !== null ? asset.pe_ratio.toFixed(2) : 'N/A';
-        row.appendChild(peCell);
-    }
-
-    // All-time high
-    const maxCell = document.createElement('td');
-    maxCell.className = 'px-6 py-4 text-gray-600 dark:text-gray-400';
-    maxCell.textContent = formatCurrency(asset.all_time_high);
-    row.appendChild(maxCell);
-
-    // Difference from max
-    const diffCell = document.createElement('td');
-    diffCell.className = 'px-6 py-4 font-semibold';
-
-    if (asset.diff_from_max >= -0.001) {
-        diffCell.className += ' text-green-500 dark:text-green-400';
-        diffCell.innerHTML = '✅ ¡En Máximo Histórico!';
+    if (isCrypto) {
+        // Crypto columns: Market Cap, Volume, Max, Diff
+        row.appendChild(createCell(asset.market_cap, formatLargeNumber));
+        row.appendChild(createCell(asset.volume, formatNumber));
+        row.appendChild(createCell(asset.all_time_high, formatCurrency));
+        
+        const diffCell = document.createElement('td');
+        diffCell.className = 'px-4 py-3 font-semibold';
+        if (asset.diff_from_max >= -0.001) {
+            diffCell.className += ' text-green-500 dark:text-green-400';
+            diffCell.innerHTML = '✅ En Máx';
+        } else {
+            diffCell.className += ' text-red-500 dark:text-red-400';
+            diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+        }
+        row.appendChild(diffCell);
     } else {
-        diffCell.className += ' text-red-500 dark:text-red-400';
-        diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+        // Stock columns: P/E, Revenue, Revenue Growth, Profit Margin, ROE, Debt/Equity, P/B, Beta, Volume, RSI
+        row.appendChild(createCell(asset.pe_ratio, (v) => v.toFixed(2)));
+        row.appendChild(createCell(asset.revenue, formatLargeNumber));
+        
+        // Revenue Growth with color coding
+        const revGrowthCell = createCell(asset.revenue_growth, (v) => (v * 100).toFixed(2) + '%');
+        if (asset.revenue_growth !== null && asset.revenue_growth > 0) {
+            revGrowthCell.className += ' text-green-500 dark:text-green-400';
+        } else if (asset.revenue_growth !== null && asset.revenue_growth < 0) {
+            revGrowthCell.className += ' text-red-500 dark:text-red-400';
+        }
+        row.appendChild(revGrowthCell);
+        
+        // Profit Margin
+        const profitMarginCell = createCell(asset.profit_margin, (v) => (v * 100).toFixed(2) + '%');
+        if (asset.profit_margin !== null && asset.profit_margin > 0.1) {
+            profitMarginCell.className += ' text-green-500 dark:text-green-400';
+        } else if (asset.profit_margin !== null && asset.profit_margin < 0) {
+            profitMarginCell.className += ' text-red-500 dark:text-red-400';
+        }
+        row.appendChild(profitMarginCell);
+        
+        // ROE with color coding
+        const roeCell = createCell(asset.return_on_equity, (v) => (v * 100).toFixed(2) + '%');
+        if (asset.return_on_equity !== null && asset.return_on_equity > 0.15) {
+            roeCell.className += ' text-green-500 dark:text-green-400';
+        } else if (asset.return_on_equity !== null && asset.return_on_equity < 0) {
+            roeCell.className += ' text-red-500 dark:text-red-400';
+        }
+        row.appendChild(roeCell);
+        
+        // Debt/Equity
+        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2)));
+        
+        // P/B
+        row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2)));
+        
+        // Beta
+        const betaCell = createCell(asset.beta, (v) => v.toFixed(2));
+        if (asset.beta !== null) {
+            if (asset.beta > 1.5) {
+                betaCell.className += ' text-red-500 dark:text-red-400';
+            } else if (asset.beta < 0.8) {
+                betaCell.className += ' text-green-500 dark:text-green-400';
+            }
+        }
+        row.appendChild(betaCell);
+        
+        // Volume
+        row.appendChild(createCell(asset.volume, formatNumber));
+        
+        // RSI with color coding
+        const rsiCell = createCell(asset.rsi, (v) => v.toFixed(2));
+        if (asset.rsi !== null) {
+            if (asset.rsi > 70) {
+                rsiCell.className += ' text-red-500 dark:text-red-400';
+            } else if (asset.rsi < 30) {
+                rsiCell.className += ' text-green-500 dark:text-green-400';
+            }
+        }
+        row.appendChild(rsiCell);
+        
+        // Difference from max
+        const diffCell = document.createElement('td');
+        diffCell.className = 'px-4 py-3 font-semibold';
+        if (asset.diff_from_max >= -0.001) {
+            diffCell.className += ' text-green-500 dark:text-green-400';
+            diffCell.innerHTML = '✅ En Máx';
+        } else {
+            diffCell.className += ' text-red-500 dark:text-red-400';
+            diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+        }
+        row.appendChild(diffCell);
     }
-
-    row.appendChild(diffCell);
 
     return row;
+}
+
+// Helper function to format large numbers (billions, millions)
+function formatLargeNumber(num) {
+    if (num >= 1e12) {
+        return `$${(num / 1e12).toFixed(2)}T`;
+    } else if (num >= 1e9) {
+        return `$${(num / 1e9).toFixed(2)}B`;
+    } else if (num >= 1e6) {
+        return `$${(num / 1e6).toFixed(2)}M`;
+    } else if (num >= 1e3) {
+        return `$${(num / 1e3).toFixed(2)}K`;
+    }
+    return `$${num.toFixed(2)}`;
+}
+
+// Helper function to format numbers (for volume)
+function formatNumber(num) {
+    if (num >= 1e9) {
+        return (num / 1e9).toFixed(2) + 'B';
+    } else if (num >= 1e6) {
+        return (num / 1e6).toFixed(2) + 'M';
+    } else if (num >= 1e3) {
+        return (num / 1e3).toFixed(2) + 'K';
+    }
+    return num.toFixed(0);
 }
 
 // Setup table sorting

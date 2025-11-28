@@ -1,13 +1,19 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 import yfinance as yf
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 from cachetools import TTLCache
 import uvicorn
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+import base64
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -95,6 +101,50 @@ class AssetData(BaseModel):
     pe_ratio: Optional[float]
     all_time_high: float
     diff_from_max: float
+    # Technical analysis metrics
+    volume: Optional[float] = None
+    market_cap: Optional[float] = None
+    cash_flow: Optional[float] = None
+    dividend_yield: Optional[float] = None
+    year_low: Optional[float] = None
+    year_high: Optional[float] = None
+    avg_volume: Optional[float] = None
+    # Technical indicators
+    rsi: Optional[float] = None
+    macd: Optional[float] = None
+    sma_50: Optional[float] = None
+    sma_200: Optional[float] = None
+    # Fundamental metrics - Revenue & Growth
+    revenue: Optional[float] = None
+    revenue_growth: Optional[float] = None
+    revenue_quarterly_growth: Optional[float] = None
+    earnings_growth: Optional[float] = None
+    earnings_quarterly_growth: Optional[float] = None
+    # Fundamental metrics - Profitability
+    profit_margin: Optional[float] = None
+    gross_margin: Optional[float] = None
+    operating_margin: Optional[float] = None
+    ebitda: Optional[float] = None
+    net_income: Optional[float] = None
+    # Fundamental metrics - Returns
+    return_on_assets: Optional[float] = None
+    return_on_equity: Optional[float] = None
+    # Fundamental metrics - Valuation
+    price_to_book: Optional[float] = None
+    forward_pe: Optional[float] = None
+    peg_ratio: Optional[float] = None
+    enterprise_value: Optional[float] = None
+    enterprise_to_revenue: Optional[float] = None
+    enterprise_to_ebitda: Optional[float] = None
+    # Fundamental metrics - Financial Health
+    debt_to_equity: Optional[float] = None
+    current_ratio: Optional[float] = None
+    total_debt: Optional[float] = None
+    total_cash: Optional[float] = None
+    total_assets: Optional[float] = None
+    book_value: Optional[float] = None
+    # Risk metrics
+    beta: Optional[float] = None
 
 # Helper functions
 def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
@@ -119,9 +169,109 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             return None
         
         all_time_high = hist['High'].max()
+        all_time_low = hist['Low'].min()
         current_price = hist['Close'].iloc[-1]
         diff_from_max = (current_price - all_time_high) / all_time_high
         pe_ratio = info.get('trailingPE')
+        
+        # Get 1 year data for year high/low
+        hist_1y = stock.history(period="1y")
+        year_high = float(hist_1y['High'].max()) if not hist_1y.empty else None
+        year_low = float(hist_1y['Low'].min()) if not hist_1y.empty else None
+        
+        # Technical metrics
+        volume = float(hist['Volume'].iloc[-1]) if not hist.empty else None
+        market_cap = info.get('marketCap')
+        cash_flow = info.get('operatingCashflow') or info.get('freeCashflow')
+        dividend_yield = info.get('dividendYield')
+        avg_volume = info.get('averageVolume')
+        
+        # Fundamental metrics - Revenue & Growth
+        revenue = info.get('totalRevenue')
+        revenue_growth = info.get('revenueGrowth')
+        revenue_quarterly_growth = info.get('revenueQuarterlyGrowth')
+        earnings_growth = info.get('earningsGrowth')
+        earnings_quarterly_growth = info.get('earningsQuarterlyGrowth')
+        
+        # Fundamental metrics - Profitability
+        profit_margin = info.get('profitMargins')
+        gross_margin = info.get('grossMargins')
+        operating_margin = info.get('operatingMargins')
+        ebitda = info.get('ebitda')
+        net_income = info.get('netIncomeToCommon')
+        
+        # Fundamental metrics - Returns
+        return_on_assets = info.get('returnOnAssets')
+        return_on_equity = info.get('returnOnEquity')
+        
+        # Fundamental metrics - Valuation
+        price_to_book = info.get('priceToBook')
+        forward_pe = info.get('forwardPE')
+        peg_ratio = info.get('pegRatio')
+        enterprise_value = info.get('enterpriseValue')
+        enterprise_to_revenue = info.get('enterpriseToRevenue')
+        enterprise_to_ebitda = info.get('enterpriseToEbitda')
+        
+        # Fundamental metrics - Financial Health
+        debt_to_equity = info.get('debtToEquity')
+        current_ratio = info.get('currentRatio')
+        total_debt = info.get('totalDebt')
+        total_cash = info.get('totalCash')
+        total_assets = info.get('totalAssets')
+        book_value = info.get('bookValue')
+        
+        # Risk metrics
+        beta = info.get('beta')
+        
+        # Try to get additional data from financial statements if not in info
+        try:
+            financials = stock.financials
+            balance_sheet = stock.balance_sheet
+            cashflow = stock.cashflow
+            
+            if financials is not None and not financials.empty:
+                # Get most recent year's data
+                if revenue is None and 'Total Revenue' in financials.index:
+                    revenue = float(financials.loc['Total Revenue'].iloc[0]) if not financials.loc['Total Revenue'].empty else None
+                if net_income is None and 'Net Income' in financials.index:
+                    net_income = float(financials.loc['Net Income'].iloc[0]) if not financials.loc['Net Income'].empty else None
+            
+            if balance_sheet is not None and not balance_sheet.empty:
+                if total_debt is None and 'Total Debt' in balance_sheet.index:
+                    total_debt = float(balance_sheet.loc['Total Debt'].iloc[0]) if not balance_sheet.loc['Total Debt'].empty else None
+                if total_cash is None and 'Cash And Cash Equivalents' in balance_sheet.index:
+                    total_cash = float(balance_sheet.loc['Cash And Cash Equivalents'].iloc[0]) if not balance_sheet.loc['Cash And Cash Equivalents'].empty else None
+                if total_assets is None and 'Total Assets' in balance_sheet.index:
+                    total_assets = float(balance_sheet.loc['Total Assets'].iloc[0]) if not balance_sheet.loc['Total Assets'].empty else None
+                if book_value is None and 'Stockholders Equity' in balance_sheet.index:
+                    book_value = float(balance_sheet.loc['Stockholders Equity'].iloc[0]) if not balance_sheet.loc['Stockholders Equity'].empty else None
+            
+            if cashflow is not None and not cashflow.empty:
+                if cash_flow is None and 'Operating Cash Flow' in cashflow.index:
+                    cash_flow = float(cashflow.loc['Operating Cash Flow'].iloc[0]) if not cashflow.loc['Operating Cash Flow'].empty else None
+        except Exception as e:
+            print(f"Error fetching financial statements for {ticker}: {e}")
+        
+        # Calculate technical indicators (simplified)
+        # RSI calculation (14 period)
+        rsi = None
+        if len(hist) >= 14:
+            delta = hist['Close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            rsi = float(100 - (100 / (1 + rs.iloc[-1]))) if not rs.empty and not rs.isna().iloc[-1] else None
+        
+        # SMA 50 and 200
+        sma_50 = float(hist['Close'].tail(50).mean()) if len(hist) >= 50 else None
+        sma_200 = float(hist['Close'].tail(200).mean()) if len(hist) >= 200 else None
+        
+        # MACD (simplified: 12-26 EMA difference)
+        macd = None
+        if len(hist) >= 26:
+            ema_12 = hist['Close'].ewm(span=12, adjust=False).mean()
+            ema_26 = hist['Close'].ewm(span=26, adjust=False).mean()
+            macd = float((ema_12 - ema_26).iloc[-1]) if not (ema_12 - ema_26).empty else None
         
         asset_data = AssetData(
             name=f"{name} ({ticker})",
@@ -129,7 +279,44 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             price=float(current_price),
             pe_ratio=float(pe_ratio) if pe_ratio else None,
             all_time_high=float(all_time_high),
-            diff_from_max=float(diff_from_max)
+            diff_from_max=float(diff_from_max),
+            volume=volume,
+            market_cap=float(market_cap) if market_cap else None,
+            cash_flow=float(cash_flow) if cash_flow else None,
+            dividend_yield=float(dividend_yield) if dividend_yield else None,
+            year_low=year_low,
+            year_high=year_high,
+            avg_volume=float(avg_volume) if avg_volume else None,
+            rsi=rsi,
+            macd=macd,
+            sma_50=sma_50,
+            sma_200=sma_200,
+            # Fundamental metrics
+            revenue=float(revenue) if revenue else None,
+            revenue_growth=float(revenue_growth) if revenue_growth else None,
+            revenue_quarterly_growth=float(revenue_quarterly_growth) if revenue_quarterly_growth else None,
+            earnings_growth=float(earnings_growth) if earnings_growth else None,
+            earnings_quarterly_growth=float(earnings_quarterly_growth) if earnings_quarterly_growth else None,
+            profit_margin=float(profit_margin) if profit_margin else None,
+            gross_margin=float(gross_margin) if gross_margin else None,
+            operating_margin=float(operating_margin) if operating_margin else None,
+            ebitda=float(ebitda) if ebitda else None,
+            net_income=float(net_income) if net_income else None,
+            return_on_assets=float(return_on_assets) if return_on_assets else None,
+            return_on_equity=float(return_on_equity) if return_on_equity else None,
+            price_to_book=float(price_to_book) if price_to_book else None,
+            forward_pe=float(forward_pe) if forward_pe else None,
+            peg_ratio=float(peg_ratio) if peg_ratio else None,
+            enterprise_value=float(enterprise_value) if enterprise_value else None,
+            enterprise_to_revenue=float(enterprise_to_revenue) if enterprise_to_revenue else None,
+            enterprise_to_ebitda=float(enterprise_to_ebitda) if enterprise_to_ebitda else None,
+            debt_to_equity=float(debt_to_equity) if debt_to_equity else None,
+            current_ratio=float(current_ratio) if current_ratio else None,
+            total_debt=float(total_debt) if total_debt else None,
+            total_cash=float(total_cash) if total_cash else None,
+            total_assets=float(total_assets) if total_assets else None,
+            book_value=float(book_value) if book_value else None,
+            beta=float(beta) if beta else None
         )
         
         # Store in cache
@@ -270,6 +457,274 @@ async def get_asset(ticker: str):
         raise HTTPException(status_code=500, detail=f"Error fetching data for {ticker}")
     
     return asset_data
+
+@app.get("/api/asset/{ticker}/history")
+async def get_asset_history(ticker: str, period: str = "1y", interval: str = "1d"):
+    """Get historical price data for an asset"""
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period, interval=interval)
+        
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data found for {ticker}")
+        
+        # Convert to list of dicts
+        history_data = []
+        for date, row in hist.iterrows():
+            history_data.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "open": float(row['Open']),
+                "high": float(row['High']),
+                "low": float(row['Low']),
+                "close": float(row['Close']),
+                "volume": float(row['Volume'])
+            })
+        
+        return history_data
+        
+    except Exception as e:
+        print(f"Error fetching history for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching history for {ticker}")
+
+@app.get("/api/chart/treemap")
+async def get_treemap_chart(category: str = "tracking", metric: str = "market_cap"):
+    """Generate treemap chart as image"""
+    try:
+        # Get data based on category
+        data = []
+        if category == "tracking":
+            for ticker, name in TRACKING_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "portfolio":
+            for ticker, name in PORTFOLIO_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "crypto":
+            for ticker, name in CRYPTO_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "argentina":
+            for ticker, name in ARGENTINA_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        else:
+            # Try custom watchlist
+            watchlists = load_watchlists()
+            if category in watchlists:
+                for ticker, name in watchlists[category].items():
+                    asset_data = get_asset_data(ticker, name)
+                    if asset_data:
+                        data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="Category not found or no data")
+        
+        # Filter crypto if needed
+        is_crypto = category == "crypto"
+        if not is_crypto:
+            data = [a for a in data if not a.get('ticker', '').endswith('-USD')]
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="No data available")
+        
+        # Prepare chart data
+        labels = []
+        values = []
+        for asset in data:
+            labels.append(asset.get('ticker', ''))
+            if metric == "market_cap":
+                values.append(asset.get('market_cap', 0) or 0)
+            elif metric == "cash_flow":
+                if is_crypto:
+                    values.append(asset.get('volume', 0) or 0)
+                else:
+                    values.append(abs(asset.get('cash_flow', 0) or 0))
+            else:
+                values.append(0)
+        
+        # Filter out zero values
+        filtered_data = [(l, v) for l, v in zip(labels, values) if v > 0]
+        if not filtered_data:
+            raise HTTPException(status_code=404, detail="No valid data for chart")
+        
+        labels, values = zip(*sorted(filtered_data, key=lambda x: x[1], reverse=True))
+        
+        # Create chart
+        plt.style.use('dark_background' if False else 'default')
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Create horizontal bar chart (treemap-like)
+        colors = sns.color_palette("Greens", len(labels))
+        bars = ax.barh(range(len(labels)), values, color=colors)
+        
+        ax.set_yticks(range(len(labels)))
+        ax.set_yticklabels(labels)
+        ax.set_xlabel('Value' if metric == "market_cap" else ("Volume" if is_crypto else "Cash Flow"))
+        ax.set_title(f"{'Market Cap' if metric == 'market_cap' else ('Volume' if is_crypto else 'Cash Flow')} by Asset")
+        ax.grid(axis='x', alpha=0.3)
+        
+        # Format x-axis
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e9:.2f}B' if x >= 1e9 else f'${x/1e6:.2f}M' if x >= 1e6 else f'${x/1e3:.2f}K'))
+        
+        plt.tight_layout()
+        
+        # Save to bytes
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
+        img_buffer.seek(0)
+        plt.close()
+        
+        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        
+    except Exception as e:
+        print(f"Error generating treemap chart: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
+
+@app.get("/api/chart/bar")
+async def get_bar_chart(category: str = "tracking", metric: str = "revenue_growth"):
+    """Generate bar chart as image"""
+    try:
+        # Get data based on category
+        data = []
+        if category == "tracking":
+            for ticker, name in TRACKING_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "portfolio":
+            for ticker, name in PORTFOLIO_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "crypto":
+            for ticker, name in CRYPTO_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        elif category == "argentina":
+            for ticker, name in ARGENTINA_ASSETS.items():
+                asset_data = get_asset_data(ticker, name)
+                if asset_data:
+                    data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        else:
+            # Try custom watchlist
+            watchlists = load_watchlists()
+            if category in watchlists:
+                for ticker, name in watchlists[category].items():
+                    asset_data = get_asset_data(ticker, name)
+                    if asset_data:
+                        data.append(asset_data.model_dump() if hasattr(asset_data, 'model_dump') else asset_data.dict())
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="Category not found or no data")
+        
+        is_crypto = category == "crypto"
+        if not is_crypto:
+            data = [a for a in data if not a.get('ticker', '').endswith('-USD')]
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="No data available")
+        
+        # Prepare data
+        labels = []
+        values = []
+        colors_list = []
+        
+        for asset in data:
+            labels.append(asset.get('ticker', ''))
+            value = 0
+            if metric == "revenue_growth":
+                value = (asset.get('revenue_growth', 0) or 0) * 100
+            elif metric == "profit_margin":
+                value = (asset.get('profit_margin', 0) or 0) * 100
+            elif metric == "roe":
+                value = (asset.get('return_on_equity', 0) or 0) * 100
+            elif metric == "pe":
+                value = asset.get('pe_ratio', 0) or 0
+            elif metric == "diff_max":
+                value = (asset.get('diff_from_max', 0) or 0) * 100
+            
+            values.append(value)
+            colors_list.append('#22c55e' if value >= 0 else '#ef4444')
+        
+        # Sort by value
+        sorted_data = sorted(zip(labels, values, colors_list), key=lambda x: x[1], reverse=True)
+        labels, values, colors_list = zip(*sorted_data)
+        
+        # Create chart
+        fig, ax = plt.subplots(figsize=(12, 6))
+        bars = ax.bar(range(len(labels)), values, color=colors_list)
+        
+        ax.set_xticks(range(len(labels)))
+        ax.set_xticklabels(labels, rotation=45, ha='right')
+        
+        metric_titles = {
+            "revenue_growth": "Revenue Growth (%)",
+            "profit_margin": "Profit Margin (%)",
+            "roe": "Return on Equity (ROE) (%)",
+            "pe": "P/E Ratio",
+            "diff_max": "Difference vs Maximum (%)"
+        }
+        ax.set_ylabel(metric_titles.get(metric, metric))
+        ax.set_title(f"{metric_titles.get(metric, metric)} by Asset")
+        ax.grid(axis='y', alpha=0.3)
+        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
+        
+        plt.tight_layout()
+        
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
+        img_buffer.seek(0)
+        plt.close()
+        
+        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        
+    except Exception as e:
+        print(f"Error generating bar chart: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
+
+@app.get("/api/chart/line")
+async def get_line_chart(ticker: str, period: str = "1y"):
+    """Generate line chart as image"""
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period, interval="1d")
+        
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data found for {ticker}")
+        
+        # Create chart
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        ax.plot(hist.index, hist['Close'], color='#22c55e', linewidth=2, label='Close Price')
+        ax.fill_between(hist.index, hist['Close'], alpha=0.3, color='#22c55e')
+        
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price (USD)')
+        ax.set_title(f'{ticker} - Historical Price')
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        # Format x-axis dates
+        fig.autofmt_xdate()
+        
+        plt.tight_layout()
+        
+        img_buffer = io.BytesIO()
+        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
+        img_buffer.seek(0)
+        plt.close()
+        
+        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        
+    except Exception as e:
+        print(f"Error generating line chart: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
 
 # News endpoint
 @app.get("/api/news")

@@ -6,3 +6,6 @@ cachetools
 python-multipart
 feedparser
 requests
+matplotlib
+seaborn
+Pillow

@@ -64,3 +64,17 @@ donde agrego los graficos???????????????????????
 mi idea era tambien resumir en un treemap la lista de activos por PER, cash flow, volumen medio, cap bursatil, 
 en un grafico de columnas por el de diferencia vs maximo, intervalo anual 
 rentabilidad por dividendo
+
+
+En dashboard.html: 
+- Agrega una tab "Anális" donde el usuario seleccione que tab quiere visualizar en graficos hechos con tailwind. Los graficos predeterminados son: 
+treemap: relacion -  [cash flow por activo, capitalizacion bursatil por activo]
+grafico de barras: relacion - [activo y diferencia vs maximo, activo y PER]
+grafico de lineas: permitir filtrar por fechas como en la imagen adjunta
+
+Ademas, agrega las columnas requeridas para el analisis tecnico en las tablas. 
+
+tambien, si el usuario quiere agregar un asset manualmente a una lista o tab ya existente, tiene el permiso para hacerlo en su propia view
+
+
+https://github.com/ranaroussi/yfinance/blob/main/yfinance/scrapers/fundamentals.py
