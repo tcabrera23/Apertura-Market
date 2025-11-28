@@ -12,12 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Modal handlers
     createRuleBtn.addEventListener('click', () => {
-        ruleModal.style.display = 'flex';
+        ruleModal.classList.remove('hidden');
+        ruleModal.classList.add('flex');
         document.body.style.overflow = 'hidden'; // Prevent background scrolling
     });
 
     closeModalBtn.addEventListener('click', () => {
-        ruleModal.style.display = 'none';
+        ruleModal.classList.add('hidden');
+        ruleModal.classList.remove('flex');
         ruleForm.reset();
         document.body.style.overflow = ''; // Restore scrolling
     });
@@ -25,7 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Close modal when clicking outside
     ruleModal.addEventListener('click', (e) => {
         if (e.target === ruleModal) {
-            ruleModal.style.display = 'none';
+            ruleModal.classList.add('hidden');
+            ruleModal.classList.remove('flex');
             ruleForm.reset();
             document.body.style.overflow = '';
         }
@@ -33,8 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close modal with Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && ruleModal.style.display === 'flex') {
-            ruleModal.style.display = 'none';
+        if (e.key === 'Escape' && !ruleModal.classList.contains('hidden')) {
+            ruleModal.classList.add('hidden');
+            ruleModal.classList.remove('flex');
             ruleForm.reset();
             document.body.style.overflow = '';
         }
@@ -53,8 +57,10 @@ async function loadRules() {
     const listEl = document.getElementById('rulesList');
     const emptyEl = document.getElementById('emptyState');
 
-    loadingEl.style.display = 'flex';
-    containerEl.style.display = 'none';
+    loadingEl.classList.remove('hidden');
+    loadingEl.classList.add('flex');
+    containerEl.classList.add('hidden');
+    containerEl.classList.remove('block');
 
     try {
         const response = await fetch(`${API_BASE_URL}/rules`);
@@ -65,33 +71,35 @@ async function loadRules() {
 
         const rules = await response.json();
 
-        loadingEl.style.display = 'none';
-        containerEl.style.display = 'block';
+        loadingEl.classList.add('hidden');
+        loadingEl.classList.remove('flex');
+        containerEl.classList.remove('hidden');
+        containerEl.classList.add('block');
 
         if (rules.length === 0) {
-            listEl.style.display = 'none';
-            emptyEl.style.display = 'block';
+            listEl.classList.add('hidden');
+            emptyEl.classList.remove('hidden');
         } else {
             listEl.innerHTML = '';
             rules.forEach(rule => {
                 const card = createRuleCard(rule);
                 listEl.appendChild(card);
             });
-            listEl.style.display = 'flex';
-            emptyEl.style.display = 'none';
+            listEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
         }
 
     } catch (error) {
         console.error('Error loading rules:', error);
         loadingEl.innerHTML = `
-            <p style="color: #dc3545;">❌ Error al cargar las reglas.</p>
+            <p class="text-red-500">❌ Error al cargar las reglas.</p>
         `;
     }
 }
 
 function createRuleCard(rule) {
     const card = document.createElement('div');
-    card.className = 'rule-card';
+    card.className = 'bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 flex justify-between items-center hover:shadow-xl hover:scale-[1.02] transition-all';
 
     const typeLabels = {
         'price_below': 'Precio debajo',
@@ -102,17 +110,17 @@ function createRuleCard(rule) {
     };
 
     card.innerHTML = `
-        <div class="rule-info">
-            <div class="rule-name">${rule.name || 'Regla sin nombre'}</div>
-            <div class="rule-details">
-                <span class="rule-badge">${typeLabels[rule.type] || rule.type}</span>
-                <span class="rule-detail">📊 ${rule.ticker}</span>
-                <span class="rule-detail">🎯 ${rule.value}</span>
-                <span class="rule-detail">📧 ${rule.email}</span>
+        <div class="flex-1">
+            <div class="font-bold text-lg text-gray-900 dark:text-white mb-2">${rule.name || 'Regla sin nombre'}</div>
+            <div class="flex flex-wrap gap-3">
+                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">${typeLabels[rule.type] || rule.type}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📊 ${rule.ticker}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📧 ${rule.email}</span>
             </div>
         </div>
-        <div class="rule-actions">
-            <button class="btn-icon delete" onclick="deleteRule(${rule.id})" title="Eliminar">
+        <div class="ml-4">
+            <button class="w-9 h-9 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors" onclick="deleteRule(${rule.id})" title="Eliminar">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>

@@ -11,7 +11,7 @@ import uvicorn
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Apertura Finance API",
+    title="BullAnalytics API",
     description="API for financial asset tracking powered by Yahoo Finance",
     version="1.0.0"
 )
@@ -461,7 +461,7 @@ async def rules():
 
 # Run server
 if __name__ == "__main__":
-    print("🚀 Starting Apertura Finance API Server...")
+    print("🚀 Starting BullAnalytics API Server...")
     print("📊 Dashboard: http://localhost:8080/dashboard.html")
     print("📰 News: http://localhost:8080/news.html")
     print("💰 Pricing: http://localhost:8080/pricing.html")

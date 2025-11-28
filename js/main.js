@@ -1,4 +1,4 @@
-// Apertura Finance - Main JavaScript
+// BullAnalytics - Main JavaScript
 
 // Smooth scroll for navigation links
 document.addEventListener('DOMContentLoaded', () => {

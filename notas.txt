@@ -26,17 +26,41 @@ news.html
 
 
 
-Mantene los tonos de colores (blanco, verde y negro) pero agrega gradientes, degradados, sombras, etc para que quede mas profesional
-Ahora vamos a refactorizar los estilos de la pagina con Tailwind  para que quede mas profesional y los dashboards sean mas profesionales
-Agrega un modo oscuro y responsive de toda la web
 
 
-quizas este repo puede ayudarte
-https://github.com/TailAdmin/free-nextjs-admin-dashboard/
+Quiero mejorar el diseño y los estilos de la web, junto con el UX. 
+- Mantene los tonos de colores (blanco, verde y negro) pero agrega gradientes, degradados, sombras, etc para que quede mas profesional
+- Agrega un modo oscuro
+- Agrega un panel "Account" donde se pueda ver el historial de alertas, cuenta, etc y el cliente pueda actualizar de plan o darse de baja
+- El nombre de la plataforma es "BullAnalytics"
+- Refactoriza los styles del dashboard con Tailwind
 
 
-quiero mejorar la UX de la web
-a lo mejor falta un panek "Account" donde se pueda ver el historial de alertas, cuenta, etc y el cliente pueda actualizar de plan o darse de baja
 
-Nombres:
-BullAgent - BullAnalytics (no existe, puedo comprarlo)
+Hacer como en S4 donde puedo elegir que columnas ver y en que orden (select y unselect - filtros, etc)
+
+
+- Agregar el logo "images/logo.png" a mi plataforma 
+- No veo el panel de account en el frontend
+- Pone el pricing.html en mi index.html 
+- Mantene la estetica para todos los html. El header y el footer deben ser como los de dashboard.html
+- Edita los estilos de rules.html con Tailwind para que sea vas profesional con animaciones
+- Para toda la web, agrega gradientes entre el verde y el blanco/negro segun modo o tema
+
+
+Bien ahora vamos a agregar la interfaz de los agentes de IA
+
+reglas.html
+- agregar un pequeño chat widget que te permita escribir tu consulta
+- el json que genera el agente almacenarlo en rules.json y mostrar en la ventana de chat que fue agregado exitosamente
+
+
+dashboard.html 
+agregar el panel en horizontal para charlar con el agente
+
+
+ideal desde google finance la api?
+donde agrego los graficos???????????????????????
+mi idea era tambien resumir en un treemap la lista de activos por PER, cash flow, volumen medio, cap bursatil, 
+en un grafico de columnas por el de diferencia vs maximo, intervalo anual 
+rentabilidad por dividendo

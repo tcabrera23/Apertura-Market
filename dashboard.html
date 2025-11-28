@@ -1,67 +1,108 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="h-full">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Dashboard de Apertura Finance - Monitor de Activos Financieros">
-    <title>Dashboard - Apertura Finance</title>
+    <meta name="description" content="Dashboard de BullAnalytics - Monitor de Activos Financieros">
+    <title>Dashboard - BullAnalytics</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Stylesheet -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#28a745',
+                            dark: '#218838',
+                            light: '#e8f5e9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <style>
+        /* Custom animations and utilities */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+            animation: spin 2s linear infinite;
+        }
+    </style>
 </head>
 
-<body class="dashboard-body">
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
     <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <div class="logo">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="16" cy="16" r="16" fill="#28a745" />
-                        <path d="M16 8L20 14H12L16 8Z" fill="white" />
-                        <path d="M12 18H20V24H12V18Z" fill="white" />
-                    </svg>
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <img src="images/logo.png" alt="BullAnalytics Logo" class="h-10 w-10 rounded-lg object-contain">
+                    <span class="text-xl font-bold text-gray-900 dark:text-white">
+                        Bull<span class="text-green-500">Analytics</span>
+                    </span>
                 </div>
-                <span class="brand-name">Apertura <span class="brand-highlight">Finance</span></span>
+                <ul class="hidden md:flex items-center gap-6">
+                    <li><a href="index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Inicio</a></li>
+                    <li><a href="dashboard.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Dashboard</a></li>
+                    <li><a href="news.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Noticias</a></li>
+                    <li><a href="rules.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Reglas</a></li>
+                    <li><a href="account.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Account</a></li>
+                </ul>
+                <div class="flex items-center gap-4">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <svg id="moonIcon" class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <ul class="nav-menu">
-                <li><a href="index.html" class="nav-link">Inicio</a></li>
-                <li><a href="dashboard.html" class="nav-link active">Dashboard</a></li>
-                <li><a href="news.html" class="nav-link">Noticias</a></li>
-                <li><a href="rules.html" class="nav-link">Reglas</a></li>
-                <li><a href="pricing.html" class="nav-link">Pricing</a></li>
-            </ul>
         </div>
     </nav>
 
     <!-- Dashboard Header -->
-    <header class="dashboard-header">
-        <div class="container">
-            <h1 class="dashboard-title">📊 Monitor de Activos Financieros</h1>
-            <p class="dashboard-date" id="currentDate"></p>
+    <header class="pt-20 pb-8 bg-gradient-to-r from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
+                📊 Monitor de Activos Financieros
+            </h1>
+            <p class="text-gray-600 dark:text-gray-400" id="currentDate"></p>
         </div>
     </header>
 
     <!-- Dashboard Content -->
-    <main class="dashboard-main">
-        <div class="container">
+    <main class="min-h-screen pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <!-- Tabs -->
-            <div class="tabs-wrapper">
-                <div class="tabs" id="tabsContainer">
-                    <button class="tab-button active" data-tab="tracking">Seguimiento</button>
-                    <button class="tab-button" data-tab="portfolio">Portafolio</button>
-                    <button class="tab-button" data-tab="crypto">Crypto</button>
-                    <button class="tab-button" data-tab="argentina">Argentina</button>
+            <div class="flex items-center gap-4 mb-8 border-b-2 border-gray-200 dark:border-gray-700 pb-2">
+                <div class="flex gap-2 overflow-x-auto scrollbar-hide" id="tabsContainer">
+                    <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent bg-gradient-to-b from-green-50 to-transparent dark:from-green-900/20 text-green-600 dark:text-green-400 border-b-2 border-green-500 dark:border-green-400 transition-all" data-tab="tracking">Seguimiento</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="portfolio">Portafolio</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="crypto">Crypto</button>
+                    <button class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all" data-tab="argentina">Argentina</button>
                     <!-- Custom watchlist tabs will be added here dynamically -->
                 </div>
-                <button class="btn-add-watchlist" id="addWatchlistBtn" title="Crear nueva lista">
+                <button class="ml-auto flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 hover:scale-110 transition-all" id="addWatchlistBtn" title="Crear nueva lista">
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                     </svg>
@@ -69,216 +110,195 @@
             </div>
 
             <!-- Tracking Tab -->
-            <div class="tab-content active" id="tracking-tab" data-category="tracking">
-                <div class="section-header">
-                    <h2 class="section-title">Seguimiento de Activos Populares</h2>
-                    <button class="btn-refresh" data-refresh="tracking">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
+            <div class="tab-content block" id="tracking-tab" data-category="tracking">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Seguimiento de Activos Populares</h2>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="tracking">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
+                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Actualizar
                     </button>
                 </div>
 
-                <div class="loading" id="tracking-loading">
-                    <div class="spinner"></div>
-                    <p>Cargando datos...</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="tracking-loading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando datos...</p>
                 </div>
 
-                <div class="table-container" id="tracking-table" style="display: none;">
-                    <table class="data-table sortable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
-                                        class="sort-icon"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="tracking-tbody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" id="tracking-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tracking-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <!-- Data will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- Portfolio Tab -->
-            <div class="tab-content" id="portfolio-tab" data-category="portfolio">
-                <div class="section-header">
-                    <h2 class="section-title">Mi Portafolio Personal</h2>
-                    <button class="btn-refresh" data-refresh="portfolio">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
+            <div class="tab-content hidden" id="portfolio-tab" data-category="portfolio">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Mi Portafolio Personal</h2>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="portfolio">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
+                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Actualizar
                     </button>
                 </div>
-
-                <div class="loading" id="portfolio-loading">
-                    <div class="spinner"></div>
-                    <p>Cargando datos...</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="portfolio-loading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando datos...</p>
                 </div>
-
-                <div class="table-container" id="portfolio-table" style="display: none;">
-                    <table class="data-table sortable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
-                                        class="sort-icon"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="portfolio-tbody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" id="portfolio-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="portfolio-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- Crypto Tab -->
-            <div class="tab-content" id="crypto-tab" data-category="crypto">
-                <div class="section-header">
-                    <h2 class="section-title">Criptomonedas</h2>
-                    <button class="btn-refresh" data-refresh="crypto">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
+            <div class="tab-content hidden" id="crypto-tab" data-category="crypto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Criptomonedas</h2>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="crypto">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
+                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Actualizar
                     </button>
                 </div>
-
-                <div class="loading" id="crypto-loading">
-                    <div class="spinner"></div>
-                    <p>Cargando datos...</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="crypto-loading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando datos...</p>
                 </div>
-
-                <div class="table-container" id="crypto-table" style="display: none;">
-                    <table class="data-table sortable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
-                                        class="sort-icon"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="crypto-tbody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" id="crypto-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="crypto-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
             <!-- Argentina Tab -->
-            <div class="tab-content" id="argentina-tab" data-category="argentina">
-                <div class="section-header">
-                    <h2 class="section-title">Acciones Argentinas</h2>
-                    <button class="btn-refresh" data-refresh="argentina">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
+            <div class="tab-content hidden" id="argentina-tab" data-category="argentina">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Acciones Argentinas</h2>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="argentina">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
+                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Actualizar
                     </button>
                 </div>
-
-                <div class="loading" id="argentina-loading">
-                    <div class="spinner"></div>
-                    <p>Cargando datos...</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="argentina-loading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando datos...</p>
                 </div>
-
-                <div class="table-container" id="argentina-table" style="display: none;">
-                    <table class="data-table sortable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
-                                        class="sort-icon"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="argentina-tbody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" id="argentina-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="argentina-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p class="footer-text">Datos obtenidos de Yahoo Finance. © 2025 Apertura Finance.</p>
+    <footer class="py-8 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-600 dark:text-gray-400 text-sm">
+                Datos obtenidos de Yahoo Finance. © 2025 <span class="font-semibold text-green-500">BullAnalytics</span>.
+            </p>
         </div>
     </footer>
 
     <!-- Modal for creating watchlist -->
-    <div class="modal" id="watchlistModal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>Crear Nueva Lista</h3>
-                <button class="modal-close" id="closeModal">&times;</button>
+    <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="watchlistModal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Crear Nueva Lista</h3>
+                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" id="closeModal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="watchlistName">Nombre de la Lista</label>
-                    <input type="text" id="watchlistName" class="form-input" placeholder="Ej: Mis Favoritos" required>
+            <div class="p-6">
+                <div class="mb-6">
+                    <label for="watchlistName" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nombre de la Lista</label>
+                    <input type="text" id="watchlistName" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Ej: Mis Favoritos" required>
                 </div>
                 
-                <div class="form-group">
-                    <label for="assetSearch">Buscar Activo</label>
-                    <input type="text" id="assetSearch" class="form-input" placeholder="Escribe el nombre o ticker del activo (ej: Broadcom, NVDA)">
-                    <div id="searchResults" class="search-results" style="display: none;"></div>
+                <div class="mb-6 relative">
+                    <label for="assetSearch" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Buscar Activo</label>
+                    <input type="text" id="assetSearch" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Escribe el nombre o ticker del activo (ej: Broadcom, NVDA)">
+                    <div id="searchResults" class="hidden absolute z-10 w-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-xl max-h-64 overflow-y-auto"></div>
                 </div>
                 
-                <div class="form-group">
-                    <label>Activos Seleccionados</label>
-                    <div id="selectedAssets" class="selected-assets">
-                        <p class="empty-message">No hay activos seleccionados</p>
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Activos Seleccionados</label>
+                    <div id="selectedAssets" class="min-h-[100px] max-h-[200px] overflow-y-auto p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <p class="text-center text-gray-500 dark:text-gray-400 italic">No hay activos seleccionados</p>
                     </div>
                 </div>
                 
-                <div class="form-actions">
-                    <button type="button" class="btn btn-outline" id="cancelWatchlistBtn">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="saveWatchlistBtn">Crear Lista</button>
+                <div class="flex justify-end gap-4">
+                    <button type="button" class="px-6 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold" id="cancelWatchlistBtn">Cancelar</button>
+                    <button type="button" class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/30 hover:shadow-xl transition-all font-semibold" id="saveWatchlistBtn">Crear Lista</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
+    <script src="js/dark-mode.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
 

@@ -1,4 +1,4 @@
-// Apertura Finance - Enhanced Dashboard JavaScript with Smart Caching
+// BullAnalytics - Enhanced Dashboard JavaScript with Smart Caching
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -44,39 +44,73 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelWatchlistBtn = document.getElementById('cancelWatchlistBtn');
 
     function closeWatchlistModal() {
-        watchlistModal.style.display = 'none';
-        document.getElementById('watchlistName').value = '';
-        document.getElementById('assetSearch').value = '';
-        document.getElementById('searchResults').style.display = 'none';
-        document.getElementById('selectedAssets').innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
+        if (watchlistModal) {
+            watchlistModal.classList.add('hidden');
+            watchlistModal.classList.remove('flex');
+        }
+        const nameInput = document.getElementById('watchlistName');
+        const searchInput = document.getElementById('assetSearch');
+        const searchResults = document.getElementById('searchResults');
+        const selectedAssets = document.getElementById('selectedAssets');
+        
+        if (nameInput) nameInput.value = '';
+        if (searchInput) searchInput.value = '';
+        if (searchResults) {
+            searchResults.classList.add('hidden');
+            searchResults.classList.remove('block');
+        }
+        if (selectedAssets) {
+            selectedAssets.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 italic">No hay activos seleccionados</p>';
+        }
         selectedAssetsList = [];
         document.body.style.overflow = ''; // Restore scrolling
     }
 
-    addWatchlistBtn.addEventListener('click', () => {
-        watchlistModal.style.display = 'flex';
-        document.getElementById('watchlistName').value = '';
-        document.getElementById('assetSearch').value = '';
-        document.getElementById('searchResults').style.display = 'none';
-        document.getElementById('selectedAssets').innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
-        selectedAssetsList = [];
-        document.body.style.overflow = 'hidden'; // Prevent background scrolling
-    });
+    if (addWatchlistBtn) {
+        addWatchlistBtn.addEventListener('click', () => {
+            if (watchlistModal) {
+                watchlistModal.classList.remove('hidden');
+                watchlistModal.classList.add('flex');
+            }
+            const nameInput = document.getElementById('watchlistName');
+            const searchInput = document.getElementById('assetSearch');
+            const searchResults = document.getElementById('searchResults');
+            const selectedAssets = document.getElementById('selectedAssets');
+            
+            if (nameInput) nameInput.value = '';
+            if (searchInput) searchInput.value = '';
+            if (searchResults) {
+                searchResults.classList.add('hidden');
+                searchResults.classList.remove('block');
+            }
+            if (selectedAssets) {
+                selectedAssets.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 italic">No hay activos seleccionados</p>';
+            }
+            selectedAssetsList = [];
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        });
+    }
 
-    closeModalBtn.addEventListener('click', closeWatchlistModal);
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener('click', closeWatchlistModal);
+    }
 
-    cancelWatchlistBtn.addEventListener('click', closeWatchlistModal);
+    if (cancelWatchlistBtn) {
+        cancelWatchlistBtn.addEventListener('click', closeWatchlistModal);
+    }
 
     // Close modal when clicking outside
-    watchlistModal.addEventListener('click', (e) => {
-        if (e.target === watchlistModal) {
-            closeWatchlistModal();
-        }
-    });
+    if (watchlistModal) {
+        watchlistModal.addEventListener('click', (e) => {
+            if (e.target === watchlistModal) {
+                closeWatchlistModal();
+            }
+        });
+    }
 
     // Close modal with Escape key
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && watchlistModal.style.display === 'flex') {
+        if (e.key === 'Escape' && !watchlistModal.classList.contains('hidden')) {
             closeWatchlistModal();
         }
     });
@@ -108,7 +142,8 @@ function initializeWatchlistModal() {
 
         // Hide results if query is too short
         if (query.length < 2) {
-            searchResults.style.display = 'none';
+            searchResults.classList.add('hidden');
+            searchResults.classList.remove('block');
             return;
         }
 
@@ -121,7 +156,8 @@ function initializeWatchlistModal() {
     // Close search results when clicking outside
     document.addEventListener('click', (e) => {
         if (!assetSearch.contains(e.target) && !searchResults.contains(e.target)) {
-            searchResults.style.display = 'none';
+            searchResults.classList.add('hidden');
+            searchResults.classList.remove('block');
         }
     });
 
@@ -151,10 +187,11 @@ function initializeWatchlistModal() {
 
 async function searchAssets(query) {
     const searchResults = document.getElementById('searchResults');
-
+    
     try {
-        searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-gray);">Buscando...</div>';
-        searchResults.style.display = 'block';
+        searchResults.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400">Buscando...</div>';
+        searchResults.classList.remove('hidden');
+        searchResults.classList.add('block');
 
         const response = await fetch(`${API_BASE_URL}/search-assets?query=${encodeURIComponent(query)}`);
 
@@ -165,7 +202,7 @@ async function searchAssets(query) {
         const results = await response.json();
 
         if (results.length === 0) {
-            searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-gray);">No se encontraron resultados</div>';
+            searchResults.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400">No se encontraron resultados</div>';
             return;
         }
 
@@ -173,23 +210,24 @@ async function searchAssets(query) {
         searchResults.innerHTML = '';
         results.forEach(asset => {
             const item = document.createElement('div');
-            item.className = 'search-result-item';
+            item.className = 'p-3 cursor-pointer border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors';
             item.innerHTML = `
-                <span class="search-result-symbol">${asset.symbol}</span>
-                <span class="search-result-name">${asset.name}</span>
-                <span class="search-result-exchange">${asset.exchange || ''}</span>
+                <span class="font-semibold text-gray-900 dark:text-white mr-2">${asset.symbol}</span>
+                <span class="text-gray-600 dark:text-gray-400 text-sm">${asset.name}</span>
+                <span class="text-gray-400 dark:text-gray-500 text-xs ml-2">${asset.exchange || ''}</span>
             `;
             item.addEventListener('click', () => {
                 selectAsset(asset);
                 document.getElementById('assetSearch').value = '';
-                searchResults.style.display = 'none';
+                searchResults.classList.add('hidden');
+                searchResults.classList.remove('block');
             });
             searchResults.appendChild(item);
         });
 
     } catch (error) {
         console.error('Error searching assets:', error);
-        searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc3545;">Error al buscar activos</div>';
+        searchResults.innerHTML = '<div class="p-4 text-center text-red-500">Error al buscar activos</div>';
     }
 }
 
@@ -216,22 +254,22 @@ function removeAsset(symbol) {
 
 function updateSelectedAssetsDisplay() {
     const container = document.getElementById('selectedAssets');
-
+    
     if (selectedAssetsList.length === 0) {
-        container.innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
+        container.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 italic">No hay activos seleccionados</p>';
         return;
     }
 
     container.innerHTML = '';
     selectedAssetsList.forEach(asset => {
         const div = document.createElement('div');
-        div.className = 'selected-asset';
+        div.className = 'flex justify-between items-center p-3 bg-white dark:bg-gray-700 rounded-lg mb-2 border border-gray-200 dark:border-gray-600';
         div.innerHTML = `
-            <div class="selected-asset-info">
-                <div class="selected-asset-symbol">${asset.symbol}</div>
-                <div class="selected-asset-name">${asset.name}</div>
+            <div class="flex-1">
+                <div class="font-semibold text-gray-900 dark:text-white">${asset.symbol}</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400">${asset.name}</div>
             </div>
-            <button class="btn-remove-asset" onclick="removeAsset('${asset.symbol}')">Eliminar</button>
+            <button class="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors" onclick="removeAsset('${asset.symbol}')">Eliminar</button>
         `;
         container.appendChild(div);
     });
@@ -280,13 +318,16 @@ async function saveWatchlist(name, assets) {
 
         // Close modal
         const modal = document.getElementById('watchlistModal');
-        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         document.body.style.overflow = '';
-
+        
         // Reset form
         document.getElementById('watchlistName').value = '';
         document.getElementById('assetSearch').value = '';
-        document.getElementById('searchResults').style.display = 'none';
+        const searchResults = document.getElementById('searchResults');
+        searchResults.classList.add('hidden');
+        searchResults.classList.remove('block');
         selectedAssetsList = [];
         updateSelectedAssetsDisplay();
 
@@ -348,43 +389,35 @@ async function loadCustomWatchlists() {
             tabContent.setAttribute('data-category', watchlistName);
 
             tabContent.innerHTML = `
-                <div class="section-header">
-                    <h2 class="section-title">${watchlistName}</h2>
-                    <button class="btn-refresh" data-refresh="${watchlistName}">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">${watchlistName}</h2>
+                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="${watchlistName}">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
+                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                         Actualizar
                     </button>
                 </div>
-
-                <div class="loading" id="${watchlistName}-loading">
-                    <div class="spinner"></div>
-                    <p>Cargando datos...</p>
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="${watchlistName}-loading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando datos...</p>
                 </div>
-
-                <div class="table-container" id="${watchlistName}-table" style="display: none;">
-                    <table class="data-table sortable">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
-                                        class="sort-icon"></span></th>
-                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
-                                        class="sort-icon"></span></th>
-                            </tr>
-                        </thead>
-                        <tbody id="${watchlistName}-tbody">
-                            <!-- Data will be inserted here -->
-                        </tbody>
-                    </table>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden" id="${watchlistName}-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio Actual (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="max">Máximo Histórico (USD) <span class="sort-icon"></span></th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máximo <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="${watchlistName}-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
+                        </table>
+                    </div>
                 </div>
             `;
 
@@ -395,17 +428,23 @@ async function loadCustomWatchlists() {
             // Add click handler for the new tab
             tabButton.addEventListener('click', () => {
                 const tabName = tabButton.getAttribute('data-tab');
-
+                
                 // Remove active class from all buttons and contents
-                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
+                    btn.classList.add('text-gray-600', 'dark:text-gray-400');
+                });
                 document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
+                    content.classList.add('hidden');
+                    content.classList.remove('block');
                 });
 
                 // Add active class to clicked button and corresponding content
-                tabButton.classList.add('active');
+                tabButton.classList.remove('text-gray-600', 'dark:text-gray-400');
+                tabButton.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
                 const tabContentEl = document.getElementById(`${tabName}-tab`);
-                tabContentEl.classList.add('active');
+                tabContentEl.classList.remove('hidden');
+                tabContentEl.classList.add('block');
 
                 // Load data if not already loaded
                 if (!currentData[tabName]) {
@@ -502,15 +541,21 @@ function initializeTabs() {
             const tabName = button.getAttribute('data-tab');
 
             // Remove active class from all buttons and contents
-            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabButtons.forEach(btn => {
+                btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
+                btn.classList.add('text-gray-600', 'dark:text-gray-400');
+            });
             document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
+                content.classList.add('hidden');
+                content.classList.remove('block');
             });
 
             // Add active class to clicked button and corresponding content
-            button.classList.add('active');
+            button.classList.remove('text-gray-600', 'dark:text-gray-400');
+            button.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
             const tabContent = document.getElementById(`${tabName}-tab`);
-            tabContent.classList.add('active');
+            tabContent.classList.remove('hidden');
+            tabContent.classList.add('block');
 
             // Data should already be loaded from preload
             const category = tabContent.getAttribute('data-category');
@@ -540,8 +585,8 @@ async function loadAssets(category, silent = false) {
 
     // Only show loading state if not silent and no cached data
     if (!silent && !localCache.data[category]) {
-        loadingEl.style.display = 'flex';
-        tableEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (tableEl) tableEl.style.display = 'none';
     }
 
     try {
@@ -601,13 +646,18 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
     setupSorting(category);
 
     // Show table, hide loading
-    loadingEl.style.display = 'none';
-    tableEl.style.display = 'block';
+    if (loadingEl) {
+        loadingEl.style.display = 'none';
+    }
+    if (tableEl) {
+        tableEl.style.display = 'block';
+    }
 }
 
 // Create table row from asset data
 function createTableRow(asset, isCrypto = false) {
     const row = document.createElement('tr');
+    row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
@@ -616,39 +666,39 @@ function createTableRow(asset, isCrypto = false) {
 
     // Asset name
     const nameCell = document.createElement('td');
-    nameCell.className = 'asset-name';
+    nameCell.className = 'px-6 py-4 font-semibold text-gray-900 dark:text-white';
     nameCell.textContent = asset.name;
     row.appendChild(nameCell);
 
     // Current price
     const priceCell = document.createElement('td');
-    priceCell.className = 'price';
+    priceCell.className = 'px-6 py-4 font-semibold text-gray-700 dark:text-gray-300';
     priceCell.textContent = formatCurrency(asset.price);
     row.appendChild(priceCell);
 
     // P/E Ratio (skip for crypto)
     if (!isCrypto) {
         const peCell = document.createElement('td');
-        peCell.className = 'pe-ratio';
+        peCell.className = 'px-6 py-4 text-gray-600 dark:text-gray-400';
         peCell.textContent = asset.pe_ratio !== null ? asset.pe_ratio.toFixed(2) : 'N/A';
         row.appendChild(peCell);
     }
 
     // All-time high
     const maxCell = document.createElement('td');
-    maxCell.className = 'max-price';
+    maxCell.className = 'px-6 py-4 text-gray-600 dark:text-gray-400';
     maxCell.textContent = formatCurrency(asset.all_time_high);
     row.appendChild(maxCell);
 
     // Difference from max
     const diffCell = document.createElement('td');
-    diffCell.className = 'difference';
+    diffCell.className = 'px-6 py-4 font-semibold';
 
     if (asset.diff_from_max >= -0.001) {
-        diffCell.classList.add('positive');
+        diffCell.className += ' text-green-500 dark:text-green-400';
         diffCell.innerHTML = '✅ ¡En Máximo Histórico!';
     } else {
-        diffCell.classList.add('negative');
+        diffCell.className += ' text-red-500 dark:text-red-400';
         diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
     }
 
