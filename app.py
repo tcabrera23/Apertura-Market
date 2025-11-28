@@ -14,6 +14,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import io
 import base64
+import json
+import os
+import re
+from groq import Groq
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -838,6 +842,164 @@ async def delete_rule(rule_id: int):
     rules = [r for r in rules if r.get('id') != rule_id]
     save_rules(rules)
     return {"message": "Rule deleted successfully"}
+
+class ChatMessage(BaseModel):
+    message: str
+    email: Optional[str] = None
+
+@app.post("/api/rules/chat")
+async def chat_create_rule(chat_message: ChatMessage):
+    """Create a rule from natural language using AI"""
+    try:
+        # Initialize Groq client
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+        
+        client = Groq(api_key=api_key)
+        
+        # System prompt
+        system_prompt = """Eres un asistente que interpreta lenguaje natural y lo convierte en JSON para crear reglas de alertas financieras.
+
+Tu objetivo es extraer los siguientes campos del mensaje del usuario:
+- name: Un nombre descriptivo para la regla (en español)
+- type: El tipo de regla. Opciones válidas: "price_below", "price_above", "pe_below", "pe_above", "max_distance"
+- ticker: El símbolo del activo (ej: NVDA, AAPL, BTC-USD)
+- value: El valor numérico de referencia (porcentaje o número según el tipo)
+- email: El email del usuario (si se proporciona en el mensaje)
+
+Tipos de reglas:
+- "price_below": Precio debajo de un valor específico
+- "price_above": Precio encima de un valor específico
+- "pe_below": P/E Ratio debajo de un valor
+- "pe_above": P/E Ratio encima de un valor
+- "max_distance": Distancia porcentual del máximo histórico (valor negativo indica debajo del máximo)
+
+Ejemplos:
+Input: "Cuando NVIDIA esté un 25% debajo de su máximo histórico"
+Output: {"name": "Alerta: NVIDIA se encuentra un 25% debajo de su máximo histórico", "type": "max_distance", "ticker": "NVDA", "value": 25}
+
+Input: "Notifícame cuando Apple tenga un P/E ratio debajo de 25"
+Output: {"name": "Alerta: Apple P/E ratio debajo de 25", "type": "pe_below", "ticker": "AAPL", "value": 25}
+
+Input: "Quiero una alerta cuando Bitcoin esté por encima de $50,000"
+Output: {"name": "Alerta: Bitcoin por encima de $50,000", "type": "price_above", "ticker": "BTC-USD", "value": 50000}
+
+Responde SOLO con un JSON válido, sin texto adicional. Si falta información crítica (como el ticker), incluye un campo "error" con el mensaje explicando qué falta."""
+
+        # User prompt
+        user_prompt = chat_message.message
+        if chat_message.email:
+            user_prompt += f"\n\nEmail del usuario: {chat_message.email}"
+
+        # Call Groq API
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.3
+            )
+        except Exception as e:
+            print(f"Groq API error: {e}")
+            raise HTTPException(status_code=500, detail=f"Error calling Groq API: {str(e)}")
+
+        # Parse response
+        response_content = completion.choices[0].message.content.strip()
+        
+        # Try to extract JSON from response (in case there's extra text)
+        # Look for JSON object with balanced braces
+        brace_count = 0
+        start_idx = -1
+        for i, char in enumerate(response_content):
+            if char == '{':
+                if start_idx == -1:
+                    start_idx = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_idx != -1:
+                    response_content = response_content[start_idx:i+1]
+                    break
+        
+        # If no balanced JSON found, try regex as fallback
+        if start_idx == -1 or brace_count != 0:
+            json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+            if json_match:
+                response_content = json_match.group(0)
+        
+        try:
+            rule_data = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            # If JSON parsing fails, try to extract key information manually
+            return {
+                "success": False,
+                "error": f"No se pudo interpretar la respuesta del AI. Por favor, intenta ser más específico con tu solicitud.",
+                "raw_response": response_content
+            }
+
+        # Check for errors
+        if "error" in rule_data:
+            return {"success": False, "error": rule_data["error"], "raw_response": response_content}
+
+        # Validate required fields
+        required_fields = ["name", "type", "ticker", "value"]
+        missing_fields = [field for field in required_fields if field not in rule_data]
+        if missing_fields:
+            return {
+                "success": False,
+                "error": f"Faltan campos requeridos: {', '.join(missing_fields)}",
+                "raw_response": response_content
+            }
+
+        # Validate type
+        valid_types = ["price_below", "price_above", "pe_below", "pe_above", "max_distance"]
+        if rule_data["type"] not in valid_types:
+            return {
+                "success": False,
+                "error": f"Tipo de regla inválido: {rule_data['type']}. Tipos válidos: {', '.join(valid_types)}",
+                "raw_response": response_content
+            }
+
+        # Use provided email or try to extract from rule_data
+        email = chat_message.email or rule_data.get("email")
+        if not email:
+            return {
+                "success": False,
+                "error": "Se requiere un email para las notificaciones. Por favor, proporciona tu email.",
+                "raw_response": response_content
+            }
+
+        # Add email to rule
+        rule_data["email"] = email
+
+        # Create the rule
+        rules = load_rules()
+        rule_data["id"] = len(rules) + 1
+        rule_data["created_at"] = datetime.now().isoformat()
+        rules.append(rule_data)
+        save_rules(rules)
+
+        return {
+            "success": True,
+            "message": "Regla creada exitosamente",
+            "rule": rule_data
+        }
+
+    except json.JSONDecodeError as e:
+        return {
+            "success": False,
+            "error": f"Error al parsear la respuesta del AI: {str(e)}",
+            "raw_response": response_content if 'response_content' in locals() else None
+        }
+    except Exception as e:
+        print(f"Error in chat_create_rule: {e}")
+        return {
+            "success": False,
+            "error": f"Error al procesar la solicitud: {str(e)}"
+        }
 
 @app.get("/api/search-assets")
 async def search_assets(query: str):
