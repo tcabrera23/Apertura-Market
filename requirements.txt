@@ -5,3 +5,4 @@ pandas
 cachetools
 python-multipart
 feedparser
+requests

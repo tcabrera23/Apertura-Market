@@ -40,12 +40,330 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add watchlist button
     document.getElementById('addWatchlistBtn').addEventListener('click', () => {
         document.getElementById('watchlistModal').style.display = 'flex';
+        document.getElementById('watchlistName').value = '';
+        document.getElementById('assetSearch').value = '';
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('selectedAssets').innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
+        selectedAssetsList = [];
     });
 
     document.getElementById('closeModal').addEventListener('click', () => {
         document.getElementById('watchlistModal').style.display = 'none';
     });
+
+    document.getElementById('cancelWatchlistBtn').addEventListener('click', () => {
+        document.getElementById('closeModal').click();
+    });
+
+    // Initialize watchlist functionality
+    initializeWatchlistModal();
+    
+    // Load custom watchlists
+    loadCustomWatchlists();
 });
+
+// Watchlist management
+let selectedAssetsList = [];
+let searchTimeout = null;
+
+function initializeWatchlistModal() {
+    const assetSearch = document.getElementById('assetSearch');
+    const searchResults = document.getElementById('searchResults');
+    const saveBtn = document.getElementById('saveWatchlistBtn');
+
+    // Search with debounce (2 seconds)
+    assetSearch.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        // Clear previous timeout
+        if (searchTimeout) {
+            clearTimeout(searchTimeout);
+        }
+
+        // Hide results if query is too short
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        // Set new timeout (2 seconds)
+        searchTimeout = setTimeout(() => {
+            searchAssets(query);
+        }, 2000);
+    });
+
+    // Close search results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!assetSearch.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Save watchlist
+    saveBtn.addEventListener('click', async () => {
+        const watchlistName = document.getElementById('watchlistName').value.trim();
+        
+        if (!watchlistName) {
+            alert('Por favor, ingresa un nombre para la lista');
+            return;
+        }
+
+        if (selectedAssetsList.length === 0) {
+            alert('Por favor, selecciona al menos un activo');
+            return;
+        }
+
+        await saveWatchlist(watchlistName, selectedAssetsList);
+    });
+}
+
+async function searchAssets(query) {
+    const searchResults = document.getElementById('searchResults');
+    
+    try {
+        searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-gray);">Buscando...</div>';
+        searchResults.style.display = 'block';
+
+        const response = await fetch(`${API_BASE_URL}/search-assets?query=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+            throw new Error('Error en la búsqueda');
+        }
+
+        const results = await response.json();
+
+        if (results.length === 0) {
+            searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--color-gray);">No se encontraron resultados</div>';
+            return;
+        }
+
+        // Display results
+        searchResults.innerHTML = '';
+        results.forEach(asset => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+                <span class="search-result-symbol">${asset.symbol}</span>
+                <span class="search-result-name">${asset.name}</span>
+                <span class="search-result-exchange">${asset.exchange || ''}</span>
+            `;
+            item.addEventListener('click', () => {
+                selectAsset(asset);
+                document.getElementById('assetSearch').value = '';
+                searchResults.style.display = 'none';
+            });
+            searchResults.appendChild(item);
+        });
+
+    } catch (error) {
+        console.error('Error searching assets:', error);
+        searchResults.innerHTML = '<div style="padding: 1rem; text-align: center; color: #dc3545;">Error al buscar activos</div>';
+    }
+}
+
+function selectAsset(asset) {
+    // Check if asset is already selected
+    if (selectedAssetsList.some(a => a.symbol === asset.symbol)) {
+        return;
+    }
+
+    selectedAssetsList.push(asset);
+    updateSelectedAssetsDisplay();
+}
+
+function removeAsset(symbol) {
+    selectedAssetsList = selectedAssetsList.filter(a => a.symbol !== symbol);
+    updateSelectedAssetsDisplay();
+}
+
+function updateSelectedAssetsDisplay() {
+    const container = document.getElementById('selectedAssets');
+    
+    if (selectedAssetsList.length === 0) {
+        container.innerHTML = '<p class="empty-message">No hay activos seleccionados</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    selectedAssetsList.forEach(asset => {
+        const div = document.createElement('div');
+        div.className = 'selected-asset';
+        div.innerHTML = `
+            <div class="selected-asset-info">
+                <div class="selected-asset-symbol">${asset.symbol}</div>
+                <div class="selected-asset-name">${asset.name}</div>
+            </div>
+            <button class="btn-remove-asset" onclick="removeAsset('${asset.symbol}')">Eliminar</button>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// Make removeAsset available globally
+window.removeAsset = removeAsset;
+
+async function saveWatchlist(name, assets) {
+    try {
+        // Convert assets to the format expected by the backend
+        const assetsDict = {};
+        assets.forEach(asset => {
+            assetsDict[asset.symbol] = asset.name;
+        });
+
+        const response = await fetch(`${API_BASE_URL}/watchlist?name=${encodeURIComponent(name)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(assetsDict)
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al guardar la lista');
+        }
+
+        // Close modal
+        document.getElementById('closeModal').click();
+        
+        // Reload watchlists
+        await loadCustomWatchlists();
+        
+        // Show success message
+        alert(`Lista "${name}" creada exitosamente`);
+
+    } catch (error) {
+        console.error('Error saving watchlist:', error);
+        alert('Error al guardar la lista. Por favor, intenta de nuevo.');
+    }
+}
+
+async function loadCustomWatchlists() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/watchlists`);
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar listas');
+        }
+
+        const watchlists = await response.json();
+        const tabsContainer = document.getElementById('tabsContainer');
+        
+        // Remove existing custom watchlist tabs (keep default ones)
+        const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina'];
+        const existingTabs = Array.from(tabsContainer.querySelectorAll('.tab-button'));
+        existingTabs.forEach(tab => {
+            const tabName = tab.getAttribute('data-tab');
+            if (!defaultTabs.includes(tabName)) {
+                tab.remove();
+            }
+        });
+
+        // Remove existing custom watchlist tab contents
+        const existingContents = document.querySelectorAll('.tab-content');
+        existingContents.forEach(content => {
+            const category = content.getAttribute('data-category');
+            if (category && !defaultTabs.includes(category)) {
+                content.remove();
+            }
+        });
+
+        // Add tabs and content for each watchlist
+        Object.keys(watchlists).forEach(watchlistName => {
+            // Add tab button
+            const tabButton = document.createElement('button');
+            tabButton.className = 'tab-button';
+            tabButton.setAttribute('data-tab', watchlistName);
+            tabButton.textContent = watchlistName;
+            tabsContainer.appendChild(tabButton);
+
+            // Add tab content
+            const tabContent = document.createElement('div');
+            tabContent.className = 'tab-content';
+            tabContent.id = `${watchlistName}-tab`;
+            tabContent.setAttribute('data-category', watchlistName);
+            
+            tabContent.innerHTML = `
+                <div class="section-header">
+                    <h2 class="section-title">${watchlistName}</h2>
+                    <button class="btn-refresh" data-refresh="${watchlistName}">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                        Actualizar
+                    </button>
+                </div>
+
+                <div class="loading" id="${watchlistName}-loading">
+                    <div class="spinner"></div>
+                    <p>Cargando datos...</p>
+                </div>
+
+                <div class="table-container" id="${watchlistName}-table" style="display: none;">
+                    <table class="data-table sortable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="price">Precio Actual (USD) <span
+                                        class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="pe">P/E Ratio <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="max">Máximo Histórico (USD) <span
+                                        class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="diff">Diferencia vs. Máximo <span
+                                        class="sort-icon"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="${watchlistName}-tbody">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Insert before the closing main tag
+            const main = document.querySelector('.dashboard-main .container');
+            main.appendChild(tabContent);
+
+            // Add click handler for the new tab
+            tabButton.addEventListener('click', () => {
+                const tabName = tabButton.getAttribute('data-tab');
+                
+                // Remove active class from all buttons and contents
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+
+                // Add active class to clicked button and corresponding content
+                tabButton.classList.add('active');
+                const tabContentEl = document.getElementById(`${tabName}-tab`);
+                tabContentEl.classList.add('active');
+
+                // Load data if not already loaded
+                if (!currentData[tabName]) {
+                    loadAssets(tabName, false);
+                }
+            });
+
+            // Add refresh button handler
+            const refreshBtn = tabContent.querySelector(`[data-refresh="${watchlistName}"]`);
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    forceRefreshAssets(watchlistName);
+                });
+            }
+        });
+
+        // Re-initialize tabs to include new ones
+        initializeTabs();
+
+    } catch (error) {
+        console.error('Error loading watchlists:', error);
+    }
+}
 
 // Preload all data on startup
 async function preloadAllData() {
@@ -144,6 +462,10 @@ async function loadAssets(category, silent = false) {
     const tableEl = document.getElementById(`${category}-table`);
     const tableBody = document.getElementById(`${category}-tbody`);
 
+    // Check if this is a custom watchlist
+    const defaultCategories = ['tracking', 'portfolio', 'crypto', 'argentina'];
+    const isCustomWatchlist = !defaultCategories.includes(category);
+
     // Check cache first
     if (localCache.data[category] && !isCacheExpired(category)) {
         // Use cached data immediately
@@ -158,7 +480,11 @@ async function loadAssets(category, silent = false) {
     }
 
     try {
-        const endpoint = `${API_BASE_URL}/${category}-assets`;
+        // Use different endpoint for custom watchlists
+        const endpoint = isCustomWatchlist 
+            ? `${API_BASE_URL}/watchlist/${encodeURIComponent(category)}`
+            : `${API_BASE_URL}/${category}-assets`;
+        
         const response = await fetch(endpoint);
 
         if (!response.ok) {
@@ -195,9 +521,13 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
     // Clear table body
     tableBody.innerHTML = '';
 
+    // Determine if this is a crypto category or if assets are crypto
+    const isCryptoCategory = category === 'crypto';
+    
     // Populate table
-    const isCrypto = category === 'crypto';
     data.forEach(asset => {
+        // Check if asset is crypto by ticker pattern (ends with -USD) or if category is crypto
+        const isCrypto = isCryptoCategory || (asset.ticker && asset.ticker.includes('-USD'));
         const row = createTableRow(asset, isCrypto);
         tableBody.appendChild(row);
     });

@@ -1,0 +1,19 @@
+Segui desarrollando las siguientes funcionalidades: 
+
+dashboard.html: 
+- Crear nueva lista: El usuario escribe el nombre o sigla del activo, la app espera 2 segundos desde que el usuario empieza a escribir y hace la peticion a yahoo para mostrarle al usuario los resultados encontrados y que escoga uno
+Ejemplo: 
+Usuario escribiendo "Broadcom"
+Sistema: Busca en el portal los activos que contienen esa palabra y devolve los resultados
+Usuario: Escoge el activo
+Sistema: Guarda la eleccion del usuario (por ahora en un JSON)
+Sistema: Presenta el activo en el formato tabla segun corresponda (accion o crypto)
+
+
+rules.html
+- Interfaz "Crear Nueva Regla": Analiza la imagen para entender que los estilos de ese container estan desalineados. De todas formas, no quiero que forme parte de la pagina web. Me parece
+una mejor experiencia de usuario, que al clickear "Crear Primera Regla" entonces aparezca tipo pop-up la interfaz de la definicion de la regla en una friendly card
+
+
+
+Ahora hace el merge de pricing.html dentro de index.html

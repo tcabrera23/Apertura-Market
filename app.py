@@ -351,6 +351,49 @@ async def delete_rule(rule_id: int):
     save_rules(rules)
     return {"message": "Rule deleted successfully"}
 
+@app.get("/api/search-assets")
+async def search_assets(query: str):
+    """Search for assets using Yahoo Finance autocomplete API"""
+    if not query or len(query) < 2:
+        return []
+    
+    try:
+        import requests
+        import urllib.parse
+        
+        # Yahoo Finance autocomplete endpoint
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(query)}&quotesCount=10&newsCount=0"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            results = []
+            
+            # Extract quotes from the response
+            if 'quotes' in data:
+                for quote in data['quotes']:
+                    results.append({
+                        "symbol": quote.get('symbol', ''),
+                        "name": quote.get('longname') or quote.get('shortname', quote.get('symbol', '')),
+                        "exchange": quote.get('exchange', ''),
+                        "type": quote.get('quoteType', 'EQUITY'),
+                        "sector": quote.get('sector', ''),
+                        "industry": quote.get('industry', '')
+                    })
+            
+            return results[:10]  # Limit to 10 results
+        
+        return []
+        
+    except Exception as e:
+        print(f"Error searching assets: {e}")
+        return []
+
 @app.get("/api/cache-info")
 async def get_cache_info():
     """Get cache statistics (for debugging)"""

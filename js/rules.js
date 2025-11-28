@@ -5,18 +5,43 @@ const API_BASE_URL = 'http://localhost:8080/api';
 document.addEventListener('DOMContentLoaded', () => {
     loadRules();
 
+    const ruleModal = document.getElementById('ruleModal');
+    const createRuleBtn = document.getElementById('createRuleBtn');
+    const closeModalBtn = document.getElementById('closeModal');
+    const ruleForm = document.getElementById('ruleForm');
+
     // Modal handlers
-    document.getElementById('createRuleBtn').addEventListener('click', () => {
-        document.getElementById('ruleModal').style.display = 'flex';
+    createRuleBtn.addEventListener('click', () => {
+        ruleModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
     });
 
-    document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('ruleModal').style.display = 'none';
-        document.getElementById('ruleForm').reset();
+    closeModalBtn.addEventListener('click', () => {
+        ruleModal.style.display = 'none';
+        ruleForm.reset();
+        document.body.style.overflow = ''; // Restore scrolling
+    });
+
+    // Close modal when clicking outside
+    ruleModal.addEventListener('click', (e) => {
+        if (e.target === ruleModal) {
+            ruleModal.style.display = 'none';
+            ruleForm.reset();
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && ruleModal.style.display === 'flex') {
+            ruleModal.style.display = 'none';
+            ruleForm.reset();
+            document.body.style.overflow = '';
+        }
     });
 
     // Form submission
-    document.getElementById('ruleForm').addEventListener('submit', async (e) => {
+    ruleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         await createRule();
     });
@@ -120,7 +145,10 @@ async function createRule() {
             throw new Error('Error al crear regla');
         }
 
-        document.getElementById('closeModal').click();
+        const ruleModal = document.getElementById('ruleModal');
+        ruleModal.style.display = 'none';
+        document.getElementById('ruleForm').reset();
+        document.body.style.overflow = '';
         loadRules();
 
     } catch (error) {
