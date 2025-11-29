@@ -250,9 +250,9 @@
     </div>
 
     <!-- Chat Widget -->
-    <div id="chatWidget" class="fixed bottom-6 right-6 z-50">
+    <div id="chatWidget" class="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <!-- Chat Button -->
-        <button id="chatToggle" class="w-14 h-14 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center">
+        <button id="chatToggle" class="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center">
             <svg id="chatIcon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
             </svg>
@@ -262,19 +262,36 @@
         </button>
 
         <!-- Chat Window -->
-        <div id="chatWindow" class="hidden fixed bottom-24 right-6 w-96 h-[600px] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col">
+        <div id="chatWindow" class="hidden fixed md:bottom-24 md:right-6 md:w-96 md:h-[600px] bottom-0 right-0 left-0 top-0 w-full h-full md:rounded-2xl rounded-none bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300">
             <!-- Chat Header -->
             <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-gray-700 dark:to-gray-800">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center flex-shrink-0">
                         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                         </svg>
                     </div>
-                    <div>
-                        <h3 class="font-bold text-gray-900 dark:text-white">Asistente AI</h3>
-                        <p class="text-xs text-gray-600 dark:text-gray-400">Crea reglas con lenguaje natural</p>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-gray-900 dark:text-white truncate">Asistente AI</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 truncate">Crea reglas con lenguaje natural</p>
                     </div>
+                </div>
+                <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                    <!-- Full Window Toggle -->
+                    <button id="fullWindowToggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" title="Pantalla completa">
+                        <svg id="maximizeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        <svg id="minimizeIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                        </svg>
+                    </button>
+                    <!-- Close Button -->
+                    <button id="chatCloseBtn" class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cerrar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -340,17 +357,102 @@
         const chatWindow = document.getElementById('chatWindow');
         const chatIcon = document.getElementById('chatIcon');
         const closeIcon = document.getElementById('closeIcon');
+        const chatCloseBtn = document.getElementById('chatCloseBtn');
+        const fullWindowToggle = document.getElementById('fullWindowToggle');
+        const maximizeIcon = document.getElementById('maximizeIcon');
+        const minimizeIcon = document.getElementById('minimizeIcon');
+
+        let isFullWindow = false;
+
+        function openChat() {
+            chatWindow.classList.remove('hidden');
+            chatIcon.classList.add('hidden');
+            closeIcon.classList.remove('hidden');
+            // On mobile, prevent background scrolling
+            if (window.innerWidth < 768) {
+                document.body.style.overflow = 'hidden';
+            }
+            // Initialize window state
+            updateFullWindowState();
+        }
+
+        function closeChat() {
+            chatWindow.classList.add('hidden');
+            chatIcon.classList.remove('hidden');
+            closeIcon.classList.add('hidden');
+            isFullWindow = false;
+            updateFullWindowState();
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        function toggleFullWindow() {
+            isFullWindow = !isFullWindow;
+            updateFullWindowState();
+        }
+
+        function updateFullWindowState() {
+            if (isFullWindow) {
+                // Full window mode - covers entire screen
+                chatWindow.classList.remove('md:bottom-24', 'md:right-6', 'md:w-96', 'md:h-[600px]', 'md:rounded-2xl');
+                chatWindow.classList.add('inset-0', 'w-full', 'h-full', 'rounded-none');
+                maximizeIcon.classList.add('hidden');
+                minimizeIcon.classList.remove('hidden');
+            } else {
+                // Normal mode - responsive
+                chatWindow.classList.remove('inset-0', 'w-full', 'h-full', 'rounded-none');
+                // On mobile (< 768px), always full screen
+                if (window.innerWidth < 768) {
+                    chatWindow.classList.add('bottom-0', 'right-0', 'left-0', 'top-0', 'w-full', 'h-full', 'rounded-none');
+                    chatWindow.classList.remove('md:bottom-24', 'md:right-6', 'md:w-96', 'md:h-[600px]', 'md:rounded-2xl');
+                } else {
+                    // On desktop, show as window
+                    chatWindow.classList.add('md:bottom-24', 'md:right-6', 'md:w-96', 'md:h-[600px]', 'md:rounded-2xl');
+                    chatWindow.classList.remove('bottom-0', 'right-0', 'left-0', 'top-0', 'w-full', 'h-full', 'rounded-none');
+                }
+                maximizeIcon.classList.remove('hidden');
+                minimizeIcon.classList.add('hidden');
+            }
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (!isFullWindow && window.innerWidth < 768) {
+                chatWindow.classList.add('bottom-0', 'right-0', 'left-0', 'top-0', 'w-full', 'h-full', 'rounded-none');
+                chatWindow.classList.remove('md:bottom-24', 'md:right-6', 'md:w-96', 'md:h-[600px]', 'md:rounded-2xl');
+            } else if (!isFullWindow && window.innerWidth >= 768) {
+                chatWindow.classList.remove('bottom-0', 'right-0', 'left-0', 'top-0', 'w-full', 'h-full', 'rounded-none');
+                chatWindow.classList.add('md:bottom-24', 'md:right-6', 'md:w-96', 'md:h-[600px]', 'md:rounded-2xl');
+            }
+        });
 
         chatToggle.addEventListener('click', () => {
             const isHidden = chatWindow.classList.contains('hidden');
             if (isHidden) {
-                chatWindow.classList.remove('hidden');
-                chatIcon.classList.add('hidden');
-                closeIcon.classList.remove('hidden');
+                openChat();
             } else {
-                chatWindow.classList.add('hidden');
-                chatIcon.classList.remove('hidden');
-                closeIcon.classList.add('hidden');
+                closeChat();
+            }
+        });
+
+        chatCloseBtn.addEventListener('click', () => {
+            closeChat();
+        });
+
+        fullWindowToggle.addEventListener('click', () => {
+            toggleFullWindow();
+        });
+
+        // Close chat when clicking outside (only in non-full window mode)
+        chatWindow.addEventListener('click', (e) => {
+            if (!isFullWindow && e.target === chatWindow) {
+                closeChat();
+            }
+        });
+
+        // Close chat with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !chatWindow.classList.contains('hidden')) {
+                closeChat();
             }
         });
     </script>

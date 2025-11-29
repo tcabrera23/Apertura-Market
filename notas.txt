@@ -78,3 +78,37 @@ tambien, si el usuario quiere agregar un asset manualmente a una lista o tab ya 
 
 
 https://github.com/ranaroussi/yfinance/blob/main/yfinance/scrapers/fundamentals.py
+
+me quedo impecable la integracion con agentes
+
+
+queda revisas como aparece el watchlist.json 
+el logo con header y footer estandarizados
+el modo dark queda feo los headers de las tablas
+las noticias personalizados recopilan news de tus seguimientos, listas, tabs etc y los ponen en reels de 2 minutos
+uy de repente el panel de account no funca,,,,,,,,,,,,,,,,,
+tampoco esta la conexion al index.html
+agregarle el free trial al plan plus - sacarle el fondo del logo en el dark mode
+agregar alguna seccion de partnerships o clientes utilizando esto
+integrar el calendario de resultados y cambiar las imagenes de reglas
+
+agregar algun background de stock market? 
+agregar un video mostrando: 
+- recibis la alerta por correo
+- panel de dashboards con grafico
+- te agendas la rules
+- ves la seccion de noticas y la personal es con un avatar que engancha tus listas y genera un reel para vos
+
+cambiar el dark mode a un negro mas oscuro como el de apertura ia
+cambiar los colores de los chat widgets y nombres a BullAgent
+
+
+dashboard.html: 
+- agregar logos de los activos 
+- agregar funcionalidad en las tablas de sort asc y desc al tocar en el header de la columna. 
+- agregar una ruedita de configuracion en lugar de "Actualizar" para que el usuario pueda personalizar las vistas de sus tablas y decida que ver (ocultar x columna, filtrar por x condicion, seleccionar el orden)
+- revisar que pasa con la tab de analisis ya que no aparece en mi frontend
+- la tabla creada por el usuario, que se lee desde "watchlist.json", al tocar en su elemento no aparece la tabla
+
+news.html:
+- eliminar la opcion de filtro por fecha, ya que cubre las noticias del dia 
