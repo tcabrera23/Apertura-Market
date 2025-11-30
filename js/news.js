@@ -25,11 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Date filter
-    const dateInput = document.getElementById('dateFilter');
-    dateInput.addEventListener('change', () => {
-        filterNewsByDate(dateInput.value);
-    });
 });
 
 async function loadNews(category) {
@@ -49,14 +44,7 @@ async function loadNews(category) {
         }
 
         currentNews = await response.json();
-
-        // Apply date filter if exists
-        const dateInput = document.getElementById('dateFilter');
-        if (dateInput.value) {
-            filterNewsByDate(dateInput.value);
-        } else {
-            renderNews(currentNews);
-        }
+        renderNews(currentNews);
 
     } catch (error) {
         console.error('Error loading news:', error);
@@ -66,21 +54,6 @@ async function loadNews(category) {
     }
 }
 
-function filterNewsByDate(dateStr) {
-    if (!dateStr) {
-        renderNews(currentNews);
-        return;
-    }
-
-    const selectedDate = new Date(dateStr);
-    const filtered = currentNews.filter(item => {
-        if (!item.published) return false;
-        const itemDate = new Date(item.published);
-        return itemDate.toDateString() === selectedDate.toDateString();
-    });
-
-    renderNews(filtered);
-}
 
 function renderNews(newsItems) {
     const loadingEl = document.getElementById('newsLoading');

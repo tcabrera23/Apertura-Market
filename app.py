@@ -149,6 +149,8 @@ class AssetData(BaseModel):
     book_value: Optional[float] = None
     # Risk metrics
     beta: Optional[float] = None
+    # Logo URL
+    logo_url: Optional[str] = None
 
 # Helper functions
 def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
@@ -168,6 +170,9 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         stock = yf.Ticker(ticker)
         info = stock.info
         hist = stock.history(period="max")
+        
+        # Get logo URL if available
+        logo_url = info.get('logo_url') or info.get('website')
         
         if hist.empty:
             return None
@@ -320,7 +325,8 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             total_cash=float(total_cash) if total_cash else None,
             total_assets=float(total_assets) if total_assets else None,
             book_value=float(book_value) if book_value else None,
-            beta=float(beta) if beta else None
+            beta=float(beta) if beta else None,
+            logo_url=logo_url
         )
         
         # Store in cache

@@ -112,3 +112,15 @@ dashboard.html:
 
 news.html:
 - eliminar la opcion de filtro por fecha, ya que cubre las noticias del dia 
+
+
+ahora funciona visualizar tech pero no analisis
+revisar en mis descargas que deje el pdf de la tab analisis
+agregar algunos activos mas de los populares
+¿No encuentras tu activo? Buscalo! 
+Agregarle la calculadora de interes compuesto si puedo con cosas mas complejas: https://javilinares.com/calculadora-interes-compuesto/
+Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye la pagina
+
+en diferencia vs max se quedo bugueado
+al hacer click en la tab de "configurar vista", no pasa nada. 
+todavia no veo los logos de los activos

@@ -384,19 +384,17 @@ async function loadCustomWatchlists() {
 
             // Add tab content
             const tabContent = document.createElement('div');
-            tabContent.className = 'tab-content';
+            tabContent.className = 'tab-content hidden';
             tabContent.id = `${watchlistName}-tab`;
             tabContent.setAttribute('data-category', watchlistName);
 
             tabContent.innerHTML = `
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900 dark:text-white">${watchlistName}</h2>
-                    <button class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-refresh="${watchlistName}">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-180 transition-transform duration-500">
-                            <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                            <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <button class="flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-config="${watchlistName}" title="Configurar vista">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-90 transition-transform duration-300">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" fill="currentColor"/>
                         </svg>
-                        Actualizar
                     </button>
                 </div>
                 <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="${watchlistName}-loading">
@@ -408,19 +406,19 @@ async function loadCustomWatchlists() {
                         <table class="w-full">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                 <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="name">Activo <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price">Precio <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="pe">P/E <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="roe">ROE <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="beta">Beta <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="volume">Volumen <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="rsi">RSI <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="pe">P/E <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="profit_margin">Profit Margin <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="roe">ROE <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="debt_to_equity">Debt/Equity <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="price_to_book">P/B <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="beta">Beta <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="volume">Volumen <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="rsi">RSI <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="diff">Diferencia vs. Máx <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
                             <tbody id="${watchlistName}-tbody" class="divide-y divide-gray-200 dark:divide-gray-700"></tbody>
@@ -429,9 +427,17 @@ async function loadCustomWatchlists() {
                 </div>
             `;
 
-            // Insert before the closing main tag
-            const main = document.querySelector('.dashboard-main .container');
-            main.appendChild(tabContent);
+            // Insert tab content in the main container (same level as other tabs)
+            const mainContainer = document.querySelector('main > div.max-w-7xl');
+            if (mainContainer) {
+                mainContainer.appendChild(tabContent);
+            } else {
+                // Fallback: find the container that holds other tab contents
+                const firstTab = document.getElementById('tracking-tab');
+                if (firstTab && firstTab.parentElement) {
+                    firstTab.parentElement.appendChild(tabContent);
+                }
+            }
 
             // Add click handler for the new tab
             tabButton.addEventListener('click', () => {
@@ -687,6 +693,12 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
     // Set up sorting
     setupSorting(category);
 
+    // Apply table configuration if available
+    if (typeof getTableConfig === 'function' && typeof applyTableConfiguration === 'function') {
+        const config = getTableConfig(category);
+        applyTableConfiguration(category, config);
+    }
+
     // Show table, hide loading
     if (loadingEl) {
         loadingEl.style.display = 'none';
@@ -729,10 +741,31 @@ function createTableRow(asset, isCrypto = false) {
         return cell;
     };
 
-    // Asset name
+    // Asset name with logo
     const nameCell = document.createElement('td');
     nameCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
-    nameCell.textContent = asset.name;
+    
+    const nameContainer = document.createElement('div');
+    nameContainer.className = 'flex items-center gap-3';
+    
+    // Add logo if available
+    if (asset.logo_url) {
+        const logoImg = document.createElement('img');
+        logoImg.src = asset.logo_url;
+        logoImg.alt = asset.name;
+        logoImg.className = 'w-8 h-8 rounded-full object-cover flex-shrink-0';
+        logoImg.onerror = function() {
+            // Hide logo if it fails to load
+            this.style.display = 'none';
+        };
+        nameContainer.appendChild(logoImg);
+    }
+    
+    const nameText = document.createElement('span');
+    nameText.textContent = asset.name;
+    nameContainer.appendChild(nameText);
+    
+    nameCell.appendChild(nameContainer);
     row.appendChild(nameCell);
 
     // Current price
