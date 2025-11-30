@@ -39,9 +39,14 @@ erDiagram
     users ||--o{ watchlist_assets : posee
     users ||--o{ alerts : recibe
     users ||--o{ payment_transactions : realiza
+    users ||--o{ coupon_redemptions : usa
     
     subscription_plans ||--o{ subscriptions : define
     subscription_plans ||--o{ plan_features : tiene
+    subscription_plans ||--o{ coupons : aplica
+    
+    coupons ||--o{ coupon_redemptions : tiene
+    coupons ||--o{ subscriptions : descuenta
     
     rules ||--o{ alerts : genera
     watchlists ||--o{ watchlist_assets : contiene
@@ -68,11 +73,36 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid plan_id FK
+        uuid coupon_id FK
         string status
         string paypal_subscription_id
         timestamp current_period_start
         timestamp current_period_end
         boolean cancel_at_period_end
+    }
+    
+    coupons {
+        uuid id PK
+        string code
+        string coupon_type
+        uuid plan_id FK
+        decimal discount_amount
+        decimal discount_percent
+        integer duration_months
+        integer max_redemptions
+        integer times_redeemed
+        boolean is_active
+        timestamp valid_from
+        timestamp valid_until
+        timestamp created_at
+    }
+    
+    coupon_redemptions {
+        uuid id PK
+        uuid coupon_id FK
+        uuid user_id FK
+        uuid subscription_id FK
+        timestamp redeemed_at
     }
     
     rules {
@@ -544,6 +574,324 @@ CREATE TRIGGER update_payment_transactions_updated_at
 
 ---
 
+### 9. `coupons` - Códigos de Descuento y Cupones
+
+```sql
+CREATE TABLE public.coupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Código del cupón
+  code TEXT NOT NULL UNIQUE,
+  
+  -- Tipo de cupón
+  coupon_type TEXT NOT NULL, -- 'free_access', 'percentage', 'fixed_amount', 'trial_extension'
+  
+  -- Plan aplicable (NULL = aplica a cualquier plan)
+  plan_id UUID REFERENCES public.subscription_plans(id) ON DELETE SET NULL,
+  
+  -- Descuentos
+  discount_amount DECIMAL(10,2), -- Descuento fijo en USD (ej: $5.00)
+  discount_percent DECIMAL(5,2), -- Descuento porcentual (ej: 25.00 = 25%)
+  
+  -- Duración del descuento/acceso gratuito
+  duration_months INTEGER, -- NULL = permanente, N = N meses
+  
+  -- Límites de uso
+  max_redemptions INTEGER, -- NULL = ilimitado
+  times_redeemed INTEGER DEFAULT 0,
+  
+  -- Usuario específico (para cupones personalizados)
+  restricted_to_email TEXT,
+  
+  -- Estado
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  -- Validez temporal
+  valid_from TIMESTAMPTZ DEFAULT NOW(),
+  valid_until TIMESTAMPTZ, -- NULL = sin fecha límite
+  
+  -- Metadata adicional
+  description TEXT,
+  internal_notes TEXT, -- Notas para admins
+  
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Validaciones
+  CHECK (coupon_type IN ('free_access', 'percentage', 'fixed_amount', 'trial_extension')),
+  CHECK (
+    (coupon_type = 'percentage' AND discount_percent IS NOT NULL AND discount_percent > 0 AND discount_percent <= 100) OR
+    (coupon_type = 'fixed_amount' AND discount_amount IS NOT NULL AND discount_amount > 0) OR
+    (coupon_type IN ('free_access', 'trial_extension'))
+  )
+);
+
+-- Índices
+CREATE INDEX idx_coupons_code ON public.coupons(UPPER(code)); -- Case-insensitive
+CREATE INDEX idx_coupons_active ON public.coupons(is_active) WHERE is_active = TRUE;
+CREATE INDEX idx_coupons_valid ON public.coupons(valid_from, valid_until);
+CREATE INDEX idx_coupons_plan ON public.coupons(plan_id);
+
+-- Trigger updated_at
+CREATE TRIGGER update_coupons_updated_at
+  BEFORE UPDATE ON public.coupons
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Ejemplos de cupones
+INSERT INTO public.coupons (code, coupon_type, plan_id, duration_months, max_redemptions, description, internal_notes) VALUES
+-- Cupón "xym": Acceso gratuito permanente al Plan Pro
+('xym', 'free_access', 
+  (SELECT id FROM public.subscription_plans WHERE name = 'pro'), 
+  NULL, -- Permanente
+  1, -- Solo 1 persona
+  'Acceso gratuito permanente al Plan Pro',
+  'Cupón especial para usuario VIP'),
+
+-- Cupón de descuento 50% por 3 meses en Plan Plus
+('LAUNCH50', 'percentage',
+  (SELECT id FROM public.subscription_plans WHERE name = 'plus'),
+  3, -- 3 meses
+  100, -- Primeros 100 usuarios
+  '50% de descuento por 3 meses en Plan Plus',
+  'Campaña de lanzamiento'),
+
+-- Cupón de $5 de descuento permanente
+('SAVE5', 'fixed_amount',
+  NULL, -- Aplica a cualquier plan
+  NULL, -- Permanente
+  NULL, -- Ilimitado
+  '$5 de descuento en cualquier plan',
+  'Cupón genérico de descuento'),
+
+-- Trial extendido de 30 días
+('TRIAL30', 'trial_extension',
+  NULL,
+  1, -- 1 mes extra
+  500,
+  'Extiende tu trial por 30 días adicionales',
+  'Campaña de prueba extendida');
+```
+
+> [!IMPORTANT]
+> **Tipos de cupones:**
+> - `free_access`: Acceso gratuito sin PayPal (como "xym")
+> - `percentage`: Descuento porcentual
+> - `fixed_amount`: Descuento fijo en USD
+> - `trial_extension`: Extensión del período de prueba
+
+---
+
+### 10. `coupon_redemptions` - Historial de Redenciones
+
+```sql
+CREATE TABLE public.coupon_redemptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Relaciones
+  coupon_id UUID NOT NULL REFERENCES public.coupons(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  subscription_id UUID REFERENCES public.subscriptions(id) ON DELETE SET NULL,
+  
+  -- Timestamp
+  redeemed_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  -- Constraint: un usuario solo puede usar el mismo cupón una vez
+  UNIQUE(coupon_id, user_id)
+);
+
+-- Índices
+CREATE INDEX idx_coupon_redemptions_coupon ON public.coupon_redemptions(coupon_id);
+CREATE INDEX idx_coupon_redemptions_user ON public.coupon_redemptions(user_id);
+CREATE INDEX idx_coupon_redemptions_date ON public.coupon_redemptions(redeemed_at DESC);
+```
+
+---
+
+### Actualizar tabla `subscriptions` para cupones
+
+```sql
+-- Agregar columna coupon_id a subscriptions
+ALTER TABLE public.subscriptions
+ADD COLUMN coupon_id UUID REFERENCES public.coupons(id) ON DELETE SET NULL;
+
+CREATE INDEX idx_subscriptions_coupon ON public.subscriptions(coupon_id);
+```
+
+---
+
+### Funciones de Validación de Cupones
+
+```sql
+-- Función para validar un cupón
+CREATE OR REPLACE FUNCTION validate_coupon(
+  p_code TEXT,
+  p_user_id UUID,
+  p_plan_id UUID
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_coupon RECORD;
+  v_redemptions INTEGER;
+  v_user_has_used BOOLEAN;
+BEGIN
+  -- Obtener cupón (case-insensitive)
+  SELECT * INTO v_coupon
+  FROM public.coupons
+  WHERE UPPER(code) = UPPER(p_code)
+    AND is_active = TRUE;
+  
+  -- Validar existencia
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Cupón no encontrado o inactivo'
+    );
+  END IF;
+  
+  -- Validar fechas
+  IF v_coupon.valid_from > NOW() THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Este cupón aún no es válido'
+    );
+  END IF;
+  
+  IF v_coupon.valid_until IS NOT NULL AND v_coupon.valid_until < NOW() THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Este cupón ha expirado'
+    );
+  END IF;
+  
+  -- Validar límite de usos
+  IF v_coupon.max_redemptions IS NOT NULL 
+     AND v_coupon.times_redeemed >= v_coupon.max_redemptions THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Este cupón ha alcanzado su límite de usos'
+    );
+  END IF;
+  
+  -- Validar restricción de email
+  IF v_coupon.restricted_to_email IS NOT NULL THEN
+    DECLARE
+      v_user_email TEXT;
+    BEGIN
+      SELECT email INTO v_user_email
+      FROM auth.users
+      WHERE id = p_user_id;
+      
+      IF LOWER(v_user_email) != LOWER(v_coupon.restricted_to_email) THEN
+        RETURN jsonb_build_object(
+          'valid', FALSE,
+          'error', 'Este cupón no está disponible para tu cuenta'
+        );
+      END IF;
+    END;
+  END IF;
+  
+  -- Validar plan aplicable
+  IF v_coupon.plan_id IS NOT NULL AND v_coupon.plan_id != p_plan_id THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Este cupón no es válido para el plan seleccionado'
+    );
+  END IF;
+  
+  -- Validar si el usuario ya lo usó
+  SELECT EXISTS(
+    SELECT 1 FROM public.coupon_redemptions
+    WHERE coupon_id = v_coupon.id AND user_id = p_user_id
+  ) INTO v_user_has_used;
+  
+  IF v_user_has_used THEN
+    RETURN jsonb_build_object(
+      'valid', FALSE,
+      'error', 'Ya has usado este cupón anteriormente'
+    );
+  END IF;
+  
+  -- Cupón válido, retornar detalles
+  RETURN jsonb_build_object(
+    'valid', TRUE,
+    'coupon_id', v_coupon.id,
+    'coupon_type', v_coupon.coupon_type,
+    'discount_amount', v_coupon.discount_amount,
+    'discount_percent', v_coupon.discount_percent,
+    'duration_months', v_coupon.duration_months,
+    'plan_id', v_coupon.plan_id,
+    'description', v_coupon.description
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Función para aplicar cupón
+CREATE OR REPLACE FUNCTION apply_coupon(
+  p_coupon_code TEXT,
+  p_user_id UUID,
+  p_subscription_id UUID
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_coupon_id UUID;
+  v_validation JSONB;
+  v_subscription RECORD;
+BEGIN
+  -- Obtener suscripción
+  SELECT * INTO v_subscription
+  FROM public.subscriptions
+  WHERE id = p_subscription_id AND user_id = p_user_id;
+  
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object(
+      'success', FALSE,
+      'error', 'Suscripción no encontrada'
+    );
+  END IF;
+  
+  -- Validar cupón
+  v_validation := validate_coupon(
+    p_coupon_code,
+    p_user_id,
+    v_subscription.plan_id
+  );
+  
+  IF NOT (v_validation->>'valid')::BOOLEAN THEN
+    RETURN jsonb_build_object(
+      'success', FALSE,
+      'error', v_validation->>'error'
+    );
+  END IF;
+  
+  v_coupon_id := (v_validation->>'coupon_id')::UUID;
+  
+  -- Registrar redención
+  INSERT INTO public.coupon_redemptions (coupon_id, user_id, subscription_id)
+  VALUES (v_coupon_id, p_user_id, p_subscription_id);
+  
+  -- Incrementar contador
+  UPDATE public.coupons
+  SET times_redeemed = times_redeemed + 1
+  WHERE id = v_coupon_id;
+  
+  -- Actualizar suscripción
+  UPDATE public.subscriptions
+  SET coupon_id = v_coupon_id
+  WHERE id = p_subscription_id;
+  
+  RETURN jsonb_build_object(
+    'success', TRUE,
+    'message', 'Cupón aplicado exitosamente',
+    'coupon_details', v_validation
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+---
+
 ## Políticas de Seguridad (RLS)
 
 > [!WARNING]
@@ -706,24 +1054,6 @@ CREATE POLICY "Users can update own alerts"
 CREATE POLICY "Service can insert alerts"
   ON public.alerts FOR INSERT
   WITH CHECK (TRUE);
-```
-
-### Políticas para `payment_transactions`
-
-```sql
-CREATE POLICY "Users can view own transactions"
-  ON public.payment_transactions FOR SELECT
-  USING (auth.uid() = user_id);
-
--- Solo el sistema puede insertar/actualizar transacciones
-CREATE POLICY "Service can manage transactions"
-  ON public.payment_transactions FOR ALL
-  USING (auth.jwt() ->> 'role' = 'service_role');
-```
-
----
-
-## Índices y Optimizaciones
 
 ### Funciones Helper para Validación de Límites
 
