@@ -171,8 +171,35 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         info = stock.info
         hist = stock.history(period="max")
         
-        # Get logo URL if available
-        logo_url = info.get('logo_url') or info.get('website')
+        # Get logo URL - try multiple sources
+        logo_url = None
+        if 'logo_url' in info and info.get('logo_url'):
+            logo_url = info.get('logo_url')
+        elif 'website' in info and info.get('website'):
+            # Try to get logo from Clearbit using website domain
+            try:
+                from urllib.parse import urlparse
+                website = info.get('website')
+                if website:
+                    domain = urlparse(website).netloc.replace('www.', '')
+                    logo_url = f"https://logo.clearbit.com/{domain}"
+            except:
+                pass
+        # Fallback: try to construct from ticker (for common stocks)
+        if not logo_url and not ticker.endswith('-USD'):
+            # For stocks, try common domain patterns
+            ticker_lower = ticker.lower()
+            common_domains = {
+                'aapl': 'apple.com',
+                'msft': 'microsoft.com',
+                'googl': 'google.com',
+                'amzn': 'amazon.com',
+                'meta': 'meta.com',
+                'nvda': 'nvidia.com',
+                'tsla': 'tesla.com'
+            }
+            if ticker_lower in common_domains:
+                logo_url = f"https://logo.clearbit.com/{common_domains[ticker_lower]}"
         
         if hist.empty:
             return None
