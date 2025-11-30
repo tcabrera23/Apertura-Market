@@ -44,6 +44,26 @@
         .animate-spin-slow {
             animation: spin 2s linear infinite;
         }
+        
+        /* Drag & Drop styles */
+        .draggable-item {
+            transition: all 0.2s ease;
+        }
+        .draggable-item.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+        .draggable-item:hover {
+            transform: translateX(4px);
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+        .move-up:disabled,
+        .move-down:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -283,8 +303,8 @@
                     </div>
                 </div>
 
-                <!-- Charts Container -->
-                <div class="space-y-6">
+                <!-- Charts Container - React will render here -->
+                <div id="analysis-charts-root"></div>
                     <!-- Treemap Chart -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" id="treemapTitle">Treemap - Capitalización Bursátil y Cash Flow</h3>
@@ -448,11 +468,12 @@
                 </button>
             </div>
             <div class="p-6">
-                <!-- Column Visibility Section -->
+                <!-- Column Visibility and Order Section -->
                 <div class="mb-6">
-                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Columnas Visibles</h4>
-                    <div id="columnVisibility" class="space-y-2 max-h-64 overflow-y-auto">
-                        <!-- Checkboxes will be dynamically generated -->
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Columnas Visibles y Orden</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Arrastra para reordenar • Marca/desmarca para mostrar/ocultar</p>
+                    <div id="columnVisibility" class="space-y-2 max-h-80 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                        <!-- Checkboxes with drag handles will be dynamically generated -->
                     </div>
                 </div>
 
@@ -544,12 +565,17 @@
         </div>
     </div>
 
+    <!-- React and Plotly -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="js/dark-mode.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/table-config.js"></script>
-    <script src="js/analisis.js"></script>
+    <script type="text/babel" src="js/analisis.js"></script>
     <script src="js/investment-chat.js"></script>
 </body>
 

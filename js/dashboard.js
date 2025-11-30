@@ -354,8 +354,8 @@ async function loadCustomWatchlists() {
         const watchlists = await response.json();
         const tabsContainer = document.getElementById('tabsContainer');
 
-        // Remove existing custom watchlist tabs (keep default ones)
-        const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina'];
+        // Remove existing custom watchlist tabs (keep default ones including analisis)
+        const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina', 'analisis'];
         const existingTabs = Array.from(tabsContainer.querySelectorAll('.tab-button'));
         existingTabs.forEach(tab => {
             const tabName = tab.getAttribute('data-tab');
@@ -364,7 +364,7 @@ async function loadCustomWatchlists() {
             }
         });
 
-        // Remove existing custom watchlist tab contents
+        // Remove existing custom watchlist tab contents (but keep default tabs including analisis)
         const existingContents = document.querySelectorAll('.tab-content');
         existingContents.forEach(content => {
             const category = content.getAttribute('data-category');
@@ -475,8 +475,38 @@ async function loadCustomWatchlists() {
             }
         });
 
-        // Re-initialize tabs to include new ones
+        // Re-initialize tabs to include new ones, but preserve current active tab
+        const currentActiveTab = document.querySelector('.tab-button.bg-gradient-to-b');
+        const currentActiveTabName = currentActiveTab ? currentActiveTab.getAttribute('data-tab') : 'tracking';
+        
+        // Re-initialize tabs
         initializeTabs();
+        
+        // Restore the previously active tab if it was analisis
+        if (currentActiveTabName === 'analisis') {
+            const analisisButton = document.querySelector('[data-tab="analisis"]');
+            const analisisTab = document.getElementById('analisis-tab');
+            if (analisisButton && analisisTab) {
+                // Activate analisis tab
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
+                    btn.classList.add('text-gray-600', 'dark:text-gray-400');
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                    content.classList.remove('block');
+                });
+                analisisButton.classList.remove('text-gray-600', 'dark:text-gray-400');
+                analisisButton.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
+                analisisTab.classList.remove('hidden');
+                analisisTab.classList.add('block');
+                
+                // Load analysis data
+                if (typeof loadAnalysisData === 'function') {
+                    loadAnalysisData();
+                }
+            }
+        }
 
         // Update analysis category selector if it exists
         if (typeof updateCategorySelector === 'function') {
@@ -583,6 +613,7 @@ function initializeTabs() {
                 btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
                 btn.classList.add('text-gray-600', 'dark:text-gray-400');
             });
+            // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.add('hidden');
                 content.classList.remove('block');
@@ -726,10 +757,11 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-rsi', asset.rsi || 0);
 
     // Helper function to create a cell
-    const createCell = (value, formatter = null, colorClass = null) => {
+    const createCell = (value, formatter = null, colorClass = null, columnKey = null) => {
         const cell = document.createElement('td');
         cell.className = 'px-4 py-3 text-sm text-gray-600 dark:text-gray-400';
         if (colorClass) cell.className += ' ' + colorClass;
+        if (columnKey) cell.setAttribute('data-column', columnKey);
         
         if (value === null || value === undefined) {
             cell.textContent = 'N/A';
@@ -744,6 +776,7 @@ function createTableRow(asset, isCrypto = false) {
     // Asset name with logo
     const nameCell = document.createElement('td');
     nameCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
+    nameCell.setAttribute('data-column', 'name');
     
     const nameContainer = document.createElement('div');
     nameContainer.className = 'flex items-center gap-3';
@@ -769,16 +802,17 @@ function createTableRow(asset, isCrypto = false) {
     row.appendChild(nameCell);
 
     // Current price
-    row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300'));
+    row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300', 'price'));
 
     if (isCrypto) {
         // Crypto columns: Market Cap, Volume, Max, Diff
-        row.appendChild(createCell(asset.market_cap, formatLargeNumber));
-        row.appendChild(createCell(asset.volume, formatNumber));
-        row.appendChild(createCell(asset.all_time_high, formatCurrency));
+        row.appendChild(createCell(asset.market_cap, formatLargeNumber, null, 'market_cap'));
+        row.appendChild(createCell(asset.volume, formatNumber, null, 'volume'));
+        row.appendChild(createCell(asset.all_time_high, formatCurrency, null, 'max'));
         
         const diffCell = document.createElement('td');
         diffCell.className = 'px-4 py-3 font-semibold';
+        diffCell.setAttribute('data-column', 'diff');
         if (asset.diff_from_max >= -0.001) {
             diffCell.className += ' text-green-500 dark:text-green-400';
             diffCell.innerHTML = '✅ En Máx';
@@ -789,11 +823,11 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(diffCell);
     } else {
         // Stock columns: P/E, Revenue, Revenue Growth, Profit Margin, ROE, Debt/Equity, P/B, Beta, Volume, RSI
-        row.appendChild(createCell(asset.pe_ratio, (v) => v.toFixed(2)));
-        row.appendChild(createCell(asset.revenue, formatLargeNumber));
+        row.appendChild(createCell(asset.pe_ratio, (v) => v.toFixed(2), null, 'pe'));
+        row.appendChild(createCell(asset.revenue, formatLargeNumber, null, 'revenue'));
         
         // Revenue Growth with color coding
-        const revGrowthCell = createCell(asset.revenue_growth, (v) => (v * 100).toFixed(2) + '%');
+        const revGrowthCell = createCell(asset.revenue_growth, (v) => (v * 100).toFixed(2) + '%', null, 'revenue_growth');
         if (asset.revenue_growth !== null && asset.revenue_growth > 0) {
             revGrowthCell.className += ' text-green-500 dark:text-green-400';
         } else if (asset.revenue_growth !== null && asset.revenue_growth < 0) {
@@ -802,7 +836,7 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(revGrowthCell);
         
         // Profit Margin
-        const profitMarginCell = createCell(asset.profit_margin, (v) => (v * 100).toFixed(2) + '%');
+        const profitMarginCell = createCell(asset.profit_margin, (v) => (v * 100).toFixed(2) + '%', null, 'profit_margin');
         if (asset.profit_margin !== null && asset.profit_margin > 0.1) {
             profitMarginCell.className += ' text-green-500 dark:text-green-400';
         } else if (asset.profit_margin !== null && asset.profit_margin < 0) {
@@ -811,7 +845,7 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(profitMarginCell);
         
         // ROE with color coding
-        const roeCell = createCell(asset.return_on_equity, (v) => (v * 100).toFixed(2) + '%');
+        const roeCell = createCell(asset.return_on_equity, (v) => (v * 100).toFixed(2) + '%', null, 'roe');
         if (asset.return_on_equity !== null && asset.return_on_equity > 0.15) {
             roeCell.className += ' text-green-500 dark:text-green-400';
         } else if (asset.return_on_equity !== null && asset.return_on_equity < 0) {
@@ -820,13 +854,13 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(roeCell);
         
         // Debt/Equity
-        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2)));
+        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2), null, 'debt_to_equity'));
         
         // P/B
-        row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2)));
+        row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2), null, 'price_to_book'));
         
         // Beta
-        const betaCell = createCell(asset.beta, (v) => v.toFixed(2));
+        const betaCell = createCell(asset.beta, (v) => v.toFixed(2), null, 'beta');
         if (asset.beta !== null) {
             if (asset.beta > 1.5) {
                 betaCell.className += ' text-red-500 dark:text-red-400';
@@ -837,10 +871,10 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(betaCell);
         
         // Volume
-        row.appendChild(createCell(asset.volume, formatNumber));
+        row.appendChild(createCell(asset.volume, formatNumber, null, 'volume'));
         
         // RSI with color coding
-        const rsiCell = createCell(asset.rsi, (v) => v.toFixed(2));
+        const rsiCell = createCell(asset.rsi, (v) => v.toFixed(2), null, 'rsi');
         if (asset.rsi !== null) {
             if (asset.rsi > 70) {
                 rsiCell.className += ' text-red-500 dark:text-red-400';
@@ -853,6 +887,7 @@ function createTableRow(asset, isCrypto = false) {
         // Difference from max
         const diffCell = document.createElement('td');
         diffCell.className = 'px-4 py-3 font-semibold';
+        diffCell.setAttribute('data-column', 'diff');
         if (asset.diff_from_max >= -0.001) {
             diffCell.className += ' text-green-500 dark:text-green-400';
             diffCell.innerHTML = '✅ En Máx';

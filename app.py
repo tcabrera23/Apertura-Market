@@ -8,10 +8,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel
 from cachetools import TTLCache
 import uvicorn
-import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
-import matplotlib.pyplot as plt
-import seaborn as sns
+
 import io
 import base64
 import json
@@ -525,7 +522,7 @@ async def get_asset_history(ticker: str, period: str = "1y", interval: str = "1d
 
 @app.get("/api/chart/treemap")
 async def get_treemap_chart(category: str = "tracking", metric: str = "market_cap"):
-    """Generate treemap chart as image"""
+    """Get treemap chart data for Plotly"""
     try:
         # Get data based on category
         data = []
@@ -569,11 +566,14 @@ async def get_treemap_chart(category: str = "tracking", metric: str = "market_ca
         if not data:
             raise HTTPException(status_code=404, detail="No data available")
         
-        # Prepare chart data
+        # Prepare chart data for Plotly
         labels = []
         values = []
+        names = []
         for asset in data:
-            labels.append(asset.get('ticker', ''))
+            ticker = asset.get('ticker', '')
+            labels.append(ticker)
+            names.append(asset.get('name', ticker))
             if metric == "market_cap":
                 values.append(asset.get('market_cap', 0) or 0)
             elif metric == "cash_flow":
@@ -585,46 +585,30 @@ async def get_treemap_chart(category: str = "tracking", metric: str = "market_ca
                 values.append(0)
         
         # Filter out zero values
-        filtered_data = [(l, v) for l, v in zip(labels, values) if v > 0]
+        filtered_data = [(l, v, n) for l, v, n in zip(labels, values, names) if v > 0]
         if not filtered_data:
             raise HTTPException(status_code=404, detail="No valid data for chart")
         
-        labels, values = zip(*sorted(filtered_data, key=lambda x: x[1], reverse=True))
+        # Sort by value descending
+        filtered_data.sort(key=lambda x: x[1], reverse=True)
+        labels, values, names = zip(*filtered_data)
         
-        # Create chart
-        plt.style.use('dark_background' if False else 'default')
-        fig, ax = plt.subplots(figsize=(12, 8))
-        
-        # Create horizontal bar chart (treemap-like)
-        colors = sns.color_palette("Greens", len(labels))
-        bars = ax.barh(range(len(labels)), values, color=colors)
-        
-        ax.set_yticks(range(len(labels)))
-        ax.set_yticklabels(labels)
-        ax.set_xlabel('Value' if metric == "market_cap" else ("Volume" if is_crypto else "Cash Flow"))
-        ax.set_title(f"{'Market Cap' if metric == 'market_cap' else ('Volume' if is_crypto else 'Cash Flow')} by Asset")
-        ax.grid(axis='x', alpha=0.3)
-        
-        # Format x-axis
-        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, p: f'${x/1e9:.2f}B' if x >= 1e9 else f'${x/1e6:.2f}M' if x >= 1e6 else f'${x/1e3:.2f}K'))
-        
-        plt.tight_layout()
-        
-        # Save to bytes
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
-        img_buffer.seek(0)
-        plt.close()
-        
-        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        # Return data for Plotly treemap
+        return {
+            "labels": list(labels),
+            "values": list(values),
+            "names": list(names),
+            "metric": metric,
+            "is_crypto": is_crypto
+        }
         
     except Exception as e:
-        print(f"Error generating treemap chart: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
+        print(f"Error generating treemap chart data: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart data: {str(e)}")
 
 @app.get("/api/chart/bar")
 async def get_bar_chart(category: str = "tracking", metric: str = "revenue_growth"):
-    """Generate bar chart as image"""
+    """Get bar chart data for Plotly"""
     try:
         # Get data based on category
         data = []
@@ -667,13 +651,16 @@ async def get_bar_chart(category: str = "tracking", metric: str = "revenue_growt
         if not data:
             raise HTTPException(status_code=404, detail="No data available")
         
-        # Prepare data
+        # Prepare data for Plotly
         labels = []
         values = []
+        names = []
         colors_list = []
         
         for asset in data:
-            labels.append(asset.get('ticker', ''))
+            ticker = asset.get('ticker', '')
+            labels.append(ticker)
+            names.append(asset.get('name', ticker))
             value = 0
             if metric == "revenue_growth":
                 value = (asset.get('revenue_growth', 0) or 0) * 100
@@ -687,18 +674,11 @@ async def get_bar_chart(category: str = "tracking", metric: str = "revenue_growt
                 value = (asset.get('diff_from_max', 0) or 0) * 100
             
             values.append(value)
-            colors_list.append('#22c55e' if value >= 0 else '#ef4444')
+            colors_list.append('rgba(34, 197, 94, 0.7)' if value >= 0 else 'rgba(239, 68, 68, 0.7)')
         
         # Sort by value
-        sorted_data = sorted(zip(labels, values, colors_list), key=lambda x: x[1], reverse=True)
-        labels, values, colors_list = zip(*sorted_data)
-        
-        # Create chart
-        fig, ax = plt.subplots(figsize=(12, 6))
-        bars = ax.bar(range(len(labels)), values, color=colors_list)
-        
-        ax.set_xticks(range(len(labels)))
-        ax.set_xticklabels(labels, rotation=45, ha='right')
+        sorted_data = sorted(zip(labels, values, names, colors_list), key=lambda x: x[1], reverse=True)
+        labels, values, names, colors_list = zip(*sorted_data)
         
         metric_titles = {
             "revenue_growth": "Revenue Growth (%)",
@@ -707,27 +687,25 @@ async def get_bar_chart(category: str = "tracking", metric: str = "revenue_growt
             "pe": "P/E Ratio",
             "diff_max": "Difference vs Maximum (%)"
         }
-        ax.set_ylabel(metric_titles.get(metric, metric))
-        ax.set_title(f"{metric_titles.get(metric, metric)} by Asset")
-        ax.grid(axis='y', alpha=0.3)
-        ax.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
         
-        plt.tight_layout()
-        
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
-        img_buffer.seek(0)
-        plt.close()
-        
-        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        # Return data for Plotly bar chart
+        return {
+            "labels": list(labels),
+            "values": list(values),
+            "names": list(names),
+            "colors": list(colors_list),
+            "metric": metric,
+            "metric_title": metric_titles.get(metric, metric),
+            "is_crypto": is_crypto
+        }
         
     except Exception as e:
-        print(f"Error generating bar chart: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
+        print(f"Error generating bar chart data: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart data: {str(e)}")
 
 @app.get("/api/chart/line")
 async def get_line_chart(ticker: str, period: str = "1y"):
-    """Generate line chart as image"""
+    """Get line chart data for Plotly"""
     try:
         stock = yf.Ticker(ticker)
         hist = stock.history(period=period, interval="1d")
@@ -735,33 +713,21 @@ async def get_line_chart(ticker: str, period: str = "1y"):
         if hist.empty:
             raise HTTPException(status_code=404, detail=f"No historical data found for {ticker}")
         
-        # Create chart
-        fig, ax = plt.subplots(figsize=(12, 6))
+        # Convert to lists for Plotly
+        dates = [date.strftime("%Y-%m-%d") for date in hist.index]
+        prices = [float(price) for price in hist['Close']]
         
-        ax.plot(hist.index, hist['Close'], color='#22c55e', linewidth=2, label='Close Price')
-        ax.fill_between(hist.index, hist['Close'], alpha=0.3, color='#22c55e')
-        
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Price (USD)')
-        ax.set_title(f'{ticker} - Historical Price')
-        ax.grid(True, alpha=0.3)
-        ax.legend()
-        
-        # Format x-axis dates
-        fig.autofmt_xdate()
-        
-        plt.tight_layout()
-        
-        img_buffer = io.BytesIO()
-        plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
-        img_buffer.seek(0)
-        plt.close()
-        
-        return Response(content=img_buffer.getvalue(), media_type="image/png")
+        # Return data for Plotly line chart
+        return {
+            "dates": dates,
+            "prices": prices,
+            "ticker": ticker,
+            "period": period
+        }
         
     except Exception as e:
-        print(f"Error generating line chart: {e}")
-        raise HTTPException(status_code=500, detail=f"Error generating chart: {str(e)}")
+        print(f"Error generating line chart data: {e}")
+        raise HTTPException(status_code=500, detail=f"Error generating chart data: {str(e)}")
 
 # News endpoint
 @app.get("/api/news")

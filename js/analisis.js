@@ -1,517 +1,539 @@
-// BullAnalytics - Analysis Charts JavaScript
+// BullAnalytics - Analysis Charts with React and Plotly
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
-let treemapChart = null;
-let barChart = null;
-let lineChart = null;
 let currentCategory = 'tracking';
 let currentData = [];
 
-// Initialize analysis tab
+// React Components for Charts
+const { useState, useEffect, useRef } = React;
+
+// Treemap Chart Component
+function TreemapChart({ data, metric, category }) {
+    const chartRef = useRef(null);
+
+    useEffect(() => {
+        if (!data || data.length === 0 || !chartRef.current) return;
+
+        const isCrypto = category === 'crypto';
+        let chartData = data;
+
+        // Filter out crypto for non-crypto categories
+        if (!isCrypto) {
+            chartData = data.filter(asset => !asset.ticker?.includes('-USD'));
+        }
+
+        // Fetch chart data from backend
+        fetch(`${API_BASE_URL}/chart/treemap?category=${category}&metric=${metric}`)
+            .then(res => res.json())
+            .then(chartData => {
+                if (!chartData.labels || chartData.labels.length === 0) {
+                    chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">No hay datos disponibles</div>';
+                    return;
+                }
+
+                const plotData = [{
+                    type: 'treemap',
+                    labels: chartData.labels,
+                    parents: chartData.labels.map(() => ''),
+                    values: chartData.values,
+                    textinfo: 'label+value',
+                    texttemplate: '<b>%{label}</b><br>%{value:,.0f}',
+                    hovertemplate: '<b>%{label}</b><br>%{value:,.0f}<extra></extra>',
+                    marker: {
+                        colors: chartData.values,
+                        colorscale: 'Greens',
+                        showscale: true,
+                        colorbar: {
+                            title: metric === 'market_cap' ? 'Capitalización' : (chartData.is_crypto ? 'Volumen' : 'Cash Flow')
+                        }
+                    }
+                }];
+
+                const layout = {
+                    title: {
+                        text: metric === 'market_cap' 
+                            ? 'Capitalización Bursátil' 
+                            : (chartData.is_crypto ? 'Volumen' : 'Cash Flow'),
+                        font: { size: 16 }
+                    },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: {
+                        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+                    }
+                };
+
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                    displaylogo: false
+                };
+
+                Plotly.newPlot(chartRef.current, plotData, layout, config);
+            })
+            .catch(error => {
+                console.error('Error loading treemap chart:', error);
+                chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 dark:text-red-400">Error al cargar el gráfico</div>';
+            });
+    }, [data, metric, category]);
+
+    return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
+}
+
+// Bar Chart Component
+function BarChart({ data, metric, category }) {
+    const chartRef = useRef(null);
+
+    useEffect(() => {
+        if (!data || data.length === 0 || !chartRef.current) return;
+
+        const isCrypto = category === 'crypto';
+
+        // Check if metric is available for crypto
+        if ((metric === 'pe' || metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe') && isCrypto) {
+            chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Esta métrica no está disponible para criptomonedas</div>';
+            return;
+        }
+
+        // Fetch chart data from backend
+        fetch(`${API_BASE_URL}/chart/bar?category=${category}&metric=${metric}`)
+            .then(res => res.json())
+            .then(chartData => {
+                if (!chartData.labels || chartData.labels.length === 0) {
+                    chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">No hay datos disponibles</div>';
+                    return;
+                }
+
+                const plotData = [{
+                    type: 'bar',
+                    x: chartData.values,
+                    y: chartData.labels,
+                    orientation: 'h',
+                    marker: {
+                        color: chartData.colors,
+                        line: {
+                            color: chartData.colors.map(c => c.replace('0.7', '1')),
+                            width: 1
+                        }
+                    },
+                    text: chartData.values.map(val => val.toFixed(2)),
+                    textposition: 'auto',
+                    hovertemplate: '<b>%{y}</b><br>%{x:.2f}<extra></extra>'
+                }];
+
+                const layout = {
+                    title: {
+                        text: chartData.metric_title || metric,
+                        font: { size: 16 }
+                    },
+                    xaxis: {
+                        title: chartData.metric_title || metric,
+                        showgrid: true,
+                        gridcolor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                    },
+                    yaxis: {
+                        showgrid: true,
+                        gridcolor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                    },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: {
+                        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+                    },
+                    margin: { l: 150, r: 50, t: 50, b: 50 }
+                };
+
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                    displaylogo: false
+                };
+
+                Plotly.newPlot(chartRef.current, plotData, layout, config);
+            })
+            .catch(error => {
+                console.error('Error loading bar chart:', error);
+                chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 dark:text-red-400">Error al cargar el gráfico</div>';
+            });
+    }, [data, metric, category]);
+
+    return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
+}
+
+// Line Chart Component
+function LineChart({ ticker, period }) {
+    const chartRef = useRef(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!ticker || !chartRef.current) return;
+
+        setLoading(true);
+        
+        // Use the chart endpoint that returns Plotly data
+        fetch(`${API_BASE_URL}/chart/line?ticker=${ticker}&period=${period}`)
+            .then(res => res.json())
+            .then(chartData => {
+                if (!chartData.dates || chartData.dates.length === 0) {
+                    chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">No hay datos disponibles para este período</div>';
+                    setLoading(false);
+                    return;
+                }
+
+                const plotData = [{
+                    type: 'scatter',
+                    mode: 'lines',
+                    x: chartData.dates,
+                    y: chartData.prices,
+                    line: {
+                        color: 'rgba(34, 197, 94, 1)',
+                        width: 2
+                    },
+                    fill: 'tozeroy',
+                    fillcolor: 'rgba(34, 197, 94, 0.2)',
+                    hovertemplate: '<b>%{x}</b><br>Precio: $%{y:.2f}<extra></extra>'
+                }];
+
+                const layout = {
+                    title: {
+                        text: `Precio Histórico - ${chartData.ticker}`,
+                        font: { size: 16 }
+                    },
+                    xaxis: {
+                        title: 'Fecha',
+                        showgrid: true,
+                        gridcolor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                    },
+                    yaxis: {
+                        title: 'Precio (USD)',
+                        showgrid: true,
+                        gridcolor: document.documentElement.classList.contains('dark') ? '#374151' : '#e5e7eb'
+                    },
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    font: {
+                        color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#374151'
+                    }
+                };
+
+                const config = {
+                    responsive: true,
+                    displayModeBar: true,
+                    modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d'],
+                    displaylogo: false
+                };
+
+                Plotly.newPlot(chartRef.current, plotData, layout, config);
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error('Error loading line chart:', error);
+                chartRef.current.innerHTML = '<div class="flex items-center justify-center h-full text-red-500 dark:text-red-400">Error al cargar el gráfico</div>';
+                setLoading(false);
+            });
+    }, [ticker, period]);
+
+    if (loading) {
+        return <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Cargando...</div>;
+    }
+
+    return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
+}
+
+// Main Analysis Component
+function AnalysisCharts() {
+    const [category, setCategory] = useState('tracking');
+    const [data, setData] = useState([]);
+    const [treemapMetric, setTreemapMetric] = useState('market_cap');
+    const [barMetric, setBarMetric] = useState('revenue_growth');
+    const [lineTicker, setLineTicker] = useState('');
+    const [linePeriod, setLinePeriod] = useState('1y');
+    const [lineChartAssets, setLineChartAssets] = useState([]);
+
+    // Load data when category changes
+    useEffect(() => {
+        loadAnalysisData(category);
+    }, [category]);
+
+    // Update line chart assets when data changes
+    useEffect(() => {
+        if (data && data.length > 0) {
+            const isCrypto = category === 'crypto';
+            const filteredData = isCrypto ? data : data.filter(asset => !asset.ticker?.includes('-USD'));
+            setLineChartAssets(filteredData);
+            
+            // Set first asset as default if none selected
+            if (!lineTicker && filteredData.length > 0) {
+                setLineTicker(filteredData[0].ticker);
+            }
+        }
+    }, [data, category]);
+
+    async function loadAnalysisData(cat) {
+        try {
+            let endpoint = '';
+            switch (cat) {
+                case 'tracking':
+                    endpoint = '/tracking-assets';
+                    break;
+                case 'portfolio':
+                    endpoint = '/portfolio-assets';
+                    break;
+                case 'crypto':
+                    endpoint = '/crypto-assets';
+                    break;
+                case 'argentina':
+                    endpoint = '/argentina-assets';
+                    break;
+                default:
+                    endpoint = `/watchlist/${cat}`;
+            }
+
+            const response = await fetch(`${API_BASE_URL}${endpoint}`);
+            if (!response.ok) {
+                throw new Error('Error loading data');
+            }
+
+            const result = await response.json();
+            setData(result);
+            currentCategory = cat;
+            currentData = result;
+        } catch (error) {
+            console.error('Error loading analysis data:', error);
+            setData([]);
+        }
+    }
+
+    // Update category selector with custom watchlists
+    useEffect(() => {
+        async function updateCategorySelector() {
+            const categorySelect = document.getElementById('analisisCategory');
+            if (!categorySelect) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/watchlists`);
+                if (!response.ok) return;
+
+                const watchlists = await response.json();
+                const watchlistNames = Object.keys(watchlists);
+                
+                // Remove existing custom watchlist options
+                const existingOptions = Array.from(categorySelect.querySelectorAll('option'));
+                existingOptions.forEach(opt => {
+                    if (!['tracking', 'portfolio', 'crypto', 'argentina', 'analisis'].includes(opt.value)) {
+                        opt.remove();
+                    }
+                });
+
+                // Add custom watchlist options
+                watchlistNames.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    categorySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error updating category selector:', error);
+            }
+        }
+
+        updateCategorySelector();
+    }, []);
+
+    // Sync category with external selector on mount and when it changes
+    useEffect(() => {
+        const categorySelect = document.getElementById('analisisCategory');
+        if (categorySelect) {
+            const selectedCategory = categorySelect.value || 'tracking';
+            if (selectedCategory !== category) {
+                setCategory(selectedCategory);
+            }
+            
+            // Listen for external changes to the selector
+            const handleChange = (e) => {
+                if (e.target.value !== category) {
+                    setCategory(e.target.value);
+                }
+            };
+            categorySelect.addEventListener('change', handleChange);
+            return () => categorySelect.removeEventListener('change', handleChange);
+        }
+    }, [category]);
+
+    return (
+        <div className="space-y-6">
+            {/* Treemap Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                    {treemapMetric === 'market_cap' 
+                        ? 'Treemap - Capitalización Bursátil' 
+                        : (category === 'crypto' ? 'Treemap - Volumen' : 'Treemap - Cash Flow')}
+                </h3>
+                <div className="flex gap-4 mb-4">
+                    <button 
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                            treemapMetric === 'market_cap'
+                                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                                : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        }`}
+                        onClick={() => setTreemapMetric('market_cap')}
+                    >
+                        Capitalización Bursátil
+                    </button>
+                    <button 
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                            treemapMetric === 'cash_flow'
+                                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                                : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                        }`}
+                        onClick={() => setTreemapMetric('cash_flow')}
+                    >
+                        {category === 'crypto' ? 'Volumen' : 'Cash Flow'}
+                    </button>
+                </div>
+                <div className="h-96">
+                    {data.length > 0 ? (
+                        <TreemapChart data={data} metric={treemapMetric} category={category} />
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                            Selecciona una categoría para ver el gráfico
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Bar Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Gráfico de Barras</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                    {['revenue_growth', 'profit_margin', 'roe', 'pe', 'diff_max'].map(metric => (
+                        <button
+                            key={metric}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                barMetric === metric
+                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                                    : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                            }`}
+                            onClick={() => setBarMetric(metric)}
+                        >
+                            {metric === 'revenue_growth' ? 'Revenue Growth' :
+                             metric === 'profit_margin' ? 'Profit Margin' :
+                             metric === 'roe' ? 'ROE' :
+                             metric === 'pe' ? 'P/E Ratio' :
+                             'Diff vs Máx'}
+                        </button>
+                    ))}
+                </div>
+                <div className="h-96">
+                    {data.length > 0 ? (
+                        <BarChart data={data} metric={barMetric} category={category} />
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                            Selecciona una categoría para ver el gráfico
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Line Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Gráfico de Líneas - Precio Histórico</h3>
+                <div className="flex flex-wrap items-center gap-4 mb-4">
+                    <select 
+                        value={lineTicker}
+                        onChange={(e) => setLineTicker(e.target.value)}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    >
+                        <option value="">Selecciona un activo</option>
+                        {lineChartAssets.map(asset => (
+                            <option key={asset.ticker} value={asset.ticker}>
+                                {asset.name || asset.ticker}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="flex gap-2">
+                        {['1d', '5d', '1mo', '6mo', '1y', 'max'].map(period => (
+                            <button
+                                key={period}
+                                className={`px-3 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                    linePeriod === period
+                                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                                        : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                                }`}
+                                onClick={() => setLinePeriod(period)}
+                            >
+                                {period === '1d' ? '1 día' :
+                                 period === '5d' ? '5 D' :
+                                 period === '1mo' ? '1 mes' :
+                                 period === '6mo' ? '6 M' :
+                                 period === '1y' ? '1 año' :
+                                 'MÁX'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="h-96">
+                    {lineTicker ? (
+                        <LineChart ticker={lineTicker} period={linePeriod} />
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                            Selecciona un activo para ver el gráfico
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     const analisisTab = document.getElementById('analisis-tab');
     if (!analisisTab) return;
 
-    // Category selector
+    // Find or create root element
+    let root = document.getElementById('analysis-charts-root');
+    if (!root) {
+        root = document.createElement('div');
+        root.id = 'analysis-charts-root';
+        // Find the container after the category selector
+        const categoryContainer = analisisTab.querySelector('.mb-6');
+        if (categoryContainer && categoryContainer.nextSibling) {
+            categoryContainer.parentNode.insertBefore(root, categoryContainer.nextSibling);
+        } else {
+            analisisTab.appendChild(root);
+        }
+    }
+
+    // Category selector handler - sync with React component
     const categorySelect = document.getElementById('analisisCategory');
     if (categorySelect) {
-        categorySelect.addEventListener('change', async (e) => {
+        categorySelect.addEventListener('change', (e) => {
             currentCategory = e.target.value;
-            await loadAnalysisData();
-        });
-    }
-
-    // Treemap metric buttons
-    document.querySelectorAll('.treemap-metric').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.treemap-metric').forEach(b => {
-                b.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-                b.classList.add('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            });
-            btn.classList.remove('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            btn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-            updateTreemapChart(btn.getAttribute('data-metric'));
-        });
-    });
-
-    // Bar chart metric buttons
-    document.querySelectorAll('.bar-metric').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.bar-metric').forEach(b => {
-                b.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-                b.classList.add('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            });
-            btn.classList.remove('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            btn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-            updateBarChart(btn.getAttribute('data-metric'));
-        });
-    });
-
-    // Line chart period buttons
-    document.querySelectorAll('.line-period').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            document.querySelectorAll('.line-period').forEach(b => {
-                b.classList.remove('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-                b.classList.add('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            });
-            btn.classList.remove('bg-white', 'dark:bg-gray-700', 'border', 'border-gray-300', 'dark:border-gray-600', 'text-gray-700', 'dark:text-gray-300');
-            btn.classList.add('bg-gradient-to-r', 'from-green-500', 'to-green-600', 'text-white');
-            const period = btn.getAttribute('data-period');
-            const assetSelect = document.getElementById('lineChartAsset');
-            if (assetSelect && assetSelect.value) {
-                await loadLineChart(assetSelect.value, period);
-            }
-        });
-    });
-
-    // Line chart asset selector
-    const assetSelect = document.getElementById('lineChartAsset');
-    if (assetSelect) {
-        assetSelect.addEventListener('change', async (e) => {
-            const ticker = e.target.value;
-            const activePeriod = document.querySelector('.line-period.bg-gradient-to-r')?.getAttribute('data-period') || '1y';
-            if (ticker) {
-                await loadLineChart(ticker, activePeriod);
+            // Re-render React component with new category
+            const root = document.getElementById('analysis-charts-root');
+            if (root) {
+                ReactDOM.render(<AnalysisCharts />, root);
             }
         });
     }
 
-    // Load data when analysis tab is clicked
-    const analisisTabButton = document.querySelector('[data-tab="analisis"]');
-    if (analisisTabButton) {
-        analisisTabButton.addEventListener('click', async () => {
-            await updateCategorySelector();
-            await loadAnalysisData();
-        });
-    }
+    // Initial render
+    ReactDOM.render(<AnalysisCharts />, root);
 });
 
-// Update category selector with custom watchlists
-async function updateCategorySelector() {
+// Export for use in dashboard.js
+window.loadAnalysisData = async function(category) {
+    currentCategory = category;
     const categorySelect = document.getElementById('analisisCategory');
-    if (!categorySelect) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/watchlists`);
-        if (!response.ok) return;
-
-        const watchlists = await response.json();
-        const watchlistNames = Object.keys(watchlists);
-
-        // Remove existing custom watchlist options (keep default ones)
-        const defaultOptions = ['tracking', 'portfolio', 'crypto', 'argentina'];
-        Array.from(categorySelect.options).forEach(option => {
-            if (!defaultOptions.includes(option.value)) {
-                option.remove();
-            }
-        });
-
-        // Add custom watchlist options
-        watchlistNames.forEach(name => {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            categorySelect.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Error updating category selector:', error);
+    if (categorySelect) {
+        categorySelect.value = category;
     }
-}
-
-async function loadAnalysisData() {
-    try {
-        let endpoint = '';
-        switch (currentCategory) {
-            case 'tracking':
-                endpoint = '/tracking-assets';
-                break;
-            case 'portfolio':
-                endpoint = '/portfolio-assets';
-                break;
-            case 'crypto':
-                endpoint = '/crypto-assets';
-                break;
-            case 'argentina':
-                endpoint = '/argentina-assets';
-                break;
-            default:
-                // Try custom watchlist
-                endpoint = `/watchlist/${currentCategory}`;
-        }
-
-        const response = await fetch(`${API_BASE_URL}${endpoint}`);
-        if (!response.ok) {
-            throw new Error('Error loading data');
-        }
-
-        currentData = await response.json();
-        
-        // Filter out crypto if needed (for non-crypto categories)
-        const isCryptoCategory = currentCategory === 'crypto';
-        const filteredData = isCryptoCategory ? currentData : currentData.filter(asset => {
-            // Check if it's a crypto ticker
-            return !asset.ticker.includes('-USD');
-        });
-
-        // Update charts
-        updateTreemapChart('market_cap');
-        updateBarChart('revenue_growth');
-        
-        // Update line chart asset selector
-        updateLineChartSelector(filteredData);
-
-    } catch (error) {
-        console.error('Error loading analysis data:', error);
+    const root = document.getElementById('analysis-charts-root');
+    if (root) {
+        ReactDOM.render(<AnalysisCharts />, root);
     }
-}
-
-function updateTreemapChart(metric) {
-    const ctx = document.getElementById('treemapChart');
-    if (!ctx) return;
-
-    // Update title
-    const titleEl = document.getElementById('treemapTitle');
-    if (titleEl) {
-        if (metric === 'market_cap') {
-            titleEl.textContent = 'Treemap - Capitalización Bursátil';
-        } else if (metric === 'cash_flow') {
-            const isCrypto = currentCategory === 'crypto';
-            titleEl.textContent = isCrypto ? 'Treemap - Volumen' : 'Treemap - Cash Flow';
-        }
-    }
-    
-    // Load chart image from backend
-    const img = document.createElement('img');
-    img.src = `${API_BASE_URL}/chart/treemap?category=${currentCategory}&metric=${metric}`;
-    img.className = 'w-full h-full object-contain';
-    img.alt = 'Treemap Chart';
-    img.onerror = () => {
-        ctx.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Error al cargar el gráfico</div>';
-    };
-    
-    ctx.innerHTML = '';
-    ctx.appendChild(img);
-
-    // Destroy existing chart
-    if (treemapChart) {
-        treemapChart.destroy();
-    }
-
-    // Prepare data
-    const chartData = data.map(asset => {
-        let value = 0;
-        if (metric === 'market_cap') {
-            value = asset.market_cap || 0;
-        } else if (metric === 'cash_flow') {
-            // For crypto, cash flow is not available, use volume as alternative
-            if (isCrypto) {
-                value = asset.volume || 0;
-            } else {
-                value = Math.abs(asset.cash_flow || 0);
-            }
-        }
-
-        return {
-            x: asset.ticker,
-            y: value,
-            v: value
-        };
-    }).filter(item => item.y > 0);
-
-    if (chartData.length === 0) {
-        ctx.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">No hay datos disponibles para esta métrica</div>';
-        return;
-    }
-
-    // Create canvas if needed
-    if (!ctx.querySelector('canvas')) {
-        ctx.innerHTML = '<canvas></canvas>';
-    }
-
-    const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#e5e7eb' : '#374151';
-    const bgColor = isDark ? '#1f2937' : '#ffffff';
-
-    // Sort data by value (descending)
-    chartData.sort((a, b) => b.v - a.v);
-
-    const labels = chartData.map(d => d.x);
-    const values = chartData.map(d => d.v);
-    const maxValue = Math.max(...values);
-
-    treemapChart = new Chart(ctx.querySelector('canvas'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: (metric === 'market_cap' ? 'Capitalización Bursátil' : 
-                       (isCrypto && metric === 'cash_flow' ? 'Volumen' : 'Cash Flow')),
-                data: values,
-                backgroundColor: (ctx) => {
-                    const value = ctx.parsed.y;
-                    const ratio = value / maxValue;
-                    // Gradient from light green to dark green
-                    const r = Math.floor(40 + (ratio * 215));
-                    const g = Math.floor(167 + (ratio * 88));
-                    const b = Math.floor(69 + (ratio * 186));
-                    return `rgba(${r}, ${g}, ${b}, 0.7)`;
-                },
-                borderColor: (ctx) => {
-                    const value = ctx.parsed.y;
-                    const ratio = value / maxValue;
-                    const r = Math.floor(40 + (ratio * 215));
-                    const g = Math.floor(167 + (ratio * 88));
-                    const b = Math.floor(69 + (ratio * 186));
-                    return `rgba(${r}, ${g}, ${b}, 1)`;
-                },
-                borderWidth: 2
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            maintainAspectRatio: false,
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: (context) => {
-                            const asset = data.find(a => a.ticker === context.label);
-                            const formatted = formatLargeNumber(context.parsed.y);
-                            const metricLabel = (metric === 'cash_flow' && isCrypto) ? 'Volumen' : 
-                                               (metric === 'market_cap' ? 'Capitalización' : 'Cash Flow');
-                            return `${asset?.name || context.label}: ${formatted} (${metricLabel})`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: textColor,
-                        callback: (value) => formatLargeNumber(value)
-                    },
-                    grid: {
-                        color: bgColor === '#ffffff' ? '#e5e7eb' : '#374151'
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: bgColor === '#ffffff' ? '#e5e7eb' : '#374151'
-                    }
-                }
-            }
-        }
-    });
-}
-
-function updateBarChart(metric) {
-    const ctx = document.getElementById('barChart');
-    if (!ctx || !currentData || currentData.length === 0) return;
-
-    const isCrypto = currentCategory === 'crypto';
-    let data = currentData;
-    
-    // For crypto, show all data. For others, filter out crypto tickers
-    if (!isCrypto) {
-        data = currentData.filter(a => !a.ticker.includes('-USD'));
-    }
-
-    if (data.length === 0) {
-        ctx.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">No hay datos disponibles</div>';
-        return;
-    }
-
-    // Destroy existing chart
-    if (barChart) {
-        barChart.destroy();
-    }
-
-    // Update title
-    const titleEl = document.getElementById('barChartTitle');
-    if (titleEl) {
-        const titles = {
-            'revenue_growth': 'Revenue Growth (%)',
-            'profit_margin': 'Profit Margin (%)',
-            'roe': 'Return on Equity (ROE) (%)',
-            'pe': 'P/E Ratio',
-            'diff_max': 'Diferencia vs Máximo (%)'
-        };
-        titleEl.textContent = `Gráfico de Barras - ${titles[metric] || metric}`;
-    }
-
-    // Prepare data - filter out crypto for fundamental metrics
-    let filteredData = data;
-    if ((metric === 'pe' || metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe') && isCrypto) {
-        ctx.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Esta métrica no está disponible para criptomonedas</div>';
-        return;
-    }
-
-    // Sort by value for better visualization
-    filteredData.sort((a, b) => {
-        let aVal = 0, bVal = 0;
-        if (metric === 'diff_max') {
-            aVal = a.diff_from_max || 0;
-            bVal = b.diff_from_max || 0;
-        } else if (metric === 'pe') {
-            aVal = a.pe_ratio || 0;
-            bVal = b.pe_ratio || 0;
-        } else if (metric === 'revenue_growth') {
-            aVal = a.revenue_growth || 0;
-            bVal = b.revenue_growth || 0;
-        } else if (metric === 'profit_margin') {
-            aVal = a.profit_margin || 0;
-            bVal = b.profit_margin || 0;
-        } else if (metric === 'roe') {
-            aVal = a.return_on_equity || 0;
-            bVal = b.return_on_equity || 0;
-        }
-        return bVal - aVal;
-    });
-
-    const labels = filteredData.map(asset => asset.ticker);
-    const values = filteredData.map(asset => {
-        if (metric === 'diff_max') {
-            return parseFloat((asset.diff_from_max * 100).toFixed(2));
-        } else if (metric === 'pe') {
-            return asset.pe_ratio || 0;
-        } else if (metric === 'revenue_growth') {
-            return asset.revenue_growth ? parseFloat((asset.revenue_growth * 100).toFixed(2)) : 0;
-        } else if (metric === 'profit_margin') {
-            return asset.profit_margin ? parseFloat((asset.profit_margin * 100).toFixed(2)) : 0;
-        } else if (metric === 'roe') {
-            return asset.return_on_equity ? parseFloat((asset.return_on_equity * 100).toFixed(2)) : 0;
-        }
-        return 0;
-    });
-
-    // Create canvas if needed
-    if (!ctx.querySelector('canvas')) {
-        ctx.innerHTML = '<canvas></canvas>';
-    }
-
-    const isDark = document.documentElement.classList.contains('dark');
-    const textColor = isDark ? '#e5e7eb' : '#374151';
-    const gridColor = isDark ? '#374151' : '#e5e7eb';
-
-    barChart = new Chart(ctx.querySelector('canvas'), {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: metric === 'diff_max' ? 'Diferencia vs Máximo (%)' : 'P/E Ratio',
-                data: values,
-                backgroundColor: (ctx) => {
-                    const value = ctx.parsed.y;
-                    if (metric === 'diff_max') {
-                        return value >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)';
-                    } else if (metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe') {
-                        return value >= 0 ? 'rgba(34, 197, 94, 0.7)' : 'rgba(239, 68, 68, 0.7)';
-                    }
-                    return 'rgba(34, 197, 94, 0.7)';
-                },
-                borderColor: (ctx) => {
-                    const value = ctx.parsed.y;
-                    if (metric === 'diff_max') {
-                        return value >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
-                    } else if (metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe') {
-                        return value >= 0 ? 'rgba(34, 197, 94, 1)' : 'rgba(239, 68, 68, 1)';
-                    }
-                    return 'rgba(34, 197, 94, 1)';
-                },
-                borderWidth: 2
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: (context) => {
-                            const asset = filteredData[context.dataIndex];
-                            const value = context.parsed.y;
-                            if (metric === 'diff_max' || metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe') {
-                                return `${asset.name}: ${value}%`;
-                            }
-                            return `${asset.name}: ${value.toFixed(2)}`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor
-                    }
-                },
-                x: {
-                    ticks: {
-                        color: textColor
-                    },
-                    grid: {
-                        color: gridColor
-                    }
-                }
-            }
-        }
-    });
-}
-
-async function loadLineChart(ticker, period) {
-    const ctx = document.getElementById('lineChart');
-    if (!ctx || !ticker) return;
-
-    // Load chart image from backend
-    const img = document.createElement('img');
-    img.src = `${API_BASE_URL}/chart/line?ticker=${ticker}&period=${period}`;
-    img.className = 'w-full h-full object-contain';
-    img.alt = 'Line Chart';
-    img.onerror = () => {
-        ctx.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">Error al cargar el gráfico</div>';
-    };
-    
-    ctx.innerHTML = '';
-    ctx.appendChild(img);
-}
-
-function updateLineChartSelector(data) {
-    const select = document.getElementById('lineChartAsset');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Selecciona un activo</option>';
-    data.forEach(asset => {
-        const option = document.createElement('option');
-        option.value = asset.ticker;
-        option.textContent = asset.name;
-        select.appendChild(option);
-    });
-}
-
-function formatLargeNumber(num) {
-    if (num >= 1e12) {
-        return `$${(num / 1e12).toFixed(2)}T`;
-    } else if (num >= 1e9) {
-        return `$${(num / 1e9).toFixed(2)}B`;
-    } else if (num >= 1e6) {
-        return `$${(num / 1e6).toFixed(2)}M`;
-    } else if (num >= 1e3) {
-        return `$${(num / 1e3).toFixed(2)}K`;
-    }
-    return `$${num.toFixed(2)}`;
-}
-
+};

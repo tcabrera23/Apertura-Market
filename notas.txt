@@ -1,93 +1,10 @@
-Segui desarrollando las siguientes funcionalidades: 
 
-dashboard.html: 
-- Crear nueva lista: El usuario escribe el nombre o sigla del activo, la app espera 2 segundos desde que el usuario empieza a escribir y hace la peticion a yahoo para mostrarle al usuario los resultados encontrados y que escoga uno
-Ejemplo: 
-Usuario escribiendo "Broadcom"
-Sistema: Busca en el portal los activos que contienen esa palabra y devolve los resultados
-Usuario: Escoge el activo
-Sistema: Guarda la eleccion del usuario (por ahora en un JSON)
-Sistema: Presenta el activo en el formato tabla segun corresponda (accion o crypto)
-
-
-rules.html
-- Interfaz "Crear Nueva Regla": Analiza la imagen para entender que los estilos de ese container estan desalineados. De todas formas, no quiero que forme parte de la pagina web. Me parece
-una mejor experiencia de usuario, que al clickear "Crear Primera Regla" entonces aparezca tipo pop-up la interfaz de la definicion de la regla en una friendly card
-
-
-pricing.html 
-- Ahora hace el merge de pricing.html dentro de index.html ya que tengo la informacion de los planes duplicada en diferentes sitios. el que importa es el de pricing.html pero debe presentarse en la landing page con index.html
-
-news.html
-- La seccion general de news esta bien, pero me gustaria agregar cards con imagenes aunque no se que tan complicado seria estilos. literalmente me gusta como esta en google finance, sacar screenshot
-- agregar filtro por fecha? y al menos poner categorias tipo sub-headers (USA, CHINA, Europa, etc, crypto, tech, ai)
-
-
-
-
-
-
-
-Quiero mejorar el diseño y los estilos de la web, junto con el UX. 
-- Mantene los tonos de colores (blanco, verde y negro) pero agrega gradientes, degradados, sombras, etc para que quede mas profesional
-- Agrega un modo oscuro
-- Agrega un panel "Account" donde se pueda ver el historial de alertas, cuenta, etc y el cliente pueda actualizar de plan o darse de baja
-- El nombre de la plataforma es "BullAnalytics"
-- Refactoriza los styles del dashboard con Tailwind
-
-
-
-Hacer como en S4 donde puedo elegir que columnas ver y en que orden (select y unselect - filtros, etc)
-
-
-- Agregar el logo "images/logo.png" a mi plataforma 
-- No veo el panel de account en el frontend
-- Pone el pricing.html en mi index.html 
-- Mantene la estetica para todos los html. El header y el footer deben ser como los de dashboard.html
-- Edita los estilos de rules.html con Tailwind para que sea vas profesional con animaciones
 - Para toda la web, agrega gradientes entre el verde y el blanco/negro segun modo o tema
-
-
-Bien ahora vamos a agregar la interfaz de los agentes de IA
-
-reglas.html
-- agregar un pequeño chat widget que te permita escribir tu consulta
-- el json que genera el agente almacenarlo en rules.json y mostrar en la ventana de chat que fue agregado exitosamente
-
-
-dashboard.html 
-agregar el panel en horizontal para charlar con el agente
-
-
-ideal desde google finance la api?
-donde agrego los graficos???????????????????????
-mi idea era tambien resumir en un treemap la lista de activos por PER, cash flow, volumen medio, cap bursatil, 
-en un grafico de columnas por el de diferencia vs maximo, intervalo anual 
-rentabilidad por dividendo
-
-
-En dashboard.html: 
-- Agrega una tab "Anális" donde el usuario seleccione que tab quiere visualizar en graficos hechos con tailwind. Los graficos predeterminados son: 
-treemap: relacion -  [cash flow por activo, capitalizacion bursatil por activo]
-grafico de barras: relacion - [activo y diferencia vs maximo, activo y PER]
-grafico de lineas: permitir filtrar por fechas como en la imagen adjunta
-
-Ademas, agrega las columnas requeridas para el analisis tecnico en las tablas. 
-
-tambien, si el usuario quiere agregar un asset manualmente a una lista o tab ya existente, tiene el permiso para hacerlo en su propia view
-
 
 https://github.com/ranaroussi/yfinance/blob/main/yfinance/scrapers/fundamentals.py
 
-me quedo impecable la integracion con agentes
 
-
-queda revisas como aparece el watchlist.json 
 el logo con header y footer estandarizados
-el modo dark queda feo los headers de las tablas
-las noticias personalizados recopilan news de tus seguimientos, listas, tabs etc y los ponen en reels de 2 minutos
-uy de repente el panel de account no funca,,,,,,,,,,,,,,,,,
-tampoco esta la conexion al index.html
 agregarle el free trial al plan plus - sacarle el fondo del logo en el dark mode
 agregar alguna seccion de partnerships o clientes utilizando esto
 integrar el calendario de resultados y cambiar las imagenes de reglas
@@ -99,28 +16,20 @@ agregar un video mostrando:
 - te agendas la rules
 - ves la seccion de noticas y la personal es con un avatar que engancha tus listas y genera un reel para vos
 
-cambiar el dark mode a un negro mas oscuro como el de apertura ia
-cambiar los colores de los chat widgets y nombres a BullAgent
-
-
-dashboard.html: 
-- agregar logos de los activos 
-- agregar funcionalidad en las tablas de sort asc y desc al tocar en el header de la columna. 
-- agregar una ruedita de configuracion en lugar de "Actualizar" para que el usuario pueda personalizar las vistas de sus tablas y decida que ver (ocultar x columna, filtrar por x condicion, seleccionar el orden)
-- revisar que pasa con la tab de analisis ya que no aparece en mi frontend
-- la tabla creada por el usuario, que se lee desde "watchlist.json", al tocar en su elemento no aparece la tabla
-
-news.html:
-- eliminar la opcion de filtro por fecha, ya que cubre las noticias del dia 
-
-
-ahora funciona visualizar tech pero no analisis
-revisar en mis descargas que deje el pdf de la tab analisis
 agregar algunos activos mas de los populares
 ¿No encuentras tu activo? Buscalo! 
 Agregarle la calculadora de interes compuesto si puedo con cosas mas complejas: https://javilinares.com/calculadora-interes-compuesto/
 Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye la pagina
 
 en diferencia vs max se quedo bugueado
-al hacer click en la tab de "configurar vista", no pasa nada. 
-todavia no veo los logos de los activos
+
+cambiar el dark mode a un negro mas oscuro como el de apertura ia
+cambiar los colores de los chat widgets y nombres a BullAgent
+revisar tab de analisis
+
+
+antigravity: 
+repasa la documentacion y dame prompts para generar campañas, videos, engagement, imagenes, marketing etc para mi aplicacion BullAnalytics y su Bull Agent
+
+
+diseña la base de datos de esta app en supabase con login y migracion de los json y todo a tablas (crear un .MD)
