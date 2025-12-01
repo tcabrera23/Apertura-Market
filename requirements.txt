@@ -15,3 +15,4 @@ python-multipart
 feedparser
 requests
 PyJWT>=2.8.0
+sib-api-v3-sdk

@@ -34,3 +34,9 @@ repasa la documentacion y dame prompts para generar campañas, videos, engagemen
 
 deberia eliminar nuevamente mi cuenta de user_profiles
 chequear porque se cambia la info de usuario a tomas tipo porque se sobreescribe
+
+ok ahora al crear la primera regla eso persiste en la base de datos, pero me tiene que dejar crear nuevas o modificar cosas de esa. ME FUNCIONA AL RECARGAR LA PAGINA. deberia funcionar sin recargarla
+esos cambios del usuario solo afectan en su cuenta! 
+- no se porque de repente se rompio la api de news
+- ahora da error al buscar activos
+- el panel de account no carga el historial de alertas

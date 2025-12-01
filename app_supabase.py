@@ -23,6 +23,14 @@ import jwt
 from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from sib_api_v3_sdk import ApiClient, Configuration, TransactionalEmailsApi
+from sib_api_v3_sdk.rest import ApiException
+from email_templates import (
+    get_onboarding_email_template,
+    get_alert_email_template,
+    get_password_reset_email_template,
+    get_subscription_confirmation_email_template
+)
 
 # Load environment variables
 load_dotenv()
@@ -50,6 +58,9 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # User table name - using user_profiles (standard table)
 USER_TABLE_NAME = "user_profiles"
+
+# Brevo Email Configuration
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -378,6 +389,23 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         
         # Crear suscripción automática con trial de 14 días
         await create_default_subscription(user_id)
+        
+        # Enviar email de bienvenida/onboarding
+        try:
+            user_name = user_data.get("full_name") or email.split("@")[0]
+            email_template = get_onboarding_email_template(user_name, email)
+            send_result = send_alert_email(
+                to_email=email,
+                subject=email_template["subject"],
+                html_content=email_template["html_content"]
+            )
+            if send_result.get("success"):
+                logger.info(f"✅ Email de bienvenida enviado a {email}")
+            else:
+                logger.warning(f"⚠️ No se pudo enviar email de bienvenida: {send_result.get('error')}")
+        except Exception as email_error:
+            logger.error(f"Error enviando email de bienvenida: {str(email_error)}")
+            # No fallar el registro si el email falla
         
         return user_data
         
@@ -847,6 +875,23 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         
         # Crear suscripción automática con trial de 14 días
         await create_default_subscription(user_id)
+        
+        # Enviar email de bienvenida/onboarding
+        try:
+            user_name = user_data.get("full_name") or email.split("@")[0]
+            email_template = get_onboarding_email_template(user_name, email)
+            send_result = send_alert_email(
+                to_email=email,
+                subject=email_template["subject"],
+                html_content=email_template["html_content"]
+            )
+            if send_result.get("success"):
+                logger.info(f"✅ Email de bienvenida enviado a {email}")
+            else:
+                logger.warning(f"⚠️ No se pudo enviar email de bienvenida: {send_result.get('error')}")
+        except Exception as email_error:
+            logger.error(f"Error enviando email de bienvenida: {str(email_error)}")
+            # No fallar el registro si el email falla
         
         return user_data
         
@@ -1356,6 +1401,306 @@ async def health_check():
             "error": str(e),
             "timestamp": datetime.now().isoformat()
         }
+
+# ============================================
+# EMAIL FUNCTIONS (Brevo Integration)
+# ============================================
+
+def send_alert_email(to_email: str, subject: str, html_content: str, sender_name: str = "BullAnalytics", sender_email: str = "noreply@aperturaia.com"):
+    """Envía un correo de alerta usando Brevo"""
+    if not BREVO_API_KEY:
+        logger.error("BREVO_API_KEY no configurada en variables de entorno")
+        return {"success": False, "error": "BREVO_API_KEY no configurada"}
+    
+    try:
+        configuration = Configuration()
+        configuration.api_key['api-key'] = BREVO_API_KEY
+        
+        api_instance = TransactionalEmailsApi(ApiClient(configuration))
+        
+        send_smtp_email = {
+            'sender': {
+                'name': sender_name,
+                'email': sender_email
+            },
+            'to': [{'email': to_email}],
+            'subject': subject,
+            'htmlContent': html_content
+        }
+        
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        logger.info(f"✅ Email enviado exitosamente a {to_email}: {api_response.message_id}")
+        return {
+            "success": True,
+            "message_id": api_response.message_id,
+            "to": to_email
+        }
+        
+    except ApiException as e:
+        error_msg = f"Error enviando email: {e}"
+        logger.error(error_msg)
+        return {
+            "success": False,
+            "error": str(e),
+            "status_code": e.status if hasattr(e, 'status') else None
+        }
+    except Exception as e:
+        error_msg = f"Error inesperado enviando email: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@app.post("/api/email/test")
+async def test_email(email: str = Query(..., description="Email destino para prueba")):
+    """Endpoint de prueba para enviar un email usando Brevo"""
+    if not BREVO_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="BREVO_API_KEY no configurada. Por favor, configura la variable de entorno."
+        )
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            .header {{
+                background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+                border-radius: 10px 10px 0 0;
+            }}
+            .content {{
+                background: #f8f9fa;
+                padding: 30px;
+                border-radius: 0 0 10px 10px;
+            }}
+            .button {{
+                display: inline-block;
+                padding: 12px 30px;
+                background: #28a745;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                margin-top: 20px;
+            }}
+            .footer {{
+                text-align: center;
+                margin-top: 30px;
+                color: #666;
+                font-size: 12px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🚀 BullAnalytics</h1>
+            <p>Prueba de Email Exitosa</p>
+        </div>
+        <div class="content">
+            <h2>¡Hola! 👋</h2>
+            <p>Este es un correo de prueba desde <strong>BullAnalytics</strong> usando <strong>Brevo</strong>.</p>
+            <p>Si recibiste este correo, significa que la integración con Brevo está funcionando correctamente.</p>
+            <p><strong>Detalles de la prueba:</strong></p>
+            <ul>
+                <li>✅ Servicio: Brevo (Sendinblue)</li>
+                <li>✅ Fecha: {timestamp}</li>
+                <li>✅ Estado: Enviado exitosamente</li>
+            </ul>
+            <p>Ahora puedes configurar alertas financieras que se enviarán automáticamente cuando se cumplan tus reglas.</p>
+            <a href="http://localhost:8080/rules.html" class="button">Gestionar Alertas</a>
+        </div>
+        <div class="footer">
+            <p>Este es un correo automático de BullAnalytics.</p>
+            <p>No respondas a este correo.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    result = send_alert_email(
+        to_email=email,
+        subject="✅ Prueba de Email - BullAnalytics",
+        html_content=html_content
+    )
+    
+    if result.get("success"):
+        return {
+            "message": "Email enviado exitosamente",
+            "message_id": result.get("message_id"),
+            "to": email
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error enviando email: {result.get('error', 'Error desconocido')}"
+        )
+
+@app.post("/api/email/test-templates")
+async def test_all_templates(email: str = Query(..., description="Email destino para probar todos los templates")):
+    """Endpoint de prueba para enviar todos los templates de email"""
+    if not BREVO_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="BREVO_API_KEY no configurada. Por favor, configura la variable de entorno."
+        )
+    
+    results = []
+    
+    # 1. Template de Onboarding
+    try:
+        user_name = email.split("@")[0]
+        onboarding_template = get_onboarding_email_template(user_name, email)
+        result = send_alert_email(
+            to_email=email,
+            subject=onboarding_template["subject"],
+            html_content=onboarding_template["html_content"]
+        )
+        results.append({
+            "template": "onboarding",
+            "success": result.get("success", False),
+            "message_id": result.get("message_id") if result.get("success") else None,
+            "error": result.get("error") if not result.get("success") else None
+        })
+    except Exception as e:
+        results.append({
+            "template": "onboarding",
+            "success": False,
+            "error": str(e)
+        })
+    
+    # 2. Template de Alerta Financiera (price_below)
+    try:
+        alert_template = get_alert_email_template(
+            rule_name="Alerta de Prueba - NVDA",
+            ticker="NVDA",
+            alert_message="NVDA está por debajo de $500",
+            current_price=495.50,
+            threshold=500.00,
+            rule_type="price_below"
+        )
+        result = send_alert_email(
+            to_email=email,
+            subject=alert_template["subject"],
+            html_content=alert_template["html_content"]
+        )
+        results.append({
+            "template": "alert_price_below",
+            "success": result.get("success", False),
+            "message_id": result.get("message_id") if result.get("success") else None,
+            "error": result.get("error") if not result.get("success") else None
+        })
+    except Exception as e:
+        results.append({
+            "template": "alert_price_below",
+            "success": False,
+            "error": str(e)
+        })
+    
+    # 3. Template de Alerta Financiera (price_above)
+    try:
+        alert_template = get_alert_email_template(
+            rule_name="Alerta de Prueba - AAPL",
+            ticker="AAPL",
+            alert_message="AAPL está por encima de $180",
+            current_price=185.75,
+            threshold=180.00,
+            rule_type="price_above"
+        )
+        result = send_alert_email(
+            to_email=email,
+            subject=alert_template["subject"],
+            html_content=alert_template["html_content"]
+        )
+        results.append({
+            "template": "alert_price_above",
+            "success": result.get("success", False),
+            "message_id": result.get("message_id") if result.get("success") else None,
+            "error": result.get("error") if not result.get("success") else None
+        })
+    except Exception as e:
+        results.append({
+            "template": "alert_price_above",
+            "success": False,
+            "error": str(e)
+        })
+    
+    # 4. Template de Reset de Contraseña
+    try:
+        reset_template = get_password_reset_email_template(
+            reset_link="https://bullanalytics.com/reset?token=test_token_12345",
+            user_name=user_name
+        )
+        result = send_alert_email(
+            to_email=email,
+            subject=reset_template["subject"],
+            html_content=reset_template["html_content"]
+        )
+        results.append({
+            "template": "password_reset",
+            "success": result.get("success", False),
+            "message_id": result.get("message_id") if result.get("success") else None,
+            "error": result.get("error") if not result.get("success") else None
+        })
+    except Exception as e:
+        results.append({
+            "template": "password_reset",
+            "success": False,
+            "error": str(e)
+        })
+    
+    # 5. Template de Confirmación de Suscripción
+    try:
+        subscription_template = get_subscription_confirmation_email_template(
+            plan_name="Plus",
+            price=29.99,
+            billing_period="mensual"
+        )
+        result = send_alert_email(
+            to_email=email,
+            subject=subscription_template["subject"],
+            html_content=subscription_template["html_content"]
+        )
+        results.append({
+            "template": "subscription_confirmation",
+            "success": result.get("success", False),
+            "message_id": result.get("message_id") if result.get("success") else None,
+            "error": result.get("error") if not result.get("success") else None
+        })
+    except Exception as e:
+        results.append({
+            "template": "subscription_confirmation",
+            "success": False,
+            "error": str(e)
+        })
+    
+    # Resumen
+    successful = sum(1 for r in results if r.get("success"))
+    total = len(results)
+    
+    return {
+        "message": f"Prueba de templates completada: {successful}/{total} enviados exitosamente",
+        "to": email,
+        "results": results,
+        "summary": {
+            "total": total,
+            "successful": successful,
+            "failed": total - successful
+        }
+    }
 
 # Run server
 if __name__ == "__main__":

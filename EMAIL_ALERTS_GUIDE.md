@@ -316,7 +316,7 @@ BREVO_API_KEY=tu_api_key_aqui
 Si prefieres mantener todo en Supabase, puedes crear una Edge Function que use Brevo:
 
 ```typescript
-// supabase/functions/send-alert/index.ts
+// supabase/functions/send-email-alert/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 serve(async (req) => {
@@ -329,7 +329,7 @@ serve(async (req) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      sender: { email: 'noreply@bullanalytics.com' },
+      sender: { email: 'noreply@aperturaia.com' },
       to: [{ email: to }],
       subject,
       htmlContent: html,
@@ -338,6 +338,12 @@ serve(async (req) => {
   
   return new Response(JSON.stringify(await response.json()))
 })
+
+response = supabase.functions.invoke(
+    "send-email-alert",
+    invoke_options={"body": {"name": "Functions"}}
+)
+
 ```
 
 ---
