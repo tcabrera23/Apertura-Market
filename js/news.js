@@ -1,6 +1,7 @@
 // News Page JavaScript
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use window.API_BASE_URL if available, otherwise use default
+const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 let currentNews = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,7 +38,7 @@ async function loadNews(category) {
     gridEl.classList.remove('grid');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/news?category=${category}`);
+        const response = await fetch(`${getApiBaseUrl()}/news?category=${category}`);
 
         if (!response.ok) {
             throw new Error('Error al cargar noticias');

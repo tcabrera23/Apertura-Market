@@ -1,5 +1,7 @@
 // Investment Chat Widget JavaScript
-const N8N_WEBHOOK_URL = 'https://dev.n8n.tomascabrera.site/webhook/8958bcf0-8fa3-4947-b389-86ba88f44290/chat';
+// Use window.N8N_WEBHOOK_URL if available, otherwise define it
+const N8N_WEBHOOK_URL = window.N8N_WEBHOOK_URL || 'https://dev.n8n.tomascabrera.site/webhook/8958bcf0-8fa3-4947-b389-86ba88f44290/chat';
+window.N8N_WEBHOOK_URL = N8N_WEBHOOK_URL;
 
 // Generate or retrieve session ID
 function getSessionId() {
@@ -260,16 +262,14 @@ function addInvestmentChatMessage(message, sender, isLoading = false, textColor 
     if (sender === 'user') {
         messageDiv.innerHTML = `
             <div class="flex-1"></div>
-            <div class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3 max-w-[80%]">
+            <div class="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-3 max-w-[80%]">
                 <p class="text-sm whitespace-pre-wrap">${escapeHtml(message)}</p>
             </div>
         `;
     } else {
         messageDiv.innerHTML = `
-            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                </svg>
+            <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <img src="images/agent.png" alt="BullAgent" class="w-full h-full object-cover">
             </div>
             <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
                 <div class="text-sm text-gray-700 dark:text-gray-300 ${textColor} ${isHtml ? '' : 'whitespace-pre-wrap'}">${isHtml ? message : escapeHtml(message)}</div>

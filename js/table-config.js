@@ -1,6 +1,8 @@
 // Table Configuration Management
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use window.API_BASE_URL if available, otherwise use default
+// Don't declare const to avoid conflicts
+const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // Column definitions for different table types
 const COLUMN_DEFINITIONS = {

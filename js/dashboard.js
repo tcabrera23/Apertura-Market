@@ -2,6 +2,8 @@
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:8080/api';
+// Expose to window for other scripts
+window.API_BASE_URL = API_BASE_URL;
 
 // Smart Cache System
 const CACHE_DURATION = 120000; // 2 minutes in milliseconds
@@ -354,8 +356,8 @@ async function loadCustomWatchlists() {
         const watchlists = await response.json();
         const tabsContainer = document.getElementById('tabsContainer');
 
-        // Remove existing custom watchlist tabs (keep default ones including analisis)
-        const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina', 'analisis'];
+        // Remove existing custom watchlist tabs (keep default ones)
+        const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina'];
         const existingTabs = Array.from(tabsContainer.querySelectorAll('.tab-button'));
         existingTabs.forEach(tab => {
             const tabName = tab.getAttribute('data-tab');
@@ -364,7 +366,7 @@ async function loadCustomWatchlists() {
             }
         });
 
-        // Remove existing custom watchlist tab contents (but keep default tabs including analisis)
+        // Remove existing custom watchlist tab contents (but keep default tabs)
         const existingContents = document.querySelectorAll('.tab-content');
         existingContents.forEach(content => {
             const category = content.getAttribute('data-category');
@@ -425,6 +427,8 @@ async function loadCustomWatchlists() {
                         </table>
                     </div>
                 </div>
+                <!-- Analysis Charts for ${watchlistName} -->
+                <div id="${watchlistName}-charts-container" class="mt-8"></div>
             `;
 
             // Insert tab content in the main container (same level as other tabs)
@@ -481,32 +485,6 @@ async function loadCustomWatchlists() {
 
         // Re-initialize tabs
         initializeTabs();
-
-        // Restore the previously active tab if it was analisis
-        if (currentActiveTabName === 'analisis') {
-            const analisisButton = document.querySelector('[data-tab="analisis"]');
-            const analisisTab = document.getElementById('analisis-tab');
-            if (analisisButton && analisisTab) {
-                // Activate analisis tab
-                document.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
-                    btn.classList.add('text-gray-600', 'dark:text-gray-400');
-                });
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.add('hidden');
-                    content.classList.remove('block');
-                });
-                analisisButton.classList.remove('text-gray-600', 'dark:text-gray-400');
-                analisisButton.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
-                analisisTab.classList.remove('hidden');
-                analisisTab.classList.add('block');
-
-                // Load analysis data
-                if (typeof loadAnalysisData === 'function') {
-                    loadAnalysisData();
-                }
-            }
-        }
 
         // Update analysis category selector if it exists
         if (typeof updateCategorySelector === 'function') {
@@ -626,19 +604,10 @@ function initializeTabs() {
             if (tabContent) {
                 tabContent.classList.remove('hidden');
                 tabContent.classList.add('block');
-
-                // Special handling for analysis tab
-                if (tabName === 'analisis') {
-                    // Load analysis data if function exists
-                    if (typeof loadAnalysisData === 'function') {
-                        loadAnalysisData();
-                    }
-                } else {
-                    // Data should already be loaded from preload
-                    const category = tabContent.getAttribute('data-category');
-                    if (category && !currentData[category]) {
-                        loadAssets(category, false);
-                    }
+                // Data should already be loaded from preload
+                const category = tabContent.getAttribute('data-category');
+                if (category && !currentData[category]) {
+                    loadAssets(category, false);
                 }
             }
         });
@@ -737,6 +706,20 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
     if (tableEl) {
         tableEl.style.display = 'block';
     }
+
+    // Render analysis charts below the table
+    // Wait a bit to ensure React is loaded and Babel has processed analisis.js
+    const renderCharts = () => {
+        if (typeof window.renderAnalysisCharts === 'function') {
+            console.log(`Rendering charts for ${category} with ${data.length} assets`);
+            window.renderAnalysisCharts(category, data);
+        } else {
+            // Retry if function not available yet (Babel may still be processing)
+            console.warn(`renderAnalysisCharts not available for ${category}, retrying...`);
+            setTimeout(renderCharts, 200);
+        }
+    };
+    setTimeout(renderCharts, 300);
 }
 
 // Create table row from asset data

@@ -44,3 +44,22 @@ esos cambios del usuario solo afectan en su cuenta!
 
 
 agrega un modo de language para que el usuario pueda cambiar el idioma. asi como tenemos el modo oscuro y claro, el usuario debe poder elegir ver el contenido de la web en español o en ingles o portugues. 
+
+
+
+eliminar login con oauth y exigir formulario manual de
+correo
+contraseña
+confirmar contraseña
+country (lista desplegable)
+date of birth (calendar)
+
+(crear una copia de nuestro index)
+
+ya tendria solucionado el login via formulario
+todos al registrarse tienen el plan gratuito y actualizan su plan desde el panel de account
+tendrian la opcion igual de la free trial por 7 dias del plan plus o 3 dias del plan pro
+**quedaria chequear que funcione bien todo el tema del login y los pagos**
+publicar el saas y seguir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
+claro seria la seccion de About Us
+tendria que editar los agentes de IA para agregarle tests, evals, safety, registro de tokens etc.

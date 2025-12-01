@@ -21,6 +21,7 @@ import re
 import logging
 import jwt
 import requests
+import feedparser
 from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -551,6 +552,68 @@ async def get_argentina_assets():
         raise HTTPException(status_code=500, detail="No se pudieron cargar los datos")
     
     return results
+
+# ============================================
+# NEWS ENDPOINT
+# ============================================
+
+@app.get("/api/news")
+async def get_news(category: str = Query("general", description="News category")):
+    """Get financial news from Yahoo Finance RSS with category support"""
+    
+    # Map categories to RSS URLs
+    rss_urls = {
+        "general": "https://finance.yahoo.com/news/rssindex",
+        "crypto": "https://finance.yahoo.com/topic/crypto/rss",
+        "tech": "https://finance.yahoo.com/topic/tech/rss",
+        "usa": "https://finance.yahoo.com/topic/stock-market-news/rss",
+        "china": "https://finance.yahoo.com/topic/china/rss",  # Best effort
+        "europe": "https://finance.yahoo.com/topic/europe/rss",  # Best effort
+        "ai": "https://finance.yahoo.com/topic/tech/rss"  # Fallback to tech for AI if no specific feed
+    }
+    
+    feed_url = rss_urls.get(category.lower(), rss_urls["general"])
+    
+    # Cache key includes category
+    cache_key = f"news_{category}_{int(datetime.now().timestamp() // 1800)}"
+    
+    if cache_key in cache:
+        return cache[cache_key]
+    
+    try:
+        feed = feedparser.parse(feed_url)
+        
+        # If feed is empty or error, fallback to general
+        if not feed.entries and category != "general":
+            feed = feedparser.parse(rss_urls["general"])
+        
+        news_items = []
+        for entry in feed.entries[:20]:
+            # Try to find image
+            image_url = None
+            if 'media_content' in entry:
+                image_url = entry.media_content[0]['url']
+            elif 'media_thumbnail' in entry:
+                image_url = entry.media_thumbnail[0]['url']
+            
+            # Clean summary (remove HTML tags if any)
+            summary = entry.get('summary', '')
+            summary = re.sub('<[^<]+?>', '', summary)
+            
+            news_items.append({
+                "title": entry.title,
+                "link": entry.link,
+                "published": entry.get('published', ''),
+                "summary": summary[:200] + '...' if len(summary) > 200 else summary,
+                "image": image_url,
+                "source": entry.get('source', {}).get('title', 'Yahoo Finance')
+            })
+        
+        cache[cache_key] = news_items
+        return news_items
+    except Exception as e:
+        logger.error(f"Error fetching news: {e}", exc_info=True)
+        return []
 
 # ============================================
 # RULES ENDPOINTS (Supabase Integration)

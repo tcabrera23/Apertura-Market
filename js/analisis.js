@@ -1,9 +1,9 @@
 // BullAnalytics - Analysis Charts with React and Plotly
+// Charts are rendered below each table in their respective tabs
 
-const API_BASE_URL = 'http://localhost:8080/api';
-
-let currentCategory = 'tracking';
-let currentData = [];
+// Use window.API_BASE_URL if available, otherwise use default
+// Don't declare const to avoid conflicts when Babel transforms this file
+const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // React Components for Charts
 const { useState, useEffect, useRef } = React;
@@ -16,15 +16,9 @@ function TreemapChart({ data, metric, category }) {
         if (!data || data.length === 0 || !chartRef.current) return;
 
         const isCrypto = category === 'crypto';
-        let chartData = data;
-
-        // Filter out crypto for non-crypto categories
-        if (!isCrypto) {
-            chartData = data.filter(asset => !asset.ticker?.includes('-USD'));
-        }
 
         // Fetch chart data from backend
-        fetch(`${API_BASE_URL}/chart/treemap?category=${category}&metric=${metric}`)
+        fetch(`${getApiBaseUrl()}/chart/treemap?category=${category}&metric=${metric}`)
             .then(res => res.json())
             .then(chartData => {
                 if (!chartData.labels || chartData.labels.length === 0) {
@@ -98,7 +92,7 @@ function BarChart({ data, metric, category }) {
         }
 
         // Fetch chart data from backend
-        fetch(`${API_BASE_URL}/chart/bar?category=${category}&metric=${metric}`)
+        fetch(`${getApiBaseUrl()}/chart/bar?category=${category}&metric=${metric}`)
             .then(res => res.json())
             .then(chartData => {
                 if (!chartData.labels || chartData.labels.length === 0) {
@@ -173,8 +167,7 @@ function LineChart({ ticker, period }) {
 
         setLoading(true);
         
-        // Use the chart endpoint that returns Plotly data
-        fetch(`${API_BASE_URL}/chart/line?ticker=${ticker}&period=${period}`)
+        fetch(`${getApiBaseUrl()}/chart/line?ticker=${ticker}&period=${period}`)
             .then(res => res.json())
             .then(chartData => {
                 if (!chartData.dates || chartData.dates.length === 0) {
@@ -243,20 +236,13 @@ function LineChart({ ticker, period }) {
     return <div ref={chartRef} style={{ width: '100%', height: '100%' }} />;
 }
 
-// Main Analysis Component
-function AnalysisCharts() {
-    const [category, setCategory] = useState('tracking');
-    const [data, setData] = useState([]);
+// Main Analysis Charts Component - renders below each table
+function AnalysisCharts({ category, data }) {
     const [treemapMetric, setTreemapMetric] = useState('market_cap');
     const [barMetric, setBarMetric] = useState('revenue_growth');
     const [lineTicker, setLineTicker] = useState('');
     const [linePeriod, setLinePeriod] = useState('1y');
     const [lineChartAssets, setLineChartAssets] = useState([]);
-
-    // Load data when category changes
-    useEffect(() => {
-        loadAnalysisData(category);
-    }, [category]);
 
     // Update line chart assets when data changes
     useEffect(() => {
@@ -272,96 +258,11 @@ function AnalysisCharts() {
         }
     }, [data, category]);
 
-    async function loadAnalysisData(cat) {
-        try {
-            let endpoint = '';
-            switch (cat) {
-                case 'tracking':
-                    endpoint = '/tracking-assets';
-                    break;
-                case 'portfolio':
-                    endpoint = '/portfolio-assets';
-                    break;
-                case 'crypto':
-                    endpoint = '/crypto-assets';
-                    break;
-                case 'argentina':
-                    endpoint = '/argentina-assets';
-                    break;
-                default:
-                    endpoint = `/watchlist/${cat}`;
-            }
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`);
-            if (!response.ok) {
-                throw new Error('Error loading data');
-            }
-
-            const result = await response.json();
-            setData(result);
-            currentCategory = cat;
-            currentData = result;
-        } catch (error) {
-            console.error('Error loading analysis data:', error);
-            setData([]);
-        }
+    if (!data || data.length === 0) {
+        return null;
     }
 
-    // Update category selector with custom watchlists
-    useEffect(() => {
-        async function updateCategorySelector() {
-            const categorySelect = document.getElementById('analisisCategory');
-            if (!categorySelect) return;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/watchlists`);
-                if (!response.ok) return;
-
-                const watchlists = await response.json();
-                const watchlistNames = Object.keys(watchlists);
-                
-                // Remove existing custom watchlist options
-                const existingOptions = Array.from(categorySelect.querySelectorAll('option'));
-                existingOptions.forEach(opt => {
-                    if (!['tracking', 'portfolio', 'crypto', 'argentina', 'analisis'].includes(opt.value)) {
-                        opt.remove();
-                    }
-                });
-
-                // Add custom watchlist options
-                watchlistNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    categorySelect.appendChild(option);
-                });
-            } catch (error) {
-                console.error('Error updating category selector:', error);
-            }
-        }
-
-        updateCategorySelector();
-    }, []);
-
-    // Sync category with external selector on mount and when it changes
-    useEffect(() => {
-        const categorySelect = document.getElementById('analisisCategory');
-        if (categorySelect) {
-            const selectedCategory = categorySelect.value || 'tracking';
-            if (selectedCategory !== category) {
-                setCategory(selectedCategory);
-            }
-            
-            // Listen for external changes to the selector
-            const handleChange = (e) => {
-                if (e.target.value !== category) {
-                    setCategory(e.target.value);
-                }
-            };
-            categorySelect.addEventListener('change', handleChange);
-            return () => categorySelect.removeEventListener('change', handleChange);
-        }
-    }, [category]);
+    const isCrypto = category === 'crypto';
 
     return (
         <div className="space-y-6">
@@ -370,7 +271,7 @@ function AnalysisCharts() {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                     {treemapMetric === 'market_cap' 
                         ? 'Treemap - Capitalización Bursátil' 
-                        : (category === 'crypto' ? 'Treemap - Volumen' : 'Treemap - Cash Flow')}
+                        : (isCrypto ? 'Treemap - Volumen' : 'Treemap - Cash Flow')}
                 </h3>
                 <div className="flex gap-4 mb-4">
                     <button 
@@ -391,17 +292,11 @@ function AnalysisCharts() {
                         }`}
                         onClick={() => setTreemapMetric('cash_flow')}
                     >
-                        {category === 'crypto' ? 'Volumen' : 'Cash Flow'}
+                        {isCrypto ? 'Volumen' : 'Cash Flow'}
                     </button>
                 </div>
                 <div className="h-96">
-                    {data.length > 0 ? (
-                        <TreemapChart data={data} metric={treemapMetric} category={category} />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                            Selecciona una categoría para ver el gráfico
-                        </div>
-                    )}
+                    <TreemapChart data={data} metric={treemapMetric} category={category} />
                 </div>
             </div>
 
@@ -409,32 +304,32 @@ function AnalysisCharts() {
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Gráfico de Barras</h3>
                 <div className="flex flex-wrap gap-2 mb-4">
-                    {['revenue_growth', 'profit_margin', 'roe', 'pe', 'diff_max'].map(metric => (
-                        <button
-                            key={metric}
-                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                                barMetric === metric
-                                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
-                                    : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-                            }`}
-                            onClick={() => setBarMetric(metric)}
-                        >
-                            {metric === 'revenue_growth' ? 'Revenue Growth' :
-                             metric === 'profit_margin' ? 'Profit Margin' :
-                             metric === 'roe' ? 'ROE' :
-                             metric === 'pe' ? 'P/E Ratio' :
-                             'Diff vs Máx'}
-                        </button>
-                    ))}
+                    {['revenue_growth', 'profit_margin', 'roe', 'pe', 'diff_max'].map(metric => {
+                        // Skip metrics not available for crypto
+                        if (isCrypto && (metric === 'pe' || metric === 'revenue_growth' || metric === 'profit_margin' || metric === 'roe')) {
+                            return null;
+                        }
+                        return (
+                            <button
+                                key={metric}
+                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                    barMetric === metric
+                                        ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                                        : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                                }`}
+                                onClick={() => setBarMetric(metric)}
+                            >
+                                {metric === 'revenue_growth' ? 'Revenue Growth' :
+                                 metric === 'profit_margin' ? 'Profit Margin' :
+                                 metric === 'roe' ? 'ROE' :
+                                 metric === 'pe' ? 'P/E Ratio' :
+                                 'Diff vs Máx'}
+                            </button>
+                        );
+                    })}
                 </div>
                 <div className="h-96">
-                    {data.length > 0 ? (
-                        <BarChart data={data} metric={barMetric} category={category} />
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                            Selecciona una categoría para ver el gráfico
-                        </div>
-                    )}
+                    <BarChart data={data} metric={barMetric} category={category} />
                 </div>
             </div>
 
@@ -489,51 +384,73 @@ function AnalysisCharts() {
     );
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    const analisisTab = document.getElementById('analisis-tab');
-    if (!analisisTab) return;
+// Function to render charts for a specific category
+window.renderAnalysisCharts = function(category, data) {
+    // Check if React and ReactDOM are available
+    if (typeof React === 'undefined' || typeof ReactDOM === 'undefined') {
+        console.warn('React or ReactDOM not available yet, retrying in 100ms...');
+        setTimeout(() => window.renderAnalysisCharts(category, data), 100);
+        return;
+    }
 
-    // Find or create root element
-    let root = document.getElementById('analysis-charts-root');
-    if (!root) {
-        root = document.createElement('div');
-        root.id = 'analysis-charts-root';
-        // Find the container after the category selector
-        const categoryContainer = analisisTab.querySelector('.mb-6');
-        if (categoryContainer && categoryContainer.nextSibling) {
-            categoryContainer.parentNode.insertBefore(root, categoryContainer.nextSibling);
-        } else {
-            analisisTab.appendChild(root);
+    const containerId = `${category}-charts-container`;
+    const container = document.getElementById(containerId);
+    
+    if (!container) {
+        console.warn(`Container ${containerId} not found`);
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        console.log(`No data to render charts for ${category}`);
+        return;
+    }
+
+    // Use React 18 createRoot
+    if (!window.reactRoots) {
+        window.reactRoots = {};
+    }
+
+    // Clean up existing root if it exists
+    if (window.reactRoots[containerId]) {
+        try {
+            window.reactRoots[containerId].unmount();
+        } catch (e) {
+            console.warn('Error unmounting previous root:', e);
         }
     }
 
-    // Category selector handler - sync with React component
-    const categorySelect = document.getElementById('analisisCategory');
-    if (categorySelect) {
-        categorySelect.addEventListener('change', (e) => {
-            currentCategory = e.target.value;
-            // Re-render React component with new category
-            const root = document.getElementById('analysis-charts-root');
-            if (root) {
-                ReactDOM.render(<AnalysisCharts />, root);
-            }
-        });
-    }
-
-    // Initial render
-    ReactDOM.render(<AnalysisCharts />, root);
-});
-
-// Export for use in dashboard.js
-window.loadAnalysisData = async function(category) {
-    currentCategory = category;
-    const categorySelect = document.getElementById('analisisCategory');
-    if (categorySelect) {
-        categorySelect.value = category;
-    }
-    const root = document.getElementById('analysis-charts-root');
-    if (root) {
-        ReactDOM.render(<AnalysisCharts />, root);
+    try {
+        // Create new root and render
+        const root = ReactDOM.createRoot(container);
+        window.reactRoots[containerId] = root;
+        // Use JSX syntax (Babel will transform it)
+        root.render(<AnalysisCharts category={category} data={data} />);
+        console.log(`Charts rendered for ${category} with ${data.length} assets`);
+    } catch (error) {
+        console.error(`Error rendering charts for ${category}:`, error);
+        console.error('Error details:', error.stack);
     }
 };
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize React roots object
+    if (!window.reactRoots) {
+        window.reactRoots = {};
+    }
+    
+    // Verify React is available
+    if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+        console.log('React and ReactDOM are available');
+    } else {
+        console.warn('React or ReactDOM not available on DOMContentLoaded');
+    }
+    
+    // Verify function is defined
+    if (typeof window.renderAnalysisCharts === 'function') {
+        console.log('renderAnalysisCharts function is available');
+    } else {
+        console.warn('renderAnalysisCharts function is NOT available');
+    }
+});
