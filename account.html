@@ -249,7 +249,6 @@
             }
 
             // Obtener plan actual del usuario
-            const API_BASE_URL = 'http://localhost:8080/api';
             fetch(`${API_BASE_URL}/subscriptions/current`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
@@ -263,7 +262,7 @@
                     const price = parseFloat(plan.price || 0);
                     
                     return `
-                        <div class="p-6 border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all ${isCurrentPlan ? '' : 'hover:shadow-lg'}" 
+                        <div id="plan-card-${plan.name}" class="p-6 border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all ${isCurrentPlan ? '' : 'hover:shadow-lg'} ${plan.name === selectedPlan?.name ? 'selected-plan-card' : ''}" 
                              onclick="${isCurrentPlan || isFree ? '' : `selectPlan('${plan.name}')`}">
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
@@ -287,7 +286,7 @@
                     const price = parseFloat(plan.price || 0);
                     
                     return `
-                        <div class="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all hover:shadow-lg" 
+                        <div id="plan-card-${plan.name}" class="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all hover:shadow-lg ${plan.name === selectedPlan?.name ? 'selected-plan-card' : ''}" 
                              onclick="${isFree ? '' : `selectPlan('${plan.name}')`}">
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
@@ -305,8 +304,21 @@
         }
 
         function selectPlan(planName) {
+            // Remover resaltado de planes anteriores
+            document.querySelectorAll('.selected-plan-card').forEach(card => {
+                card.classList.remove('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                card.classList.add('border-gray-200', 'dark:border-gray-700');
+            });
+
             selectedPlan = availablePlans.find(p => p.name === planName);
             if (!selectedPlan) return;
+
+            // Resaltar plan seleccionado
+            const selectedCard = document.getElementById(`plan-card-${planName}`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                selectedCard.classList.remove('border-gray-200', 'dark:border-gray-700');
+            }
 
             // Mostrar información del plan seleccionado
             const infoContainer = document.getElementById('selectedPlanInfo');

@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchInput = document.getElementById('assetSearch');
         const searchResults = document.getElementById('searchResults');
         const selectedAssets = document.getElementById('selectedAssets');
-        
+
         if (nameInput) nameInput.value = '';
         if (searchInput) searchInput.value = '';
         if (searchResults) {
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.getElementById('assetSearch');
             const searchResults = document.getElementById('searchResults');
             const selectedAssets = document.getElementById('selectedAssets');
-            
+
             if (nameInput) nameInput.value = '';
             if (searchInput) searchInput.value = '';
             if (searchResults) {
@@ -187,7 +187,7 @@ function initializeWatchlistModal() {
 
 async function searchAssets(query) {
     const searchResults = document.getElementById('searchResults');
-    
+
     try {
         searchResults.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400">Buscando...</div>';
         searchResults.classList.remove('hidden');
@@ -254,7 +254,7 @@ function removeAsset(symbol) {
 
 function updateSelectedAssetsDisplay() {
     const container = document.getElementById('selectedAssets');
-    
+
     if (selectedAssetsList.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-500 dark:text-gray-400 italic">No hay activos seleccionados</p>';
         return;
@@ -321,7 +321,7 @@ async function saveWatchlist(name, assets) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
         document.body.style.overflow = '';
-        
+
         // Reset form
         document.getElementById('watchlistName').value = '';
         document.getElementById('assetSearch').value = '';
@@ -442,7 +442,7 @@ async function loadCustomWatchlists() {
             // Add click handler for the new tab
             tabButton.addEventListener('click', () => {
                 const tabName = tabButton.getAttribute('data-tab');
-                
+
                 // Remove active class from all buttons and contents
                 document.querySelectorAll('.tab-button').forEach(btn => {
                     btn.classList.remove('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
@@ -478,10 +478,10 @@ async function loadCustomWatchlists() {
         // Re-initialize tabs to include new ones, but preserve current active tab
         const currentActiveTab = document.querySelector('.tab-button.bg-gradient-to-b');
         const currentActiveTabName = currentActiveTab ? currentActiveTab.getAttribute('data-tab') : 'tracking';
-        
+
         // Re-initialize tabs
         initializeTabs();
-        
+
         // Restore the previously active tab if it was analisis
         if (currentActiveTabName === 'analisis') {
             const analisisButton = document.querySelector('[data-tab="analisis"]');
@@ -500,7 +500,7 @@ async function loadCustomWatchlists() {
                 analisisButton.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
                 analisisTab.classList.remove('hidden');
                 analisisTab.classList.add('block');
-                
+
                 // Load analysis data
                 if (typeof loadAnalysisData === 'function') {
                     loadAnalysisData();
@@ -584,14 +584,14 @@ function setCurrentDate() {
 // Initialize tab functionality
 function initializeTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
-    
+
     // Set first tab (tracking) as active by default
     const firstTab = document.querySelector('.tab-button[data-tab="tracking"]');
     if (firstTab) {
         firstTab.classList.remove('text-gray-600', 'dark:text-gray-400');
         firstTab.classList.add('bg-gradient-to-b', 'from-green-50', 'dark:from-green-900/20', 'text-green-600', 'dark:text-green-400', 'border-b-2', 'border-green-500', 'dark:border-green-400');
     }
-    
+
     // Hide all tab contents except tracking
     document.querySelectorAll('.tab-content').forEach(content => {
         const tabId = content.id;
@@ -626,7 +626,7 @@ function initializeTabs() {
             if (tabContent) {
                 tabContent.classList.remove('hidden');
                 tabContent.classList.add('block');
-                
+
                 // Special handling for analysis tab
                 if (tabName === 'analisis') {
                     // Load analysis data if function exists
@@ -634,10 +634,10 @@ function initializeTabs() {
                         loadAnalysisData();
                     }
                 } else {
-            // Data should already be loaded from preload
-            const category = tabContent.getAttribute('data-category');
-            if (category && !currentData[category]) {
-                loadAssets(category, false);
+                    // Data should already be loaded from preload
+                    const category = tabContent.getAttribute('data-category');
+                    if (category && !currentData[category]) {
+                        loadAssets(category, false);
                     }
                 }
             }
@@ -732,10 +732,10 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
 
     // Show table, hide loading
     if (loadingEl) {
-    loadingEl.style.display = 'none';
+        loadingEl.style.display = 'none';
     }
     if (tableEl) {
-    tableEl.style.display = 'block';
+        tableEl.style.display = 'block';
     }
 }
 
@@ -762,7 +762,7 @@ function createTableRow(asset, isCrypto = false) {
         cell.className = 'px-4 py-3 text-sm text-gray-600 dark:text-gray-400';
         if (colorClass) cell.className += ' ' + colorClass;
         if (columnKey) cell.setAttribute('data-column', columnKey);
-        
+
         if (value === null || value === undefined) {
             cell.textContent = 'N/A';
         } else if (formatter) {
@@ -777,27 +777,73 @@ function createTableRow(asset, isCrypto = false) {
     const nameCell = document.createElement('td');
     nameCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
     nameCell.setAttribute('data-column', 'name');
-    
+
     const nameContainer = document.createElement('div');
     nameContainer.className = 'flex items-center gap-3';
-    
-    // Add logo if available
+
+    // Add logo
+    const logoImg = document.createElement('img');
+    logoImg.alt = asset.name;
+    logoImg.className = 'w-8 h-8 rounded-full object-cover flex-shrink-0';
+
+    // Determine logo source based on asset type
     if (asset.logo_url) {
-        const logoImg = document.createElement('img');
+        // Use provided logo URL if available
         logoImg.src = asset.logo_url;
-        logoImg.alt = asset.name;
-        logoImg.className = 'w-8 h-8 rounded-full object-cover flex-shrink-0';
-        logoImg.onerror = function() {
-            // Hide logo if it fails to load
-            this.style.display = 'none';
+    } else if (isCrypto) {
+        // For crypto, use CoinCap API
+        const cryptoSymbol = (asset.ticker || asset.symbol || '').replace('-USD', '').toLowerCase();
+        logoImg.src = `https://assets.coincap.io/assets/icons/${cryptoSymbol}@2x.png`;
+    } else {
+        // For stocks, use Clearbit Logo API
+        const ticker = (asset.ticker || asset.symbol || '').toLowerCase();
+        // Map common tickers to their domains
+        const domainMap = {
+            'amzn': 'amazon.com',
+            'aapl': 'apple.com',
+            'googl': 'google.com',
+            'goog': 'google.com',
+            'msft': 'microsoft.com',
+            'meta': 'meta.com',
+            'tsla': 'tesla.com',
+            'nvda': 'nvidia.com',
+            'nflx': 'netflix.com',
+            'adbe': 'adobe.com',
+            'crm': 'salesforce.com',
+            'orcl': 'oracle.com',
+            'intc': 'intel.com',
+            'amd': 'amd.com',
+            'qcom': 'qualcomm.com',
+            'pypl': 'paypal.com',
+            'v': 'visa.com',
+            'ma': 'mastercard.com',
+            'ko': 'coca-cola.com',
+            'pep': 'pepsico.com',
+            'wmt': 'walmart.com',
+            'dis': 'disney.com',
+            'nke': 'nike.com',
+            'mcd': 'mcdonalds.com',
+            'sbux': 'starbucks.com',
+            'ba': 'boeing.com',
+            'ibm': 'ibm.com',
+            'csco': 'cisco.com'
         };
-        nameContainer.appendChild(logoImg);
+
+        const domain = domainMap[ticker] || `${ticker}.com`;
+        logoImg.src = `https://logo.clearbit.com/${domain}`;
     }
-    
+
+    // Hide logo if it fails to load
+    logoImg.onerror = function () {
+        this.style.display = 'none';
+    };
+
+    nameContainer.appendChild(logoImg);
+
     const nameText = document.createElement('span');
     nameText.textContent = asset.name;
     nameContainer.appendChild(nameText);
-    
+
     nameCell.appendChild(nameContainer);
     row.appendChild(nameCell);
 
@@ -809,7 +855,7 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(createCell(asset.market_cap, formatLargeNumber, null, 'market_cap'));
         row.appendChild(createCell(asset.volume, formatNumber, null, 'volume'));
         row.appendChild(createCell(asset.all_time_high, formatCurrency, null, 'max'));
-        
+
         const diffCell = document.createElement('td');
         diffCell.className = 'px-4 py-3 font-semibold';
         diffCell.setAttribute('data-column', 'diff');
@@ -825,7 +871,7 @@ function createTableRow(asset, isCrypto = false) {
         // Stock columns: P/E, Revenue, Revenue Growth, Profit Margin, ROE, Debt/Equity, P/B, Beta, Volume, RSI
         row.appendChild(createCell(asset.pe_ratio, (v) => v.toFixed(2), null, 'pe'));
         row.appendChild(createCell(asset.revenue, formatLargeNumber, null, 'revenue'));
-        
+
         // Revenue Growth with color coding
         const revGrowthCell = createCell(asset.revenue_growth, (v) => (v * 100).toFixed(2) + '%', null, 'revenue_growth');
         if (asset.revenue_growth !== null && asset.revenue_growth > 0) {
@@ -834,7 +880,7 @@ function createTableRow(asset, isCrypto = false) {
             revGrowthCell.className += ' text-red-500 dark:text-red-400';
         }
         row.appendChild(revGrowthCell);
-        
+
         // Profit Margin
         const profitMarginCell = createCell(asset.profit_margin, (v) => (v * 100).toFixed(2) + '%', null, 'profit_margin');
         if (asset.profit_margin !== null && asset.profit_margin > 0.1) {
@@ -843,7 +889,7 @@ function createTableRow(asset, isCrypto = false) {
             profitMarginCell.className += ' text-red-500 dark:text-red-400';
         }
         row.appendChild(profitMarginCell);
-        
+
         // ROE with color coding
         const roeCell = createCell(asset.return_on_equity, (v) => (v * 100).toFixed(2) + '%', null, 'roe');
         if (asset.return_on_equity !== null && asset.return_on_equity > 0.15) {
@@ -852,13 +898,13 @@ function createTableRow(asset, isCrypto = false) {
             roeCell.className += ' text-red-500 dark:text-red-400';
         }
         row.appendChild(roeCell);
-        
+
         // Debt/Equity
         row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2), null, 'debt_to_equity'));
-        
+
         // P/B
         row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2), null, 'price_to_book'));
-        
+
         // Beta
         const betaCell = createCell(asset.beta, (v) => v.toFixed(2), null, 'beta');
         if (asset.beta !== null) {
@@ -869,10 +915,10 @@ function createTableRow(asset, isCrypto = false) {
             }
         }
         row.appendChild(betaCell);
-        
+
         // Volume
         row.appendChild(createCell(asset.volume, formatNumber, null, 'volume'));
-        
+
         // RSI with color coding
         const rsiCell = createCell(asset.rsi, (v) => v.toFixed(2), null, 'rsi');
         if (asset.rsi !== null) {
@@ -884,18 +930,18 @@ function createTableRow(asset, isCrypto = false) {
         }
         row.appendChild(rsiCell);
 
-    // Difference from max
-    const diffCell = document.createElement('td');
+        // Difference from max
+        const diffCell = document.createElement('td');
         diffCell.className = 'px-4 py-3 font-semibold';
         diffCell.setAttribute('data-column', 'diff');
-    if (asset.diff_from_max >= -0.001) {
+        if (asset.diff_from_max >= -0.001) {
             diffCell.className += ' text-green-500 dark:text-green-400';
             diffCell.innerHTML = '✅ En Máx';
-    } else {
+        } else {
             diffCell.className += ' text-red-500 dark:text-red-400';
-        diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
-    }
-    row.appendChild(diffCell);
+            diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+        }
+        row.appendChild(diffCell);
     }
 
     return row;

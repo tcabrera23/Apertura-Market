@@ -40,3 +40,7 @@ esos cambios del usuario solo afectan en su cuenta!
 - no se porque de repente se rompio la api de news
 - ahora da error al buscar activos
 - el panel de account no carga el historial de alertas
+
+
+
+agrega un modo de language para que el usuario pueda cambiar el idioma. asi como tenemos el modo oscuro y claro, el usuario debe poder elegir ver el contenido de la web en español o en ingles o portugues. 
