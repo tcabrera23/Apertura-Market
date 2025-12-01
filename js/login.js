@@ -110,9 +110,12 @@ async function handleSignIn() {
 
         showMessage('¡Bienvenido! Redirigiendo...', 'success');
         
-        // Redirigir después de un breve delay
+        // Redirigir a la URL guardada o al dashboard
+        const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
+        localStorage.removeItem('redirect_after_login');
+        
         setTimeout(() => {
-            window.location.href = 'dashboard.html';
+            window.location.href = redirectUrl;
         }, 1000);
 
     } catch (error) {
@@ -166,9 +169,12 @@ async function handleSignUp() {
 
         showMessage('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
         
-        // Redirigir después de un breve delay
+        // Redirigir a la URL guardada o al dashboard
+        const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
+        localStorage.removeItem('redirect_after_login');
+        
         setTimeout(() => {
-            window.location.href = 'dashboard.html';
+            window.location.href = redirectUrl;
         }, 1500);
 
     } catch (error) {
@@ -228,9 +234,12 @@ async function completeOAuth(token) {
         // Limpiar hash de la URL
         window.history.replaceState(null, null, window.location.pathname);
         
-        // Redirigir
+        // Redirigir a la URL guardada o al dashboard
+        const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
+        localStorage.removeItem('redirect_after_login');
+        
         setTimeout(() => {
-            window.location.href = 'dashboard.html';
+            window.location.href = redirectUrl;
         }, 1000);
 
     } catch (error) {
@@ -259,8 +268,10 @@ async function verifyToken(token) {
         });
 
         if (response.ok) {
-            // Token válido, redirigir al dashboard
-            window.location.href = 'dashboard.html';
+            // Token válido, redirigir a la URL guardada o al dashboard
+            const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
+            localStorage.removeItem('redirect_after_login');
+            window.location.href = redirectUrl;
         } else {
             // Token inválido, limpiar
             localStorage.removeItem('access_token');

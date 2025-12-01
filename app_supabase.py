@@ -20,6 +20,7 @@ import os
 import re
 import logging
 import jwt
+import requests
 from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -61,6 +62,14 @@ USER_TABLE_NAME = "user_profiles"
 
 # Brevo Email Configuration
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+
+# PayPal Configuration
+PAYPAL_MODE = os.getenv("PAYPAL_MODE", "live")  # 'sandbox' o 'live'
+PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
+PAYPAL_BASE_URL = "https://api-m.sandbox.paypal.com" if PAYPAL_MODE == "sandbox" else "https://api-m.paypal.com"
+PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "http://localhost:8080/subscription-success.html")
+PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8080/pricing.html")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -417,25 +426,21 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         )
 
 async def create_default_subscription(user_id: str):
-    """Crea una suscripción por defecto con trial de 14 días"""
+    """Crea una suscripción por defecto con plan free y trial de 7 días"""
     try:
-        # Obtener el plan "plus" (plan con trial)
-        plan_response = supabase.table("subscription_plans").select("*").eq("name", "plus").execute()
+        # Obtener el plan "free" (plan gratuito con trial)
+        plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
         
         if not plan_response.data or len(plan_response.data) == 0:
-            logger.warning("Plan 'plus' no encontrado, usando plan 'free'")
-            plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
-        
-        if not plan_response.data or len(plan_response.data) == 0:
-            logger.error("No se encontró ningún plan disponible")
+            logger.error("Plan 'free' no encontrado")
             return
         
         plan = plan_response.data[0]
         plan_id = plan["id"]
         
-        # Calcular fechas de trial (14 días desde ahora)
+        # Calcular fechas de trial (7 días desde ahora)
         now = datetime.utcnow()
-        trial_end = now + timedelta(days=14)
+        trial_end = now + timedelta(days=7)
         
         # Crear suscripción con trial
         subscription_data = {
@@ -903,25 +908,21 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         )
 
 async def create_default_subscription(user_id: str):
-    """Crea una suscripción por defecto con trial de 14 días"""
+    """Crea una suscripción por defecto con plan free y trial de 7 días"""
     try:
-        # Obtener el plan "plus" (plan con trial)
-        plan_response = supabase.table("subscription_plans").select("*").eq("name", "plus").execute()
+        # Obtener el plan "free" (plan gratuito con trial)
+        plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
         
         if not plan_response.data or len(plan_response.data) == 0:
-            logger.warning("Plan 'plus' no encontrado, usando plan 'free'")
-            plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
-        
-        if not plan_response.data or len(plan_response.data) == 0:
-            logger.error("No se encontró ningún plan disponible")
+            logger.error("Plan 'free' no encontrado")
             return
         
         plan = plan_response.data[0]
         plan_id = plan["id"]
         
-        # Calcular fechas de trial (14 días desde ahora)
+        # Calcular fechas de trial (7 días desde ahora)
         now = datetime.utcnow()
-        trial_end = now + timedelta(days=14)
+        trial_end = now + timedelta(days=7)
         
         # Crear suscripción con trial
         subscription_data = {
@@ -1270,6 +1271,24 @@ async def get_current_subscription(user = Depends(get_current_user)):
 # SUBSCRIPTIONS ENDPOINTS
 # ============================================
 
+@app.get("/api/subscription-plans")
+async def get_subscription_plans():
+    """Obtiene todos los planes de suscripción disponibles"""
+    try:
+        response = supabase.table("subscription_plans") \
+            .select("*") \
+            .eq("is_active", True) \
+            .order("sort_order", desc=False) \
+            .execute()
+        
+        if not response.data:
+            return []
+        
+        return response.data
+    except Exception as e:
+        logger.error(f"Error fetching subscription plans: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching subscription plans: {str(e)}")
+
 @app.get("/api/subscriptions/current")
 async def get_current_subscription(user = Depends(get_current_user)):
     """Obtiene la suscripción actual del usuario"""
@@ -1372,6 +1391,10 @@ async def account():
 @app.get("/login.html")
 async def login():
     return FileResponse("login.html")
+
+@app.get("/subscription-success.html")
+async def subscription_success():
+    return FileResponse("subscription-success.html")
 
 @app.get("/")
 async def root():
@@ -1701,6 +1724,273 @@ async def test_all_templates(email: str = Query(..., description="Email destino 
             "failed": total - successful
         }
     }
+
+# ============================================
+# PAYPAL SUBSCRIPTION ENDPOINTS
+# ============================================
+
+class CreateSubscriptionRequest(BaseModel):
+    plan_name: str  # 'plus' o 'pro'
+
+def get_paypal_access_token() -> str:
+    """Obtiene token de acceso de PayPal"""
+    if not PAYPAL_CLIENT_ID or not PAYPAL_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=500,
+            detail="PayPal credentials no configuradas. Configura PAYPAL_CLIENT_ID y PAYPAL_CLIENT_SECRET en .env"
+        )
+    
+    auth = base64.b64encode(
+        f"{PAYPAL_CLIENT_ID}:{PAYPAL_CLIENT_SECRET}".encode()
+    ).decode()
+    
+    headers = {
+        "Authorization": f"Basic {auth}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    
+    try:
+        response = requests.post(
+            f"{PAYPAL_BASE_URL}/v1/oauth2/token",
+            headers=headers,
+            data={"grant_type": "client_credentials"}
+        )
+        response.raise_for_status()
+        return response.json()["access_token"]
+    except Exception as e:
+        logger.error(f"Error obteniendo token de PayPal: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error conectando con PayPal: {str(e)}"
+        )
+
+@app.post("/api/subscriptions/create")
+async def create_subscription(
+    request: CreateSubscriptionRequest,
+    user = Depends(get_current_user)
+):
+    """
+    Crea una nueva suscripción en PayPal y guarda referencia en Supabase
+    """
+    try:
+        logger.info(f"Creando suscripción para usuario {user.id}, plan: {request.plan_name}")
+        
+        # 1. Obtener plan de Supabase
+        plan_response = supabase.table("subscription_plans") \
+            .select("*") \
+            .eq("name", request.plan_name) \
+            .execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            raise HTTPException(status_code=404, detail=f"Plan '{request.plan_name}' no encontrado")
+        
+        plan = plan_response.data[0]
+        paypal_plan_id = plan.get("paypal_plan_id")
+        
+        if not paypal_plan_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Plan '{request.plan_name}' no tiene paypal_plan_id configurado. Configúralo en Supabase."
+            )
+        
+        # 2. Verificar si el usuario ya tiene una suscripción activa
+        existing_sub = supabase.table("subscriptions") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .in_("status", ["active", "pending_approval"]) \
+            .execute()
+        
+        if existing_sub.data and len(existing_sub.data) > 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Ya tienes una suscripción activa o pendiente. Cancela la actual antes de crear una nueva."
+            )
+        
+        # 3. Obtener email del usuario
+        user_profile = supabase.table("user_profiles") \
+            .select("email") \
+            .eq("id", user.id) \
+            .single() \
+            .execute()
+        
+        user_email = user_profile.data.get("email") if user_profile.data else user.id
+        
+        # 4. Crear suscripción en PayPal
+        access_token = get_paypal_access_token()
+        
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        
+        payload = {
+            "plan_id": paypal_plan_id,
+            "start_time": None,  # Inicia inmediatamente tras aprobación
+            "subscriber": {
+                "email_address": user_email,
+            },
+            "application_context": {
+                "brand_name": "BullAnalytics",
+                "locale": "es-ES",
+                "shipping_preference": "NO_SHIPPING",
+                "user_action": "SUBSCRIBE_NOW",
+                "payment_method": {
+                    "payer_selected": "PAYPAL",
+                    "payee_preferred": "IMMEDIATE_PAYMENT_REQUIRED"
+                },
+                "return_url": PAYPAL_RETURN_URL,
+                "cancel_url": PAYPAL_CANCEL_URL
+            }
+        }
+        
+        logger.info(f"Creando suscripción en PayPal con plan_id: {paypal_plan_id}")
+        response = requests.post(
+            f"{PAYPAL_BASE_URL}/v1/billing/subscriptions",
+            headers=headers,
+            json=payload
+        )
+        
+        if response.status_code != 201:
+            error_detail = response.json() if response.content else {"message": "Error desconocido"}
+            logger.error(f"Error en PayPal: {response.status_code} - {error_detail}")
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Error en PayPal: {error_detail}"
+            )
+        
+        subscription_data = response.json()
+        paypal_subscription_id = subscription_data["id"]
+        
+        logger.info(f"Suscripción creada en PayPal: {paypal_subscription_id}")
+        
+        # 5. Guardar referencia en Supabase (status='pending_approval' hasta aprobación)
+        subscription_record = {
+            "user_id": user.id,
+            "plan_id": plan["id"],
+            "status": "pending_approval",
+            "paypal_subscription_id": paypal_subscription_id,
+            "current_period_start": None,  # Se actualizará con webhook
+            "current_period_end": None
+        }
+        
+        supabase_response = supabase.table("subscriptions").insert(subscription_record).execute()
+        
+        if not supabase_response.data:
+            logger.error("No se pudo guardar la suscripción en Supabase")
+            raise HTTPException(status_code=500, detail="Error guardando suscripción en base de datos")
+        
+        # 6. Obtener approval_url
+        approval_url = None
+        for link in subscription_data.get("links", []):
+            if link.get("rel") == "approve":
+                approval_url = link.get("href")
+                break
+        
+        if not approval_url:
+            raise HTTPException(status_code=500, detail="No se encontró approval_url en la respuesta de PayPal")
+        
+        logger.info(f"✅ Suscripción creada exitosamente. Approval URL: {approval_url}")
+        
+        return {
+            "success": True,
+            "paypal_subscription_id": paypal_subscription_id,
+            "approval_url": approval_url,
+            "message": "Redirige al usuario a approval_url para completar el pago"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creando suscripción: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error creando suscripción: {str(e)}")
+
+@app.get("/api/subscriptions/verify")
+async def verify_subscription(
+    subscription_id: str = Query(..., description="ID de suscripción de PayPal"),
+    user = Depends(get_current_user)
+):
+    """
+    Verifica el estado de una suscripción después del retorno de PayPal
+    """
+    try:
+        # 1. Obtener suscripción de Supabase
+        sub_response = supabase.table("subscriptions") \
+            .select("*") \
+            .eq("paypal_subscription_id", subscription_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not sub_response.data or len(sub_response.data) == 0:
+            raise HTTPException(status_code=404, detail="Suscripción no encontrada")
+        
+        subscription = sub_response.data[0]
+        
+        # 2. Verificar estado en PayPal
+        access_token = get_paypal_access_token()
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            f"{PAYPAL_BASE_URL}/v1/billing/subscriptions/{subscription_id}",
+            headers=headers
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"Error obteniendo estado de PayPal: {response.json()}"
+            )
+        
+        paypal_subscription = response.json()
+        paypal_status = paypal_subscription.get("status")
+        
+        # 3. Actualizar estado en Supabase si cambió
+        if paypal_status != subscription["status"]:
+            update_data = {"status": paypal_status.lower()}
+            
+            # Si está activa, actualizar fechas
+            if paypal_status == "ACTIVE":
+                billing_info = paypal_subscription.get("billing_info", {})
+                if billing_info:
+                    next_billing_time = billing_info.get("next_billing_time")
+                    if next_billing_time:
+                        update_data["current_period_start"] = datetime.utcnow().isoformat()
+                        # Calcular end basado en el plan
+                        plan_response = supabase.table("subscription_plans") \
+                            .select("billing_interval") \
+                            .eq("id", subscription["plan_id"]) \
+                            .single() \
+                            .execute()
+                        
+                        if plan_response.data:
+                            interval = plan_response.data.get("billing_interval", "month")
+                            if interval == "month":
+                                update_data["current_period_end"] = (datetime.utcnow() + timedelta(days=30)).isoformat()
+                            elif interval == "year":
+                                update_data["current_period_end"] = (datetime.utcnow() + timedelta(days=365)).isoformat()
+            
+            supabase.table("subscriptions") \
+                .update(update_data) \
+                .eq("id", subscription["id"]) \
+                .execute()
+            
+            logger.info(f"Suscripción {subscription_id} actualizada a estado: {paypal_status}")
+        
+        return {
+            "success": True,
+            "subscription_id": subscription_id,
+            "status": paypal_status,
+            "subscription": paypal_subscription
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verificando suscripción: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error verificando suscripción: {str(e)}")
 
 # Run server
 if __name__ == "__main__":

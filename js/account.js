@@ -4,6 +4,9 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 const AUTH_API_BASE_URL = 'http://localhost:8080/auth';
 
+// Exponer getAuthToken globalmente para account.html
+window.getAuthToken = getAuthToken;
+
 // Obtener token del localStorage
 function getAuthToken() {
     return localStorage.getItem('access_token');

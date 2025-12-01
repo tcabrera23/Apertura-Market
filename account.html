@@ -141,9 +141,9 @@
 
     <!-- Upgrade Plan Modal -->
     <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="upgradeModal">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4">
-            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Actualizar Plan</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Seleccionar Plan</h3>
                 <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" onclick="closeUpgradeModal()">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -151,27 +151,22 @@
                 </button>
             </div>
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-colors">
-                        <h4 class="font-bold text-gray-900 dark:text-white mb-2">Básico</h4>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">$9.99</p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">/mes</p>
-                    </div>
-                    <div class="p-4 border-2 border-green-500 rounded-lg bg-green-50 dark:bg-green-900/20 cursor-pointer">
-                        <h4 class="font-bold text-gray-900 dark:text-white mb-2">Pro</h4>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">$29.99</p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">/mes</p>
-                        <span class="text-xs text-green-600 dark:text-green-400 font-semibold">Actual</span>
-                    </div>
-                    <div class="p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-colors">
-                        <h4 class="font-bold text-gray-900 dark:text-white mb-2">Enterprise</h4>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">$99.99</p>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">/mes</p>
+                <div id="plansContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <!-- Los planes se cargarán dinámicamente aquí -->
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <p>Cargando planes...</p>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button class="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold" onclick="closeUpgradeModal()">Cancelar</button>
-                    <button class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg transition-all font-semibold">Confirmar Cambio</button>
+                
+                <!-- PayPal Checkout Container -->
+                <div id="paypalCheckoutContainer" class="hidden mt-6 p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-gray-200 dark:border-gray-600">
+                    <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Completar Pago</h4>
+                    <div id="selectedPlanInfo" class="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
+                        <!-- Información del plan seleccionado -->
+                    </div>
+                    <div id="paypal-button-container" class="flex justify-center">
+                        <!-- PayPal button se renderizará aquí -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -205,16 +200,242 @@
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
     <script src="js/account.js"></script>
+    <script src="js/subscription.js"></script>
     <script>
+        let selectedPlan = null;
+        let availablePlans = [];
+
         function openUpgradeModal() {
             document.getElementById('upgradeModal').classList.remove('hidden');
             document.getElementById('upgradeModal').classList.add('flex');
+            loadAvailablePlans();
         }
 
         function closeUpgradeModal() {
             document.getElementById('upgradeModal').classList.add('hidden');
             document.getElementById('upgradeModal').classList.remove('flex');
+            selectedPlan = null;
+            document.getElementById('paypalCheckoutContainer').classList.add('hidden');
+            // Limpiar contenedor de PayPal
+            const container = document.getElementById('paypal-button-container');
+            if (container) {
+                container.innerHTML = '';
+            }
         }
+
+        async function loadAvailablePlans() {
+            const container = document.getElementById('plansContainer');
+            container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-3"><p>Cargando planes...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/subscription-plans`);
+                if (!response.ok) throw new Error('Error cargando planes');
+                
+                availablePlans = await response.json();
+                renderPlans(availablePlans);
+            } catch (error) {
+                console.error('Error loading plans:', error);
+                container.innerHTML = '<div class="text-center py-8 text-red-500 col-span-3"><p>Error al cargar los planes</p></div>';
+            }
+        }
+
+        function renderPlans(plans) {
+            const container = document.getElementById('plansContainer');
+            const token = getAuthToken();
+            
+            if (!token) {
+                container.innerHTML = '<div class="text-center py-8 text-red-500 col-span-3"><p>Debes iniciar sesión para ver los planes</p></div>';
+                return;
+            }
+
+            // Obtener plan actual del usuario
+            const API_BASE_URL = 'http://localhost:8080/api';
+            fetch(`${API_BASE_URL}/subscriptions/current`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(res => res.ok ? res.json() : null)
+            .then(currentSub => {
+                const currentPlanName = currentSub?.plan_name || 'free';
+                
+                container.innerHTML = plans.map(plan => {
+                    const isCurrentPlan = plan.name === currentPlanName;
+                    const isFree = plan.name === 'free';
+                    const price = parseFloat(plan.price || 0);
+                    
+                    return `
+                        <div class="p-6 border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all ${isCurrentPlan ? '' : 'hover:shadow-lg'}" 
+                             onclick="${isCurrentPlan || isFree ? '' : `selectPlan('${plan.name}')`}">
+                            <div class="text-center">
+                                <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
+                                ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
+                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                    ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
+                                    ${price > 0 ? `<span class="text-lg font-normal">/mes</span>` : ''}
+                                </p>
+                                ${isCurrentPlan ? '<span class="inline-block mt-2 px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">Plan Actual</span>' : ''}
+                                ${isFree ? '<span class="inline-block mt-2 px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-semibold">Gratis</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                console.error('Error getting current subscription:', err);
+                // Renderizar planes sin información de plan actual
+                container.innerHTML = plans.map(plan => {
+                    const isFree = plan.name === 'free';
+                    const price = parseFloat(plan.price || 0);
+                    
+                    return `
+                        <div class="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all hover:shadow-lg" 
+                             onclick="${isFree ? '' : `selectPlan('${plan.name}')`}">
+                            <div class="text-center">
+                                <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
+                                ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
+                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                    ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
+                                    ${price > 0 ? `<span class="text-lg font-normal">/mes</span>` : ''}
+                                </p>
+                                ${isFree ? '<span class="inline-block mt-2 px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-semibold">Gratis</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+        }
+
+        function selectPlan(planName) {
+            selectedPlan = availablePlans.find(p => p.name === planName);
+            if (!selectedPlan) return;
+
+            // Mostrar información del plan seleccionado
+            const infoContainer = document.getElementById('selectedPlanInfo');
+            const price = parseFloat(selectedPlan.price || 0);
+            
+            infoContainer.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h5 class="font-bold text-gray-900 dark:text-white">${selectedPlan.display_name || selectedPlan.name}</h5>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">${selectedPlan.description || ''}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                            ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
+                            ${price > 0 ? '<span class="text-sm font-normal">/mes</span>' : ''}
+                        </p>
+                    </div>
+                </div>
+            `;
+
+            // Mostrar contenedor de PayPal
+            document.getElementById('paypalCheckoutContainer').classList.remove('hidden');
+            
+            // Renderizar botón de PayPal
+            renderPayPalButton(selectedPlan);
+            
+            // Scroll al contenedor de PayPal
+            document.getElementById('paypalCheckoutContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function renderPayPalButton(plan) {
+            const container = document.getElementById('paypal-button-container');
+            container.innerHTML = ''; // Limpiar contenedor anterior
+            
+            if (!plan.paypal_plan_id) {
+                container.innerHTML = '<p class="text-red-500">Error: Plan ID de PayPal no configurado</p>';
+                return;
+            }
+
+            // PayPal Client ID (debería venir del backend o estar en una variable de entorno)
+            const PAYPAL_CLIENT_ID = 'AV6sbA4gR729v953GH_NPURUQNOgdZCPL7XMXHWPg4VtfahVRw290OW_vjysf4BfcNrLtPYTBYnFAtif';
+            
+            // Cargar SDK de PayPal si no está cargado
+            if (!window.paypal) {
+                const script = document.createElement('script');
+                script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
+                script.setAttribute('data-sdk-integration-source', 'button-factory');
+                script.onload = () => {
+                    initializePayPalButton(plan);
+                };
+                document.head.appendChild(script);
+            } else {
+                initializePayPalButton(plan);
+            }
+        }
+
+        function initializePayPalButton(plan) {
+            const container = document.getElementById('paypal-button-container');
+            container.innerHTML = '<div id="paypal-button"></div>';
+            
+            paypal.Buttons({
+                style: {
+                    shape: 'pill',
+                    color: 'gold',
+                    layout: 'vertical',
+                    label: 'subscribe'
+                },
+                createSubscription: function(data, actions) {
+                    return actions.subscription.create({
+                        plan_id: plan.paypal_plan_id
+                    });
+                },
+                onApprove: function(data, actions) {
+                    // Cuando el usuario aprueba la suscripción
+                    console.log('Suscripción aprobada:', data);
+                    
+                    // Verificar suscripción en el backend
+                    verifyPayPalSubscription(data.subscriptionID);
+                },
+                onCancel: function(data) {
+                    console.log('Suscripción cancelada:', data);
+                    alert('El proceso de suscripción fue cancelado.');
+                },
+                onError: function(err) {
+                    console.error('Error en PayPal:', err);
+                    alert('Ocurrió un error al procesar el pago. Por favor, intenta de nuevo.');
+                }
+            }).render('#paypal-button');
+        }
+
+        async function verifyPayPalSubscription(subscriptionId) {
+            const token = getAuthToken();
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const API_BASE_URL = 'http://localhost:8080/api';
+                const response = await fetch(
+                    `${API_BASE_URL}/subscriptions/verify?subscription_id=${subscriptionId}`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Error verificando suscripción');
+                }
+
+                const result = await response.json();
+                console.log('Suscripción verificada:', result);
+
+                // Mostrar mensaje de éxito
+                alert('¡Suscripción activada exitosamente!');
+                
+                // Cerrar modal y recargar información
+                closeUpgradeModal();
+                location.reload(); // Recargar para mostrar el nuevo plan
+                
+            } catch (error) {
+                console.error('Error verificando suscripción:', error);
+                alert('Error verificando la suscripción. Por favor, contacta al soporte.');
+            }
+        }
+
 
         function openCancelModal() {
             document.getElementById('cancelModal').classList.remove('hidden');
@@ -232,7 +453,6 @@
                 closeCancelModal();
             }
         }
-
     </script>
 </body>
 
