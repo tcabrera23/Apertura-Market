@@ -1,7 +1,7 @@
 // Login Page JavaScript
-// Conecta con main_login.py (puerto 8000)
+// Conecta con app_supabase.py (puerto 8080)
 
-const AUTH_API_BASE_URL = 'http://localhost:8000/auth';
+const AUTH_API_BASE_URL = 'http://localhost:8080/auth';
 
 // Estado de autenticación
 let currentMode = 'signin'; // 'signin' o 'signup'

@@ -2,15 +2,15 @@
 BullAnalytics API with Supabase Integration
 FastAPI backend for financial asset tracking with Supabase PostgreSQL
 """
-from fastapi import FastAPI, HTTPException, Query, Header, Depends
+from fastapi import FastAPI, HTTPException, Query, Header, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, RedirectResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import yfinance as yf
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from pydantic import BaseModel
+from typing import Dict, List, Optional, Any
+from pydantic import BaseModel, EmailStr
 from cachetools import TTLCache
 import uvicorn
 import io
@@ -18,6 +18,8 @@ import base64
 import json
 import os
 import re
+import logging
+import jwt
 from groq import Groq
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -25,15 +27,29 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://pwumamzbicapuiqkwrey.supabase.co")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 if not SUPABASE_SERVICE_KEY:
     raise ValueError("SUPABASE_SERVICE_KEY environment variable is required")
 
+if not SUPABASE_JWT_SECRET:
+    raise ValueError("SUPABASE_JWT_SECRET environment variable is required")
+
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+# User table name - using user_profiles (standard table)
+USER_TABLE_NAME = "user_profiles"
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -106,14 +122,27 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     try:
         token = credentials.credentials
         
+        if not token:
+            logger.warning("No token provided")
+            raise HTTPException(status_code=401, detail="No authentication token provided")
+        
         # Verify token with Supabase
-        user_response = supabase.auth.get_user(token)
+        try:
+            user_response = supabase.auth.get_user(token)
+        except Exception as auth_error:
+            logger.error(f"Error validating token with Supabase: {str(auth_error)}")
+            raise HTTPException(status_code=401, detail=f"Authentication failed: {str(auth_error)}")
         
         if not user_response or not user_response.user:
+            logger.warning("Token validation returned no user")
             raise HTTPException(status_code=401, detail="Invalid authentication token")
         
+        logger.info(f"User authenticated: {user_response.user.id}")
         return user_response.user
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Unexpected error in get_current_user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 # ============================================
@@ -284,6 +313,148 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         return None
 
 # ============================================
+# AUTHENTICATION HELPERS
+# ============================================
+
+def decode_jwt(token: str) -> Dict[str, Any]:
+    """Decodifica y valida el JWT de Supabase"""
+    try:
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        logger.warning("Token expirado")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Token inválido: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> Dict[str, Any]:
+    """Garantiza que el usuario existe en user_profiles"""
+    try:
+        # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        
+        if response.data and len(response.data) > 0:
+            logger.info(f"Usuario {user_id} ya existe en {USER_TABLE_NAME}")
+            user_data = response.data[0]
+            # Agregar auth_source al response para compatibilidad
+            user_data["auth_source"] = auth_source
+            return user_data
+        
+        # Crear nuevo usuario en user_profiles
+        logger.info(f"Creando nuevo usuario {user_id} en {USER_TABLE_NAME}")
+        new_user = {
+            "id": user_id,
+            "email": email,
+            "full_name": None,
+            "avatar_url": None,
+            "preferences": {},
+            "onboarding_completed": False,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        insert_response = supabase.table(USER_TABLE_NAME).insert(new_user).execute()
+        
+        if not insert_response.data or len(insert_response.data) == 0:
+            raise Exception("No se pudo insertar el usuario")
+        
+        logger.info(f"Usuario {user_id} creado exitosamente")
+        user_data = insert_response.data[0]
+        # Agregar auth_source al response para compatibilidad
+        user_data["auth_source"] = auth_source
+        
+        # Crear suscripción automática con trial de 14 días
+        await create_default_subscription(user_id)
+        
+        return user_data
+        
+    except Exception as e:
+        logger.error(f"Error en ensure_user_persisted: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al persistir usuario: {str(e)}"
+        )
+
+async def create_default_subscription(user_id: str):
+    """Crea una suscripción por defecto con trial de 14 días"""
+    try:
+        # Obtener el plan "plus" (plan con trial)
+        plan_response = supabase.table("subscription_plans").select("*").eq("name", "plus").execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            logger.warning("Plan 'plus' no encontrado, usando plan 'free'")
+            plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            logger.error("No se encontró ningún plan disponible")
+            return
+        
+        plan = plan_response.data[0]
+        plan_id = plan["id"]
+        
+        # Calcular fechas de trial (14 días desde ahora)
+        now = datetime.utcnow()
+        trial_end = now + timedelta(days=14)
+        
+        # Crear suscripción con trial
+        subscription_data = {
+            "user_id": user_id,
+            "plan_id": plan_id,
+            "status": "active",
+            "trial_start": now.isoformat(),
+            "trial_end": trial_end.isoformat(),
+            "current_period_start": now.isoformat(),
+            "current_period_end": trial_end.isoformat()
+        }
+        
+        subscription_response = supabase.table("subscriptions").insert(subscription_data).execute()
+        
+        if subscription_response.data:
+            logger.info(f"Suscripción con trial creada para usuario {user_id}")
+        else:
+            logger.error(f"Error al crear suscripción para usuario {user_id}")
+            
+    except Exception as e:
+        logger.error(f"Error creando suscripción por defecto: {str(e)}")
+        # No lanzar excepción para no interrumpir el registro del usuario
+
+# ============================================
+# AUTHENTICATION MODELS
+# ============================================
+
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class SignInRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserResponse(BaseModel):
+    user_id: str
+    email: str
+    auth_source: str
+    created_at: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+# ============================================
 # ASSET ENDPOINTS (Unchanged)
 # ============================================
 
@@ -356,31 +527,53 @@ async def get_argentina_assets():
 async def get_rules(user = Depends(get_current_user)):
     """Get all rules for authenticated user"""
     try:
+        logger.info(f"Fetching rules for user {user.id}")
         response = supabase.table("rules") \
             .select("*") \
             .eq("user_id", user.id) \
             .order("created_at", desc=True) \
             .execute()
         
-        return response.data
+        # Asegurar que siempre devolvemos un array, incluso si response.data es None
+        rules = response.data if response.data is not None else []
+        
+        if len(rules) == 0:
+            logger.info(f"No rules found for user {user.id}")
+        else:
+            logger.info(f"Found {len(rules)} rules for user {user.id}")
+        
+        return rules
     except Exception as e:
+        logger.error(f"Error fetching rules for user {user.id}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error fetching rules: {str(e)}")
 
 @app.post("/api/rules")
 async def create_rule(rule: RuleCreate, user = Depends(get_current_user)):
     """Create a new rule"""
     try:
-        # Check user's plan limits
-        check_result = supabase.rpc("check_user_plan_limit", {
-            "p_user_id": user.id,
-            "p_limit_type": "max_rules"
-        }).execute()
+        logger.info(f"Creating rule for user {user.id}: {rule.name} ({rule.rule_type})")
         
-        if not check_result.data:
-            raise HTTPException(
-                status_code=403,
-                detail="Has alcanzado el límite de reglas de tu plan. Actualiza tu suscripción."
-            )
+        # Check user's plan limits
+        try:
+            check_result = supabase.rpc("check_user_plan_limit", {
+                "p_user_id": user.id,
+                "p_limit_type": "max_rules"
+            }).execute()
+            
+            # La función RPC devuelve un booleano directamente
+            # Si devuelve False o None, el usuario no puede crear más reglas
+            can_create = check_result.data if check_result.data is not None else True
+            
+            if not can_create:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Has alcanzado el límite de reglas de tu plan. Actualiza tu suscripción."
+                )
+        except HTTPException:
+            raise
+        except Exception as rpc_error:
+            logger.warning(f"Error checking plan limit, continuando: {str(rpc_error)}")
+            # Continuar si hay error en la verificación del límite (no bloquear creación)
         
         rule_data = {
             "user_id": user.id,
@@ -392,8 +585,14 @@ async def create_rule(rule: RuleCreate, user = Depends(get_current_user)):
             "is_active": True
         }
         
+        logger.info(f"Inserting rule data: {rule_data}")
         response = supabase.table("rules").insert(rule_data).execute()
         
+        if not response.data or len(response.data) == 0:
+            logger.error("No data returned from Supabase insert")
+            raise HTTPException(status_code=500, detail="No se pudo crear la regla. No se recibieron datos de respuesta.")
+        
+        logger.info(f"Rule created successfully: {response.data[0].get('id')}")
         return {
             "message": "Rule created successfully",
             "rule": response.data[0]
@@ -401,6 +600,7 @@ async def create_rule(rule: RuleCreate, user = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error creating rule: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating rule: {str(e)}")
 
 @app.put("/api/rules/{rule_id}")
@@ -580,6 +780,487 @@ async def mark_alert_read(alert_id: str, user = Depends(get_current_user)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating alert: {str(e)}")
+
+# ============================================
+# AUTHENTICATION HELPERS
+# ============================================
+
+def decode_jwt(token: str) -> Dict[str, Any]:
+    """Decodifica y valida el JWT de Supabase"""
+    try:
+        payload = jwt.decode(
+            token,
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        logger.warning("Token expirado")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"Token inválido: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> Dict[str, Any]:
+    """Garantiza que el usuario existe en user_profiles"""
+    try:
+        # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        
+        if response.data and len(response.data) > 0:
+            logger.info(f"Usuario {user_id} ya existe en {USER_TABLE_NAME}")
+            user_data = response.data[0]
+            # Agregar auth_source al response para compatibilidad
+            user_data["auth_source"] = auth_source
+            return user_data
+        
+        # Crear nuevo usuario en user_profiles
+        logger.info(f"Creando nuevo usuario {user_id} en {USER_TABLE_NAME}")
+        new_user = {
+            "id": user_id,
+            "email": email,
+            "full_name": None,
+            "avatar_url": None,
+            "preferences": {},
+            "onboarding_completed": False,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        insert_response = supabase.table(USER_TABLE_NAME).insert(new_user).execute()
+        
+        if not insert_response.data or len(insert_response.data) == 0:
+            raise Exception("No se pudo insertar el usuario")
+        
+        logger.info(f"Usuario {user_id} creado exitosamente")
+        user_data = insert_response.data[0]
+        # Agregar auth_source al response para compatibilidad
+        user_data["auth_source"] = auth_source
+        
+        # Crear suscripción automática con trial de 14 días
+        await create_default_subscription(user_id)
+        
+        return user_data
+        
+    except Exception as e:
+        logger.error(f"Error en ensure_user_persisted: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al persistir usuario: {str(e)}"
+        )
+
+async def create_default_subscription(user_id: str):
+    """Crea una suscripción por defecto con trial de 14 días"""
+    try:
+        # Obtener el plan "plus" (plan con trial)
+        plan_response = supabase.table("subscription_plans").select("*").eq("name", "plus").execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            logger.warning("Plan 'plus' no encontrado, usando plan 'free'")
+            plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            logger.error("No se encontró ningún plan disponible")
+            return
+        
+        plan = plan_response.data[0]
+        plan_id = plan["id"]
+        
+        # Calcular fechas de trial (14 días desde ahora)
+        now = datetime.utcnow()
+        trial_end = now + timedelta(days=14)
+        
+        # Crear suscripción con trial
+        subscription_data = {
+            "user_id": user_id,
+            "plan_id": plan_id,
+            "status": "active",
+            "trial_start": now.isoformat(),
+            "trial_end": trial_end.isoformat(),
+            "current_period_start": now.isoformat(),
+            "current_period_end": trial_end.isoformat()
+        }
+        
+        subscription_response = supabase.table("subscriptions").insert(subscription_data).execute()
+        
+        if subscription_response.data:
+            logger.info(f"Suscripción con trial creada para usuario {user_id}")
+        else:
+            logger.error(f"Error al crear suscripción para usuario {user_id}")
+            
+    except Exception as e:
+        logger.error(f"Error creando suscripción por defecto: {str(e)}")
+        # No lanzar excepción para no interrumpir el registro del usuario
+
+# ============================================
+# AUTHENTICATION MODELS
+# ============================================
+
+class SignUpRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class SignInRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserResponse(BaseModel):
+    user_id: str
+    email: str
+    auth_source: str
+    created_at: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+# ============================================
+# AUTHENTICATION ENDPOINTS
+# ============================================
+
+@app.post("/auth/signup", response_model=AuthResponse, tags=["Authentication"])
+async def signup(signup_data: SignUpRequest):
+    """Registro de nuevo usuario con email y password"""
+    try:
+        logger.info(f"Registrando usuario: {signup_data.email}")
+        auth_response = supabase.auth.sign_up({
+            "email": signup_data.email,
+            "password": signup_data.password
+        })
+        
+        if not auth_response.user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pudo crear el usuario. Verifica que el email no esté registrado."
+            )
+        
+        user_id = auth_response.user.id
+        email = auth_response.user.email
+        
+        # Persistir en tabla custom
+        user_data = await ensure_user_persisted(user_id, email, "email_password")
+        
+        # Obtener token
+        access_token = auth_response.session.access_token if auth_response.session else None
+        
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Usuario creado pero no se pudo obtener el token"
+            )
+        
+        logger.info(f"Usuario {email} registrado exitosamente")
+        
+        return AuthResponse(
+            access_token=access_token,
+            user=UserResponse(
+                user_id=user_data["id"],  # user_profiles usa 'id' como PK
+                email=user_data["email"],
+                auth_source=user_data.get("auth_source", auth_source),
+                created_at=user_data["created_at"]
+            )
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en signup: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al registrar usuario: {str(e)}"
+        )
+
+@app.post("/auth/signin", response_model=AuthResponse, tags=["Authentication"])
+async def signin(signin_data: SignInRequest):
+    """Login con email y password"""
+    try:
+        logger.info(f"Autenticando usuario: {signin_data.email}")
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": signin_data.email,
+            "password": signin_data.password
+        })
+        
+        if not auth_response.user or not auth_response.session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Credenciales inválidas"
+            )
+        
+        user_id = auth_response.user.id
+        email = auth_response.user.email
+        access_token = auth_response.session.access_token
+        
+        # Validar JWT internamente
+        decode_jwt(access_token)
+        
+        # Persistir en tabla custom
+        user_data = await ensure_user_persisted(user_id, email, "email_password")
+        
+        logger.info(f"Usuario {email} autenticado exitosamente")
+        
+        return AuthResponse(
+            access_token=access_token,
+            user=UserResponse(
+                user_id=user_data["id"],  # user_profiles usa 'id' como PK
+                email=user_data["email"],
+                auth_source=user_data.get("auth_source", auth_source),
+                created_at=user_data["created_at"]
+            )
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en signin: {str(e)}", exc_info=True)
+        error_detail = str(e)
+        if "Invalid login credentials" in error_detail or "invalid_credentials" in error_detail.lower():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Email o contraseña incorrectos"
+            )
+        elif "Email not confirmed" in error_detail:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Por favor verifica tu email antes de iniciar sesión"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al autenticar: {error_detail}"
+            )
+
+@app.get("/auth/oauth/{provider_name}", tags=["OAuth"])
+async def oauth_login(provider_name: str):
+    """Inicia el flujo OAuth con el proveedor especificado"""
+    try:
+        provider_map = {
+            "google": "google",
+            "outlook": "azure",
+            "microsoft": "azure"
+        }
+        
+        provider = provider_map.get(provider_name.lower())
+        
+        if not provider:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Proveedor '{provider_name}' no soportado. Usa: google, outlook"
+            )
+        
+        logger.info(f"🔐 Iniciando OAuth con proveedor: {provider}")
+        
+        # URL de callback - debe ser la URL completa de tu frontend (puerto 8080)
+        redirect_to = "http://localhost:8080/login.html"
+        logger.info(f"📍 Redirect URL configurada: {redirect_to}")
+        
+        # Construir la URL de OAuth directamente
+        base_url = SUPABASE_URL.replace('/rest/v1', '').replace('/v1', '').rstrip('/')
+        
+        # Construir URL de autorización OAuth
+        oauth_url = f"{base_url}/auth/v1/authorize?provider={provider}&redirect_to={redirect_to}"
+        
+        logger.info(f"🌐 URL de OAuth construida: {oauth_url}")
+        logger.info(f"🚀 Redirigiendo a {provider} OAuth...")
+        
+        # Redirigir directamente a la URL de OAuth de Supabase
+        return RedirectResponse(url=oauth_url, status_code=302)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error inesperado en oauth_login: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al iniciar OAuth: {str(e)}"
+        )
+
+@app.get("/auth/callback", tags=["OAuth"])
+async def oauth_callback(request: Request):
+    """Callback de OAuth - Redirige al frontend"""
+    # Redirigir al frontend - el hash fragment se mantendrá
+    frontend_url = "http://localhost:8080/login.html"
+    return RedirectResponse(url=frontend_url)
+
+@app.post("/auth/oauth/complete", response_model=AuthResponse, tags=["OAuth"])
+async def oauth_complete(request: Request):
+    """Completa el flujo OAuth después de que el frontend captura el token"""
+    try:
+        # Obtener el token del header Authorization
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token de autorización requerido"
+            )
+        
+        access_token = auth_header.replace("Bearer ", "")
+        
+        # Validar y decodificar el token
+        payload = decode_jwt(access_token)
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id or not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token inválido: falta user_id o email"
+            )
+        
+        # Determinar el proveedor desde el token
+        provider = payload.get("app_metadata", {}).get("provider", "unknown")
+        auth_source = "google" if provider == "google" else "outlook" if provider == "azure" else provider
+        
+        logger.info(f"Completando OAuth para usuario {email} con proveedor {auth_source}")
+        
+        # Persistir usuario
+        user_data = await ensure_user_persisted(user_id, email, auth_source)
+        
+        logger.info(f"Usuario {email} persistido exitosamente en {USER_TABLE_NAME}")
+        
+        return AuthResponse(
+            access_token=access_token,
+            user=UserResponse(
+                user_id=user_data["id"],  # user_profiles usa 'id' como PK
+                email=user_data["email"],
+                auth_source=user_data.get("auth_source", auth_source),
+                created_at=user_data["created_at"]
+            )
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error en oauth_complete: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al completar OAuth: {str(e)}"
+        )
+
+@app.get("/api/v1/user/me", response_model=UserResponse, tags=["User"])
+async def get_current_user_profile(user = Depends(get_current_user)):
+    """Endpoint protegido que devuelve el perfil del usuario actual"""
+    try:
+        # user es un objeto de Supabase Auth con id
+        user_id = user.id
+        
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado en la base de datos"
+            )
+        
+        user_data = response.data[0]
+        # user_profiles no tiene auth_source, usar valor por defecto
+        auth_source = user_data.get("auth_source", "email_password")
+        
+        return UserResponse(
+            user_id=user_data["id"],  # user_profiles usa 'id' como PK
+            email=user_data["email"],
+            auth_source=auth_source,
+            created_at=user_data["created_at"]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error al obtener usuario: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener datos del usuario: {str(e)}"
+        )
+
+# ============================================
+# SUBSCRIPTIONS ENDPOINTS
+# ============================================
+
+@app.get("/api/subscriptions/current")
+async def get_current_subscription(user = Depends(get_current_user)):
+    """Obtiene la suscripción actual del usuario"""
+    try:
+        response = supabase.table("subscriptions") \
+            .select("*, subscription_plans(*)") \
+            .eq("user_id", user.id) \
+            .eq("status", "active") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        subscription = response.data[0]
+        plan = subscription.get("subscription_plans", {})
+        
+        return {
+            "id": subscription["id"],
+            "user_id": subscription["user_id"],
+            "plan_id": subscription["plan_id"],
+            "plan_name": plan.get("name", "free"),
+            "display_name": plan.get("display_name", "Plan Básico"),
+            "price": str(plan.get("price", "0.00")),
+            "status": subscription["status"],
+            "trial_start": subscription.get("trial_start"),
+            "trial_end": subscription.get("trial_end"),
+            "current_period_start": subscription.get("current_period_start"),
+            "current_period_end": subscription.get("current_period_end"),
+            "created_at": subscription.get("created_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching subscription: {str(e)}")
+
+# ============================================
+# SUBSCRIPTIONS ENDPOINTS
+# ============================================
+
+@app.get("/api/subscriptions/current")
+async def get_current_subscription(user = Depends(get_current_user)):
+    """Obtiene la suscripción actual del usuario"""
+    try:
+        response = supabase.table("subscriptions") \
+            .select("*, subscription_plans(*)") \
+            .eq("user_id", user.id) \
+            .eq("status", "active") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        subscription = response.data[0]
+        plan = subscription.get("subscription_plans", {})
+        
+        return {
+            "id": subscription["id"],
+            "user_id": subscription["user_id"],
+            "plan_id": subscription["plan_id"],
+            "plan_name": plan.get("name", "free"),
+            "display_name": plan.get("display_name", "Plan Básico"),
+            "price": str(plan.get("price", "0.00")),
+            "status": subscription["status"],
+            "trial_start": subscription.get("trial_start"),
+            "trial_end": subscription.get("trial_end"),
+            "current_period_start": subscription.get("current_period_start"),
+            "current_period_end": subscription.get("current_period_end"),
+            "created_at": subscription.get("created_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching subscription: {str(e)}")
 
 # ============================================
 # COUPONS ENDPOINTS (Supabase Integration)

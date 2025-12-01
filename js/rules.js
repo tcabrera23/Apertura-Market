@@ -2,7 +2,19 @@
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
+// Obtener token del localStorage
+function getAuthToken() {
+    return localStorage.getItem('access_token');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Verificar autenticación
+    const token = getAuthToken();
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
     loadRules();
 
     const ruleModal = document.getElementById('ruleModal');
@@ -63,13 +75,38 @@ async function loadRules() {
     containerEl.classList.remove('block');
 
     try {
-        const response = await fetch(`${API_BASE_URL}/rules`);
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/rules`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
         if (!response.ok) {
-            throw new Error('Error al cargar reglas');
+            if (response.status === 401) {
+                // Token inválido, redirigir al login
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                window.location.href = 'login.html';
+                return;
+            }
+            // Si es un error del servidor (500, etc.), lanzar error
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || errorData.message || 'Error al cargar reglas');
         }
 
         const rules = await response.json();
+
+        // Verificar que rules sea un array
+        if (!Array.isArray(rules)) {
+            console.error('Invalid response format:', rules);
+            throw new Error('Formato de respuesta inválido');
+        }
 
         loadingEl.classList.add('hidden');
         loadingEl.classList.remove('flex');
@@ -91,9 +128,21 @@ async function loadRules() {
 
     } catch (error) {
         console.error('Error loading rules:', error);
-        loadingEl.innerHTML = `
-            <p class="text-red-500">❌ Error al cargar las reglas.</p>
-        `;
+        loadingEl.classList.add('hidden');
+        loadingEl.classList.remove('flex');
+        containerEl.classList.remove('hidden');
+        containerEl.classList.add('block');
+        listEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        // Mostrar mensaje de error solo si es un error de conexión, no si es un array vacío
+        if (error.message && !error.message.includes('Formato')) {
+            emptyEl.innerHTML = `
+                <div class="text-center py-12">
+                    <p class="text-red-500 text-lg font-semibold mb-2">❌ Error al cargar las reglas</p>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">${error.message}</p>
+                </div>
+            `;
+        }
     }
 }
 
@@ -113,9 +162,9 @@ function createRuleCard(rule) {
         <div class="flex-1">
             <div class="font-bold text-lg text-gray-900 dark:text-white mb-2">${rule.name || 'Regla sin nombre'}</div>
             <div class="flex flex-wrap gap-3">
-                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">${typeLabels[rule.type] || rule.type}</span>
+                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">${typeLabels[rule.rule_type] || rule.type || rule.rule_type}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📊 ${rule.ticker}</span>
-                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value_threshold || rule.value}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📧 ${rule.email}</span>
             </div>
         </div>
@@ -134,24 +183,47 @@ function createRuleCard(rule) {
 async function createRule() {
     const formData = {
         name: document.getElementById('ruleName').value,
-        type: document.getElementById('ruleType').value,
+        rule_type: document.getElementById('ruleType').value,  // Cambiado de 'type' a 'rule_type'
         ticker: document.getElementById('ruleTicker').value.toUpperCase(),
         value: parseFloat(document.getElementById('ruleValue').value),
         email: document.getElementById('ruleEmail').value
     };
 
     try {
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
         const response = await fetch(`${API_BASE_URL}/rules`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(formData)
         });
 
         if (!response.ok) {
-            throw new Error('Error al crear regla');
+            if (response.status === 401) {
+                console.error('401 Unauthorized - Token inválido o expirado');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+                window.location.href = 'login.html';
+                return;
+            }
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || errorData.message || 'Error al crear regla';
+            console.error('Error creating rule:', errorMessage, response.status);
+            console.error('Full error response:', errorData);
+            alert(`Error al crear la regla: ${errorMessage}`);
+            return;
         }
+
+        const result = await response.json();
+        console.log('Rule created successfully:', result);
 
         const ruleModal = document.getElementById('ruleModal');
         ruleModal.style.display = 'none';
@@ -161,7 +233,7 @@ async function createRule() {
 
     } catch (error) {
         console.error('Error creating rule:', error);
-        alert('Error al crear la regla. Por favor, intenta de nuevo.');
+        alert(`Error al crear la regla: ${error.message || 'Por favor, intenta de nuevo.'}`);
     }
 }
 
@@ -171,11 +243,26 @@ async function deleteRule(ruleId) {
     }
 
     try {
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
         const response = await fetch(`${API_BASE_URL}/rules/${ruleId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
         });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                window.location.href = 'login.html';
+                return;
+            }
             throw new Error('Error al eliminar regla');
         }
 
@@ -237,7 +324,7 @@ async function sendChatMessage() {
             addChatMessage(
                 `✅ ¡Regla creada exitosamente!\n\n` +
                 `📋 Nombre: ${result.rule.name}\n` +
-                `📊 Tipo: ${getTypeLabel(result.rule.type)}\n` +
+                `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
                 `🎯 Ticker: ${result.rule.ticker}\n` +
                 `💵 Valor: ${result.rule.value}\n` +
                 `📧 Email: ${result.rule.email}`,

@@ -43,11 +43,11 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str
     
     # Personalización
-    user_table_name: str = "usuarios_app_genai"
+    user_table_name: str = "user_profiles"
     app_name: str = "Login Starter Kit"
     
     # CORS
-    cors_origins: str = "http://localhost:3000,http://localhost:8000,http://127.0.0.1:8000"
+    cors_origins: str = "http://localhost:8080,http://localhost:8000,http://127.0.0.1:8000"
     
     # Server
     host: str = "0.0.0.0"
@@ -182,9 +182,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             detail="Token inválido: no contiene user_id"
         )
     
-    # Obtener datos del usuario desde la tabla custom
+    # Obtener datos del usuario desde user_profiles (usa 'id' como PK)
     try:
-        response = supabase.table(settings.user_table_name).select("*").eq("user_id", user_id).execute()
+        response = supabase.table(settings.user_table_name).select("*").eq("id", user_id).execute()
         
         if not response.data or len(response.data) == 0:
             logger.error(f"Usuario {user_id} no encontrado en {settings.user_table_name}")
@@ -193,7 +193,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 detail="Usuario no encontrado en la base de datos"
             )
         
-        return response.data[0]
+        user_data = response.data[0]
+        # Agregar auth_source al response para compatibilidad (user_profiles no lo tiene)
+        user_data["auth_source"] = user_data.get("auth_source", "email_password")
+        return user_data
         
     except Exception as e:
         logger.error(f"Error al obtener usuario: {str(e)}")
@@ -220,19 +223,25 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         Diccionario con los datos del usuario
     """
     try:
-        # Verificar si el usuario ya existe
-        response = supabase.table(settings.user_table_name).select("*").eq("user_id", user_id).execute()
+        # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
+        response = supabase.table(settings.user_table_name).select("*").eq("id", user_id).execute()
         
         if response.data and len(response.data) > 0:
             logger.info(f"Usuario {user_id} ya existe en {settings.user_table_name}")
-            return response.data[0]
+            user_data = response.data[0]
+            # Agregar auth_source al response para compatibilidad
+            user_data["auth_source"] = auth_source
+            return user_data
         
-        # Crear nuevo usuario
+        # Crear nuevo usuario en user_profiles
         logger.info(f"Creando nuevo usuario {user_id} en {settings.user_table_name}")
         new_user = {
-            "user_id": user_id,
+            "id": user_id,
             "email": email,
-            "auth_source": auth_source,
+            "full_name": None,
+            "avatar_url": None,
+            "preferences": {},
+            "onboarding_completed": False,
             "created_at": datetime.utcnow().isoformat()
         }
         
@@ -242,7 +251,10 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
             raise Exception("No se pudo insertar el usuario")
         
         logger.info(f"Usuario {user_id} creado exitosamente")
-        return insert_response.data[0]
+        user_data = insert_response.data[0]
+        # Agregar auth_source al response para compatibilidad
+        user_data["auth_source"] = auth_source
+        return user_data
         
     except Exception as e:
         logger.error(f"Error en ensure_user_persisted: {str(e)}")
@@ -505,8 +517,8 @@ async def oauth_login(provider_name: str):
         # Obtener URL de OAuth desde Supabase
         logger.info(f"🔐 Iniciando OAuth con proveedor: {provider}")
         
-        # URL de callback - debe ser la URL completa de tu frontend
-        redirect_to = f"http://localhost:{settings.port}/auth/callback"
+        # URL de callback - debe ser la URL completa de tu frontend (puerto 8080 donde está app_supabase.py)
+        redirect_to = "http://localhost:8080/login.html"
         logger.info(f"📍 Redirect URL configurada: {redirect_to}")
         
         # Construir la URL de OAuth directamente
@@ -545,7 +557,8 @@ async def oauth_callback(request: Request):
     y llamar a /auth/oauth/complete para persistir el usuario.
     """
     # Redirigir al frontend - el hash fragment se mantendrá
-    frontend_url = f"http://localhost:{settings.port}/"
+    # Redirigir a login.html en el puerto 8080 donde está app_supabase.py
+    frontend_url = "http://localhost:8080/login.html"
     return RedirectResponse(url=frontend_url)
 
 

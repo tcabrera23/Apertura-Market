@@ -32,4 +32,5 @@ antigravity:
 repasa la documentacion y dame prompts para generar campañas, videos, engagement, imagenes, marketing etc para mi aplicacion BullAnalytics y su Bull Agent
 
 
-diseña la base de datos de esta app en supabase con login y migracion de los json y todo a tablas (crear un .MD)
+deberia eliminar nuevamente mi cuenta de user_profiles
+chequear porque se cambia la info de usuario a tomas tipo porque se sobreescribe

@@ -204,6 +204,7 @@
 
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
+    <script src="js/account.js"></script>
     <script>
         function openUpgradeModal() {
             document.getElementById('upgradeModal').classList.remove('hidden');
@@ -232,39 +233,6 @@
             }
         }
 
-        // Load alert history
-        async function loadAlertHistory() {
-            const container = document.getElementById('alertHistory');
-            try {
-                const response = await fetch('http://localhost:8080/api/rules');
-                const rules = await response.json();
-                
-                if (rules.length === 0) {
-                    container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400"><p>No hay alertas en tu historial</p></div>';
-                    return;
-                }
-
-                container.innerHTML = rules.map(rule => `
-                    <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-semibold text-gray-900 dark:text-white">${rule.name || 'Regla sin nombre'}</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${rule.ticker} - ${rule.type}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Creada: ${new Date(rule.created_at).toLocaleDateString()}</p>
-                            </div>
-                            <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">Activa</span>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading alert history:', error);
-                container.innerHTML = '<div class="text-center py-8 text-red-500"><p>Error al cargar el historial</p></div>';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadAlertHistory();
-        });
     </script>
 </body>
 
