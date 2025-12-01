@@ -634,10 +634,10 @@ function initializeTabs() {
                         loadAnalysisData();
                     }
                 } else {
-                    // Data should already be loaded from preload
-                    const category = tabContent.getAttribute('data-category');
-                    if (category && !currentData[category]) {
-                        loadAssets(category, false);
+            // Data should already be loaded from preload
+            const category = tabContent.getAttribute('data-category');
+            if (category && !currentData[category]) {
+                loadAssets(category, false);
                     }
                 }
             }
@@ -732,10 +732,10 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
 
     // Show table, hide loading
     if (loadingEl) {
-        loadingEl.style.display = 'none';
+    loadingEl.style.display = 'none';
     }
     if (tableEl) {
-        tableEl.style.display = 'block';
+    tableEl.style.display = 'block';
     }
 }
 
@@ -883,19 +883,19 @@ function createTableRow(asset, isCrypto = false) {
             }
         }
         row.appendChild(rsiCell);
-        
-        // Difference from max
-        const diffCell = document.createElement('td');
+
+    // Difference from max
+    const diffCell = document.createElement('td');
         diffCell.className = 'px-4 py-3 font-semibold';
         diffCell.setAttribute('data-column', 'diff');
-        if (asset.diff_from_max >= -0.001) {
+    if (asset.diff_from_max >= -0.001) {
             diffCell.className += ' text-green-500 dark:text-green-400';
             diffCell.innerHTML = '✅ En Máx';
-        } else {
+    } else {
             diffCell.className += ' text-red-500 dark:text-red-400';
-            diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
-        }
-        row.appendChild(diffCell);
+        diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+    }
+    row.appendChild(diffCell);
     }
 
     return row;
