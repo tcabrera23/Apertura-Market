@@ -1,6 +1,7 @@
 // Rules Page JavaScript
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// Use window.API_BASE_URL if available, otherwise use default
+const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // Obtener token del localStorage
 function getAuthToken() {
@@ -81,7 +82,7 @@ async function loadRules() {
             return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/rules`, {
+        const response = await fetch(`${getApiBaseUrl()}/rules`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -196,7 +197,7 @@ async function createRule() {
             return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/rules`, {
+        const response = await fetch(`${getApiBaseUrl()}/rules`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -249,7 +250,7 @@ async function deleteRule(ruleId) {
             return;
         }
 
-        const response = await fetch(`${API_BASE_URL}/rules/${ruleId}`, {
+        const response = await fetch(`${getApiBaseUrl()}/rules/${ruleId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -300,11 +301,20 @@ async function sendChatMessage() {
     const loadingId = addChatMessage('Procesando tu solicitud...', 'assistant', true);
 
     try {
-        const response = await fetch(`${API_BASE_URL}/rules/chat`, {
+        // Get auth token if available
+        const token = getAuthToken();
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add authorization header if token exists
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${getApiBaseUrl()}/rules/chat`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: JSON.stringify({
                 message: message,
                 email: email
@@ -320,23 +330,39 @@ async function sendChatMessage() {
         }
 
         if (result.success) {
-            // Show success message
-            addChatMessage(
-                `✅ ¡Regla creada exitosamente!\n\n` +
-                `📋 Nombre: ${result.rule.name}\n` +
-                `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
-                `🎯 Ticker: ${result.rule.ticker}\n` +
-                `💵 Valor: ${result.rule.value}\n` +
-                `📧 Email: ${result.rule.email}`,
-                'assistant',
-                false,
-                'text-green-600 dark:text-green-400'
-            );
+            // Check if authentication is required
+            if (result.requires_auth) {
+                addChatMessage(
+                    `⚠️ ${result.message}\n\n` +
+                    `📋 Nombre: ${result.rule.name}\n` +
+                    `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
+                    `🎯 Ticker: ${result.rule.ticker}\n` +
+                    `💵 Valor: ${result.rule.value}\n` +
+                    `📧 Email: ${result.rule.email}\n\n` +
+                    `Por favor, inicia sesión para guardar esta regla.`,
+                    'assistant',
+                    false,
+                    'text-yellow-600 dark:text-yellow-400'
+                );
+            } else {
+                // Show success message
+                addChatMessage(
+                    `✅ ¡Regla creada exitosamente!\n\n` +
+                    `📋 Nombre: ${result.rule.name}\n` +
+                    `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
+                    `🎯 Ticker: ${result.rule.ticker}\n` +
+                    `💵 Valor: ${result.rule.value}\n` +
+                    `📧 Email: ${result.rule.email}`,
+                    'assistant',
+                    false,
+                    'text-green-600 dark:text-green-400'
+                );
 
-            // Reload rules list
-            setTimeout(() => {
-                loadRules();
-            }, 1000);
+                // Reload rules list
+                setTimeout(() => {
+                    loadRules();
+                }, 1000);
+            }
         } else {
             // Show error message
             addChatMessage(

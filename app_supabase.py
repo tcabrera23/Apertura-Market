@@ -166,6 +166,32 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         logger.error(f"Unexpected error in get_current_user: {str(e)}", exc_info=True)
         raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
+async def get_optional_user(request: Request):
+    """
+    Optionally validate JWT token from Supabase Auth and return user or None
+    This allows endpoints to work with or without authentication
+    """
+    try:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+        
+        token = auth_header.replace("Bearer ", "")
+        
+        # Verify token with Supabase
+        try:
+            user_response = supabase.auth.get_user(token)
+        except Exception:
+            return None
+        
+        if not user_response or not user_response.user:
+            return None
+        
+        logger.info(f"Optional user authenticated: {user_response.user.id}")
+        return user_response.user
+    except Exception:
+        return None
+
 # ============================================
 # PYDANTIC MODELS
 # ============================================
@@ -698,6 +724,234 @@ async def create_rule(rule: RuleCreate, user = Depends(get_current_user)):
     except Exception as e:
         logger.error(f"Error creating rule: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating rule: {str(e)}")
+
+class ChatMessage(BaseModel):
+    message: str
+    email: Optional[str] = None
+
+@app.post("/api/rules/chat")
+async def chat_create_rule(chat_message: ChatMessage, request: Request):
+    """Create a rule from natural language using AI - Authentication optional"""
+    try:
+        # Try to get optional user
+        user = await get_optional_user(request)
+        
+        # Initialize Groq client
+        api_key = os.environ.get("GROQ_API_KEY")
+        if not api_key:
+            raise HTTPException(status_code=500, detail="GROQ_API_KEY not configured")
+        
+        client = Groq(api_key=api_key)
+        
+        # System prompt
+        system_prompt = """Eres un asistente que interpreta lenguaje natural y lo convierte en JSON para crear reglas de alertas financieras.
+
+Tu objetivo es extraer los siguientes campos del mensaje del usuario:
+- name: Un nombre descriptivo para la regla (en español)
+- type: El tipo de regla. Opciones válidas: "price_below", "price_above", "pe_below", "pe_above", "max_distance"
+- ticker: El símbolo del activo (ej: NVDA, AAPL, BTC-USD, META)
+- value: El valor numérico de referencia (porcentaje o número según el tipo)
+- email: El email del usuario (si se proporciona en el mensaje)
+
+Tipos de reglas:
+- "price_below": Precio debajo de un valor específico
+- "price_above": Precio encima de un valor específico
+- "pe_below": P/E Ratio debajo de un valor
+- "pe_above": P/E Ratio encima de un valor
+- "max_distance": Distancia porcentual del máximo histórico (valor negativo indica debajo del máximo)
+
+Ejemplos:
+Input: "Cuando NVIDIA esté un 25% debajo de su máximo histórico"
+Output: {"name": "Alerta: NVIDIA se encuentra un 25% debajo de su máximo histórico", "type": "max_distance", "ticker": "NVDA", "value": 25}
+
+Input: "Notifícame cuando Apple tenga un P/E ratio debajo de 25"
+Output: {"name": "Alerta: Apple P/E ratio debajo de 25", "type": "pe_below", "ticker": "AAPL", "value": 25}
+
+Input: "Quiero una alerta cuando Bitcoin esté por encima de $50,000"
+Output: {"name": "Alerta: Bitcoin por encima de $50,000", "type": "price_above", "ticker": "BTC-USD", "value": 50000}
+
+Input: "avisame cuando meta llegue a un per de 40"
+Output: {"name": "Alerta: Meta P/E ratio de 40", "type": "pe_above", "ticker": "META", "value": 40}
+
+Responde SOLO con un JSON válido, sin texto adicional. Si falta información crítica (como el ticker), incluye un campo "error" con el mensaje explicando qué falta."""
+
+        # User prompt
+        user_prompt = chat_message.message
+        if chat_message.email:
+            user_prompt += f"\n\nEmail del usuario: {chat_message.email}"
+
+        # Call Groq API
+        try:
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.3
+            )
+        except Exception as e:
+            logger.error(f"Groq API error: {e}")
+            raise HTTPException(status_code=500, detail=f"Error calling Groq API: {str(e)}")
+
+        # Parse response
+        response_content = completion.choices[0].message.content.strip()
+        
+        # Try to extract JSON from response (in case there's extra text)
+        # Look for JSON object with balanced braces
+        brace_count = 0
+        start_idx = -1
+        for i, char in enumerate(response_content):
+            if char == '{':
+                if start_idx == -1:
+                    start_idx = i
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and start_idx != -1:
+                    response_content = response_content[start_idx:i+1]
+                    break
+        
+        # If no balanced JSON found, try regex as fallback
+        if start_idx == -1 or brace_count != 0:
+            json_match = re.search(r'\{.*\}', response_content, re.DOTALL)
+            if json_match:
+                response_content = json_match.group(0)
+        
+        try:
+            rule_data = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}, response: {response_content}")
+            return {
+                "success": False,
+                "error": f"No se pudo interpretar la respuesta del AI. Por favor, intenta ser más específico con tu solicitud.",
+                "raw_response": response_content
+            }
+
+        # Check for errors
+        if "error" in rule_data:
+            return {"success": False, "error": rule_data["error"], "raw_response": response_content}
+
+        # Validate required fields
+        required_fields = ["name", "type", "ticker", "value"]
+        missing_fields = [field for field in required_fields if field not in rule_data]
+        if missing_fields:
+            return {
+                "success": False,
+                "error": f"Faltan campos requeridos: {', '.join(missing_fields)}",
+                "raw_response": response_content
+            }
+
+        # Validate type
+        valid_types = ["price_below", "price_above", "pe_below", "pe_above", "max_distance"]
+        if rule_data["type"] not in valid_types:
+            return {
+                "success": False,
+                "error": f"Tipo de regla inválido: {rule_data['type']}. Tipos válidos: {', '.join(valid_types)}",
+                "raw_response": response_content
+            }
+
+        # Use provided email or try to extract from rule_data
+        email = chat_message.email or rule_data.get("email")
+        if not email:
+            return {
+                "success": False,
+                "error": "Se requiere un email para las notificaciones. Por favor, proporciona tu email.",
+                "raw_response": response_content
+            }
+
+        # Map type to rule_type (for Supabase schema)
+        type_mapping = {
+            "price_below": "price_below",
+            "price_above": "price_above",
+            "pe_below": "pe_below",
+            "pe_above": "pe_above",
+            "max_distance": "max_distance"
+        }
+        rule_type = type_mapping.get(rule_data["type"], rule_data["type"])
+
+        # Create the rule
+        if user:
+            # User is authenticated, save to Supabase
+            try:
+                # Check user's plan limits
+                try:
+                    check_result = supabase.rpc("check_user_plan_limit", {
+                        "p_user_id": user.id,
+                        "p_limit_type": "max_rules"
+                    }).execute()
+                    
+                    can_create = check_result.data if check_result.data is not None else True
+                    
+                    if not can_create:
+                        return {
+                            "success": False,
+                            "error": "Has alcanzado el límite de reglas de tu plan. Actualiza tu suscripción."
+                        }
+                except Exception as rpc_error:
+                    logger.warning(f"Error checking plan limit, continuando: {str(rpc_error)}")
+                
+                rule_data_db = {
+                    "user_id": user.id,
+                    "name": rule_data["name"],
+                    "rule_type": rule_type,
+                    "ticker": rule_data["ticker"].upper(),
+                    "value_threshold": rule_data["value"],
+                    "email": email,
+                    "is_active": True
+                }
+                
+                response = supabase.table("rules").insert(rule_data_db).execute()
+                
+                if not response.data or len(response.data) == 0:
+                    return {
+                        "success": False,
+                        "error": "No se pudo crear la regla en la base de datos."
+                    }
+                
+                created_rule = response.data[0]
+                return {
+                    "success": True,
+                    "message": "Regla creada exitosamente",
+                    "rule": {
+                        "id": created_rule.get("id"),
+                        "name": created_rule.get("name"),
+                        "rule_type": created_rule.get("rule_type"),
+                        "ticker": created_rule.get("ticker"),
+                        "value": created_rule.get("value_threshold"),
+                        "email": created_rule.get("email")
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error creating rule in Supabase: {str(e)}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": f"Error al crear la regla: {str(e)}"
+                }
+        else:
+            # No user authenticated, return rule data for frontend to handle
+            # (Frontend can save to localStorage or prompt for login)
+            return {
+                "success": True,
+                "message": "Regla interpretada exitosamente. Por favor, inicia sesión para guardarla.",
+                "rule": {
+                    "name": rule_data["name"],
+                    "rule_type": rule_type,
+                    "ticker": rule_data["ticker"].upper(),
+                    "value": rule_data["value"],
+                    "email": email
+                },
+                "requires_auth": True
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in chat_create_rule: {str(e)}", exc_info=True)
+        return {
+            "success": False,
+            "error": f"Error al procesar la solicitud: {str(e)}"
+        }
 
 @app.put("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, rule: RuleUpdate, user = Depends(get_current_user)):
