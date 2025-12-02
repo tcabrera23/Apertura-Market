@@ -20,7 +20,9 @@ async function loadCalendar() {
     try {
         const response = await fetch(`${API_BASE_URL}/earnings-calendar?year=${currentYear}&month=${currentMonth}`);
         if (!response.ok) {
-            throw new Error('Error al cargar el calendario');
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || 'Error al cargar el calendario';
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
@@ -102,7 +104,8 @@ function renderCalendar(data) {
             }
             
             dayCell.appendChild(eventsIndicator);
-            dayCell.classList.add('bg-green-50/50 dark:bg-green-900/20');
+            dayCell.classList.add('bg-green-50');
+            dayCell.classList.add('dark:bg-green-900/20');
         }
         
         // Click handler to show events
@@ -151,11 +154,18 @@ function renderEventsList(data) {
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     ${dayEvents.map(event => `
-                        <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                             <div class="flex-1">
                                 <p class="font-semibold text-gray-900 dark:text-white">${event.name}</p>
                                 <p class="text-sm text-gray-600 dark:text-gray-400">${event.ticker}</p>
                             </div>
+                            ${event.is_past && event.earnings_link ? `
+                                <a href="${event.earnings_link}" target="_blank" 
+                                   class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold transition-colors"
+                                   title="Ver balance">
+                                    Ver Balance
+                                </a>
+                            ` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -190,13 +200,22 @@ function showDayEvents(dateKey, events) {
                     ${events.map(event => `
                         <div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <div class="flex items-center justify-between">
-                                <div>
+                                <div class="flex-1">
                                     <p class="font-bold text-lg text-gray-900 dark:text-white">${event.name}</p>
                                     <p class="text-sm text-gray-600 dark:text-gray-400">${event.ticker}</p>
                                 </div>
-                                <span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">
-                                    Resultados
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    ${event.is_past && event.earnings_link ? `
+                                        <a href="${event.earnings_link}" target="_blank" 
+                                           class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-semibold transition-colors whitespace-nowrap"
+                                           title="Ver balance">
+                                            Ver Balance
+                                        </a>
+                                    ` : ''}
+                                    <span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">
+                                        Resultados
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     `).join('')}

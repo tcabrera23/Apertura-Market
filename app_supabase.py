@@ -91,8 +91,9 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Cache with 2-minute TTL (120 seconds)
-cache = TTLCache(maxsize=200, ttl=120)
+# Cache with 2-minute TTL (120 seconds) for most endpoints
+# Earnings calendar uses 24-hour cache (86400 seconds) - handled in endpoint
+cache = TTLCache(maxsize=500, ttl=120)
 
 # Asset definitions
 TRACKING_ASSETS = {
@@ -653,12 +654,32 @@ async def get_earnings_calendar(
     """
     Get earnings calendar for all tracked assets.
     Returns earnings dates grouped by date.
+    Cache: 24 hours
     """
     try:
         # Use current year/month if not provided
         now = datetime.now()
         target_year = year or now.year
         target_month = month or now.month
+        
+        # Validate date range: only allow last 2 months and next 4 months
+        current_date = datetime(now.year, now.month, 1)
+        target_date = datetime(target_year, target_month, 1)
+        
+        # Calculate months difference
+        months_diff = (target_date.year - current_date.year) * 12 + (target_date.month - current_date.month)
+        
+        if months_diff < -2 or months_diff > 4:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Solo se pueden visualizar los últimos 2 meses y los próximos 4 meses. Mes solicitado: {target_month}/{target_year}"
+            )
+        
+        # Cache key with 24 hour TTL (86400 seconds)
+        cache_key = f"earnings_calendar_{target_year}_{target_month}_{int(now.timestamp() // 86400)}"
+        
+        if cache_key in cache:
+            return cache[cache_key]
         
         # Combine all assets
         all_assets = {**TRACKING_ASSETS, **PORTFOLIO_ASSETS, **ARGENTINA_ASSETS}
@@ -728,6 +749,14 @@ async def get_earnings_calendar(
                     
                     # Filter by target month/year
                     if earnings_date.year == target_year and earnings_date.month == target_month:
+                        # Check if date is in the past to add link to earnings
+                        is_past = earnings_date < now
+                        earnings_link = None
+                        
+                        if is_past:
+                            # Generate link to Yahoo Finance earnings page
+                            earnings_link = f"https://finance.yahoo.com/quote/{ticker}/financials"
+                        
                         earnings_events.append({
                             "ticker": ticker,
                             "name": name,
@@ -735,7 +764,9 @@ async def get_earnings_calendar(
                             "datetime": earnings_date.isoformat(),
                             "day": earnings_date.day,
                             "month": earnings_date.month,
-                            "year": earnings_date.year
+                            "year": earnings_date.year,
+                            "is_past": is_past,
+                            "earnings_link": earnings_link
                         })
             except Exception as e:
                 logger.debug(f"Error fetching earnings for {ticker}: {e}")
@@ -749,13 +780,19 @@ async def get_earnings_calendar(
                 events_by_date[date_key] = []
             events_by_date[date_key].append(event)
         
-        return {
+        result = {
             "year": target_year,
             "month": target_month,
             "events": events_by_date,
             "total_events": len(earnings_events)
         }
         
+        # Cache for 24 hours (86400 seconds) - cache key already includes day
+        cache[cache_key] = result
+        return result
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching earnings calendar: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error fetching earnings calendar: {str(e)}")
