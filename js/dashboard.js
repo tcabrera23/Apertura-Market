@@ -5,6 +5,11 @@ const API_BASE_URL = 'http://localhost:8080/api';
 // Expose to window for other scripts
 window.API_BASE_URL = API_BASE_URL;
 
+// Get auth token
+function getAuthToken() {
+    return localStorage.getItem('access_token');
+}
+
 // Smart Cache System
 const CACHE_DURATION = 120000; // 2 minutes in milliseconds
 const localCache = {
@@ -290,18 +295,27 @@ async function saveWatchlist(name, assets) {
             assetsDict[asset.symbol] = asset.name;
         });
 
+        const token = getAuthToken();
+        if (!token) {
+            alert('Por favor, inicia sesión para crear listas');
+            window.location.href = 'login.html';
+            return;
+        }
+
         const requestBody = {
             name: name,
-            assets: assetsDict
+            assets: assetsDict,
+            description: ""
         };
 
         console.log('Request body:', requestBody);
-        console.log('API URL:', `${API_BASE_URL}/watchlist`);
+        console.log('API URL:', `${API_BASE_URL}/watchlists`);
 
-        const response = await fetch(`${API_BASE_URL}/watchlist`, {
+        const response = await fetch(`${API_BASE_URL}/watchlists`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(requestBody)
         });
@@ -347,14 +361,42 @@ async function saveWatchlist(name, assets) {
 
 async function loadCustomWatchlists() {
     try {
-        const response = await fetch(`${API_BASE_URL}/watchlists`);
+        const token = getAuthToken();
+        if (!token) {
+            console.log('No token available, skipping watchlists load');
+            return; // Don't load watchlists if not authenticated
+        }
+
+        console.log('Loading watchlists with token...');
+        const response = await fetch(`${API_BASE_URL}/watchlists`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
         if (!response.ok) {
+            if (response.status === 401) {
+                console.log('Unauthorized, skipping watchlists load');
+                return; // Not authenticated, skip loading watchlists
+            }
+            const errorText = await response.text();
+            console.error('Error loading watchlists:', response.status, errorText);
             throw new Error('Error al cargar listas');
         }
 
         const watchlists = await response.json();
+        console.log('Watchlists loaded:', watchlists);
+        
+        if (!Array.isArray(watchlists) || watchlists.length === 0) {
+            console.log('No watchlists found');
+            return;
+        }
+        
         const tabsContainer = document.getElementById('tabsContainer');
+        if (!tabsContainer) {
+            console.error('Tabs container not found');
+            return;
+        }
 
         // Remove existing custom watchlist tabs (keep default ones)
         const defaultTabs = ['tracking', 'portfolio', 'crypto', 'argentina'];
@@ -376,7 +418,12 @@ async function loadCustomWatchlists() {
         });
 
         // Add tabs and content for each watchlist
-        Object.keys(watchlists).forEach(watchlistName => {
+        // watchlists is now an array from Supabase
+        watchlists.forEach(watchlist => {
+            const watchlistName = watchlist.name;
+            const watchlistId = watchlist.id;
+            const watchlistAssets = watchlist.watchlist_assets || [];
+            
             // Add tab button
             const tabButton = document.createElement('button');
             tabButton.className = 'tab-button';
@@ -389,6 +436,7 @@ async function loadCustomWatchlists() {
             tabContent.className = 'tab-content hidden';
             tabContent.id = `${watchlistName}-tab`;
             tabContent.setAttribute('data-category', watchlistName);
+            tabContent.setAttribute('data-watchlist-id', watchlistId);
 
             tabContent.innerHTML = `
                 <div class="flex justify-between items-center mb-6">
@@ -638,12 +686,31 @@ async function loadAssets(category, silent = false) {
     }
 
     try {
-        // Use different endpoint for custom watchlists
-        const endpoint = isCustomWatchlist
-            ? `${API_BASE_URL}/watchlist/${encodeURIComponent(category)}`
-            : `${API_BASE_URL}/${category}-assets`;
+        let endpoint;
+        let headers = {};
+        
+        if (isCustomWatchlist) {
+            // For custom watchlists, get watchlist ID and fetch assets data
+            const token = getAuthToken();
+            if (!token) {
+                throw new Error('Authentication required');
+            }
+            headers['Authorization'] = `Bearer ${token}`;
+            
+            // Find watchlist by name
+            const watchlistTab = document.querySelector(`[data-category="${category}"]`);
+            const watchlistId = watchlistTab ? watchlistTab.getAttribute('data-watchlist-id') : null;
+            
+            if (!watchlistId) {
+                throw new Error('Watchlist ID not found');
+            }
+            
+            endpoint = `${API_BASE_URL}/watchlists/${watchlistId}/assets-data`;
+        } else {
+            endpoint = `${API_BASE_URL}/${category}-assets`;
+        }
 
-        const response = await fetch(endpoint);
+        const response = await fetch(endpoint, { headers });
 
         if (!response.ok) {
             throw new Error('Error al cargar datos');

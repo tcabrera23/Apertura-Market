@@ -68,7 +68,7 @@ arreglar los watchlists y el buscador de activos.
 
 
 Perfecto. Ahora necesito algo complicado. Asi que analiza paso a paso los cambios a realizar. Necesito que reestructuremos el login en el back y el front.
-Quiero dejar de usar el oauth e implementar un registro tipico con formulario que solicite: 
+Quiero dejar de usar los metodos oauth e implementar un registro tipico con formulario que solicite: 
 - correo
 - contraseña
 - confirmar contraseña
@@ -77,4 +77,9 @@ Quiero dejar de usar el oauth e implementar un registro tipico con formulario qu
 
 Una vez que el usuario se registra, recibe el mail de onboarding de bienvenida. Todos los usuarios al registrarse entran con el plan gratuito. Luego, pueden
 actualizarlo desde el panel de Account, donde pueden escoger una free trial por 7 dias del plan "Plus" o por 3 dias el plan "Pro".
+Ademas, maneja los casos donde el usuario se olvida su contraseña y necesita recuperarla, etc. 
 
+
+me quedaria pendiente que funcionen los graficos. por ahora lo descarto.....
+
+agregar politica de privacidad y terminos de servicio

@@ -257,6 +257,7 @@ class RuleUpdate(BaseModel):
 class WatchlistCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    assets: Optional[Dict[str, str]] = None  # Dict of ticker -> asset_name
 
 class WatchlistAssetAdd(BaseModel):
     ticker: str
@@ -1175,6 +1176,59 @@ async def delete_rule(rule_id: str, user = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Error deleting rule: {str(e)}")
 
 # ============================================
+# ASSET SEARCH ENDPOINT
+# ============================================
+
+@app.get("/api/search-assets")
+async def search_assets(query: str = Query(..., description="Search query for assets")):
+    """Search for assets using Yahoo Finance autocomplete API - No authentication required"""
+    if not query or len(query) < 2:
+        return []
+    
+    try:
+        import urllib.parse
+        
+        # Yahoo Finance autocomplete endpoint
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(query)}&quotesCount=10&newsCount=0"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            results = []
+            
+            # Extract quotes from the response
+            if 'quotes' in data:
+                for quote in data['quotes']:
+                    # Filter out invalid symbols
+                    symbol = quote.get('symbol', '')
+                    if symbol and '.' not in symbol:  # Exclude symbols with dots (like options)
+                        results.append({
+                            "symbol": symbol,
+                            "name": quote.get('longname') or quote.get('shortname', '') or symbol,
+                            "exchange": quote.get('exchange', ''),
+                            "type": quote.get('quoteType', 'EQUITY'),
+                            "sector": quote.get('sector', ''),
+                            "industry": quote.get('industry', '')
+                        })
+            
+            return results[:10]  # Limit to 10 results
+        
+        logger.warning(f"Yahoo Finance API returned status {response.status_code}")
+        return []
+        
+    except requests.exceptions.Timeout:
+        logger.error("Timeout searching assets")
+        return []
+    except Exception as e:
+        logger.error(f"Error searching assets: {e}", exc_info=True)
+        return []
+
+# ============================================
 # WATCHLISTS ENDPOINTS (Supabase  Integration)
 # ============================================
 
@@ -1193,21 +1247,49 @@ async def get_watchlists(user = Depends(get_current_user)):
 
 @app.post("/api/watchlists")
 async def create_watchlist(watchlist: WatchlistCreate, user = Depends(get_current_user)):
-    """Create a new watchlist"""
+    """Create a new watchlist with assets"""
     try:
+        # Create watchlist
         watchlist_data = {
             "user_id": user.id,
             "name": watchlist.name,
-            "description": watchlist.description
+            "description": watchlist.description or ""
         }
         
-        response = supabase.table("watchlists").insert(watchlist_data).execute()
+        watchlist_response = supabase.table("watchlists").insert(watchlist_data).execute()
+        
+        if not watchlist_response.data or len(watchlist_response.data) == 0:
+            raise HTTPException(status_code=500, detail="Failed to create watchlist")
+        
+        watchlist_id = watchlist_response.data[0]['id']
+        
+        # Add assets to watchlist if provided
+        if watchlist.assets:
+            assets_to_add = []
+            for ticker, asset_name in watchlist.assets.items():
+                assets_to_add.append({
+                    "watchlist_id": watchlist_id,
+                    "ticker": ticker.upper(),
+                    "asset_name": asset_name
+                })
+            
+            if assets_to_add:
+                supabase.table("watchlist_assets").insert(assets_to_add).execute()
+        
+        # Return watchlist with assets
+        response = supabase.table("watchlists") \
+            .select("*, watchlist_assets(*)") \
+            .eq("id", watchlist_id) \
+            .execute()
         
         return {
             "message": "Watchlist created successfully",
-            "watchlist": response.data[0]
+            "watchlist": response.data[0] if response.data else watchlist_response.data[0]
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Error creating watchlist: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error creating watchlist: {str(e)}")
 
 @app.post("/api/watchlists/{watchlist_id}/assets")
@@ -1244,6 +1326,42 @@ async def add_asset_to_watchlist(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding asset: {str(e)}")
+
+@app.get("/api/watchlists/{watchlist_id}/assets-data")
+async def get_watchlist_assets_data(watchlist_id: str, user = Depends(get_current_user)):
+    """Get financial data for all assets in a watchlist"""
+    try:
+        # Verify watchlist belongs to user
+        watchlist_response = supabase.table("watchlists") \
+            .select("*, watchlist_assets(*)") \
+            .eq("id", watchlist_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not watchlist_response.data:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+        
+        watchlist = watchlist_response.data[0]
+        watchlist_assets = watchlist.get('watchlist_assets', [])
+        
+        # Get financial data for each asset
+        assets_data = []
+        for asset in watchlist_assets:
+            ticker = asset.get('ticker')
+            asset_name = asset.get('asset_name', ticker)
+            
+            if ticker:
+                asset_data = get_asset_data(ticker, asset_name)
+                if asset_data:
+                    assets_data.append(asset_data)
+        
+        return assets_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching watchlist assets data: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching watchlist assets data: {str(e)}")
 
 @app.delete("/api/watchlists/{watchlist_id}")
 async def delete_watchlist(watchlist_id: str, user = Depends(get_current_user)):
