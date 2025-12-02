@@ -1718,7 +1718,7 @@ async def signup(signup_data: SignUpRequest):
             user=UserResponse(
                 user_id=user_data["id"],  # user_profiles usa 'id' como PK
                 email=user_data["email"],
-                auth_source=user_data.get("auth_source", auth_source),
+                auth_source=user_data.get("auth_source", "email_password"),
                 created_at=user_data["created_at"]
             )
         )
@@ -1765,7 +1765,7 @@ async def signin(signin_data: SignInRequest):
             user=UserResponse(
                 user_id=user_data["id"],  # user_profiles usa 'id' como PK
                 email=user_data["email"],
-                auth_source=user_data.get("auth_source", auth_source),
+                auth_source=user_data.get("auth_source", "email_password"),
                 created_at=user_data["created_at"]
             )
         )
