@@ -52,7 +52,7 @@ correo
 contraseña
 confirmar contraseña
 country (lista desplegable)
-date of birth (calendar)
+date of birth (calendar view)
 
 (crear una copia de nuestro index)
 
@@ -64,5 +64,17 @@ publicar el saas y seguir trabajando en el resumen de noticias con IA y la integ
 claro seria la seccion de About Us
 tendria que editar los agentes de IA para agregarle tests, evals, safety, registro de tokens etc.
 
-agregar calendario de resultados notificaciones
 arreglar los watchlists y el buscador de activos. 
+
+
+Perfecto. Ahora necesito algo complicado. Asi que analiza paso a paso los cambios a realizar. Necesito que reestructuremos el login en el back y el front.
+Quiero dejar de usar el oauth e implementar un registro tipico con formulario que solicite: 
+- correo
+- contraseña
+- confirmar contraseña
+- country (lista desplegable)
+- date of birth (calendar view)
+
+Una vez que el usuario se registra, recibe el mail de onboarding de bienvenida. Todos los usuarios al registrarse entran con el plan gratuito. Luego, pueden
+actualizarlo desde el panel de Account, donde pueden escoger una free trial por 7 dias del plan "Plus" o por 3 dias el plan "Pro".
+

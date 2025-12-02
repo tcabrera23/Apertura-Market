@@ -15,6 +15,11 @@ const monthNames = [
 
 const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+// Check if mobile device
+function isMobile() {
+    return window.innerWidth < 768; // md breakpoint in Tailwind
+}
+
 // Load calendar data
 async function loadCalendar() {
     try {
@@ -88,19 +93,29 @@ function renderCalendar(data) {
             const eventsIndicator = document.createElement('div');
             eventsIndicator.className = 'flex flex-wrap gap-1 mt-1';
             
-            dayEvents.slice(0, 3).forEach(event => {
-                const badge = document.createElement('span');
-                badge.className = 'px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full';
-                badge.textContent = event.ticker;
-                badge.title = `${event.name} - ${event.ticker}`;
-                eventsIndicator.appendChild(badge);
-            });
-            
-            if (dayEvents.length > 3) {
-                const moreBadge = document.createElement('span');
-                moreBadge.className = 'px-2 py-0.5 text-xs font-semibold bg-green-600 text-white rounded-full';
-                moreBadge.textContent = `+${dayEvents.length - 3}`;
-                eventsIndicator.appendChild(moreBadge);
+            if (isMobile()) {
+                // Mobile: only show count
+                const countBadge = document.createElement('span');
+                countBadge.className = 'px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full';
+                countBadge.textContent = dayEvents.length.toString();
+                countBadge.title = `${dayEvents.length} ${dayEvents.length === 1 ? 'evento' : 'eventos'}: ${dayEvents.map(e => e.ticker).join(', ')}`;
+                eventsIndicator.appendChild(countBadge);
+            } else {
+                // Desktop: show tickers (up to 3) + count if more
+                dayEvents.slice(0, 3).forEach(event => {
+                    const badge = document.createElement('span');
+                    badge.className = 'px-2 py-0.5 text-xs font-semibold bg-green-500 text-white rounded-full';
+                    badge.textContent = event.ticker;
+                    badge.title = `${event.name} - ${event.ticker}`;
+                    eventsIndicator.appendChild(badge);
+                });
+                
+                if (dayEvents.length > 3) {
+                    const moreBadge = document.createElement('span');
+                    moreBadge.className = 'px-2 py-0.5 text-xs font-semibold bg-green-600 text-white rounded-full';
+                    moreBadge.textContent = `+${dayEvents.length - 3}`;
+                    eventsIndicator.appendChild(moreBadge);
+                }
             }
             
             dayCell.appendChild(eventsIndicator);
@@ -251,6 +266,16 @@ document.getElementById('nextMonth').addEventListener('click', () => {
         currentYear++;
     }
     loadCalendar();
+});
+
+// Handle window resize to re-render calendar on mobile/desktop switch
+let resizeTimeout;
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        // Re-render calendar if switching between mobile/desktop
+        loadCalendar();
+    }, 250);
 });
 
 // Initialize
