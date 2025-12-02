@@ -226,6 +226,13 @@
     <script src="js/account.js"></script>
     <script src="js/subscription.js"></script>
     <script>
+        const API_BASE_URL = 'http://localhost:8080/api';
+        
+        // Función para obtener token (debe estar disponible globalmente)
+        function getAuthToken() {
+            return localStorage.getItem('access_token');
+        }
+        
         let selectedPlan = null;
         let availablePlans = [];
 
@@ -279,6 +286,16 @@
             .then(res => res.ok ? res.json() : null)
             .then(currentSub => {
                 const currentPlanName = currentSub?.plan_name || 'free';
+                const hasActiveTrial = currentSub?.trial_end && new Date(currentSub.trial_end) > new Date();
+                
+                // Mostrar opciones de trial si el usuario tiene plan free y no tiene trial activo
+                const trialOptions = document.getElementById('trialOptions');
+                if (currentPlanName === 'free' && !hasActiveTrial && trialOptions) {
+                    trialOptions.classList.remove('hidden');
+                    initializeTrialButtons();
+                } else if (trialOptions) {
+                    trialOptions.classList.add('hidden');
+                }
                 
                 container.innerHTML = plans.map(plan => {
                     const isCurrentPlan = plan.name === currentPlanName;
@@ -365,6 +382,61 @@
 
             // Mostrar contenedor de PayPal
             document.getElementById('paypalCheckoutContainer').classList.remove('hidden');
+        }
+
+        function initializeTrialButtons() {
+            const startPlusTrial = document.getElementById('startPlusTrial');
+            const startProTrial = document.getElementById('startProTrial');
+            
+            if (startPlusTrial) {
+                startPlusTrial.addEventListener('click', () => startTrial('plus'));
+            }
+            if (startProTrial) {
+                startProTrial.addEventListener('click', () => startTrial('pro'));
+            }
+        }
+
+        async function startTrial(planName) {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Debes iniciar sesión para iniciar un trial');
+                return;
+            }
+
+            const button = planName === 'plus' ? document.getElementById('startPlusTrial') : document.getElementById('startProTrial');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Iniciando trial...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/subscriptions/start-trial`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plan_name: planName })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Error al iniciar trial');
+                }
+
+                alert(`¡Trial de ${planName === 'plus' ? '7' : '3'} días iniciado exitosamente!`);
+                
+                // Recargar información de suscripción y cerrar modal
+                closeUpgradeModal();
+                location.reload(); // Recargar página para mostrar el nuevo plan
+
+            } catch (error) {
+                console.error('Error starting trial:', error);
+                alert(error.message || 'Error al iniciar trial. Por favor, intenta de nuevo.');
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
             
             // Renderizar botón de PayPal
             renderPayPalButton(selectedPlan);

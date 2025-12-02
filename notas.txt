@@ -83,3 +83,7 @@ Ademas, maneja los casos donde el usuario se olvida su contraseña y necesita re
 me quedaria pendiente que funcionen los graficos. por ahora lo descarto.....
 
 agregar politica de privacidad y terminos de servicio
+
+sacarle un screenshot a la tabla y pedirle a alguna ia que me genere graficos con plotly y me los renderize con react a ver como anda
+
+agregar opcion de cerrar sesion, etc

@@ -390,7 +390,7 @@ def decode_jwt(token: str) -> Dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> Dict[str, Any]:
+async def ensure_user_persisted(user_id: str, email: str, auth_source: str, country: Optional[str] = None, date_of_birth: Optional[str] = None) -> Dict[str, Any]:
     """Garantiza que el usuario existe en user_profiles"""
     try:
         # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
@@ -403,49 +403,69 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
             user_data["auth_source"] = auth_source
             return user_data
         
-        # Crear nuevo usuario en user_profiles
-        logger.info(f"Creando nuevo usuario {user_id} en {USER_TABLE_NAME}")
-        new_user = {
-            "id": user_id,
-            "email": email,
-            "full_name": None,
-            "avatar_url": None,
-            "preferences": {},
-            "onboarding_completed": False,
-            "created_at": datetime.utcnow().isoformat()
-        }
+        # El trigger debería haber creado el registro básico, ahora lo actualizamos
+        # Si no existe, intentamos crearlo manualmente
+        logger.info(f"Actualizando/creando usuario {user_id} en {USER_TABLE_NAME}")
         
-        insert_response = supabase.table(USER_TABLE_NAME).insert(new_user).execute()
+        # Intentar actualizar primero (el trigger ya debería haber creado el registro)
+        update_data = {}
+        if country:
+            update_data["country"] = country
+        if date_of_birth:
+            update_data["date_of_birth"] = date_of_birth
         
-        if not insert_response.data or len(insert_response.data) == 0:
-            raise Exception("No se pudo insertar el usuario")
+        if update_data:
+            try:
+                update_response = supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                # Verificar si el UPDATE funcionó (puede no devolver datos pero funcionar)
+                # Si no hay error, el UPDATE funcionó, verificar que el registro existe
+                logger.info(f"UPDATE ejecutado, verificando existencia del usuario")
+                response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                if response.data and len(response.data) > 0:
+                    user_data = response.data[0]
+                    user_data["auth_source"] = auth_source
+                    logger.info(f"Usuario {user_id} actualizado y verificado exitosamente")
+                    return user_data
+            except Exception as update_error:
+                logger.warning(f"Error actualizando usuario (puede que no exista aún): {str(update_error)}")
         
-        logger.info(f"Usuario {user_id} creado exitosamente")
-        user_data = insert_response.data[0]
-        # Agregar auth_source al response para compatibilidad
-        user_data["auth_source"] = auth_source
+        # Si la actualización falló, verificar si el registro existe (puede que el trigger lo haya creado)
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        if response.data and len(response.data) > 0:
+            # El registro existe, actualizar con los datos faltantes
+            logger.info(f"Usuario {user_id} encontrado, actualizando datos adicionales")
+            user_data = response.data[0]
+            if update_data:
+                try:
+                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                    user_data = response.data[0] if response.data else user_data
+                except Exception as update_error2:
+                    logger.warning(f"Error en segunda actualización: {str(update_error2)}")
+            user_data["auth_source"] = auth_source
+            return user_data
         
-        # Crear suscripción automática con trial de 14 días
-        await create_default_subscription(user_id)
+        # Si no existe, esperar un poco más para que el trigger se ejecute
+        import asyncio
+        await asyncio.sleep(2.0)  # Esperar 1 segundo adicional
         
-        # Enviar email de bienvenida/onboarding
-        try:
-            user_name = user_data.get("full_name") or email.split("@")[0]
-            email_template = get_onboarding_email_template(user_name, email)
-            send_result = send_alert_email(
-                to_email=email,
-                subject=email_template["subject"],
-                html_content=email_template["html_content"]
-            )
-            if send_result.get("success"):
-                logger.info(f"✅ Email de bienvenida enviado a {email}")
-            else:
-                logger.warning(f"⚠️ No se pudo enviar email de bienvenida: {send_result.get('error')}")
-        except Exception as email_error:
-            logger.error(f"Error enviando email de bienvenida: {str(email_error)}")
-            # No fallar el registro si el email falla
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        if response.data and len(response.data) > 0:
+            logger.info(f"Usuario {user_id} encontrado después de esperar")
+            user_data = response.data[0]
+            if update_data:
+                try:
+                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                    user_data = response.data[0] if response.data else user_data
+                except Exception as update_error3:
+                    logger.warning(f"Error en actualización final: {str(update_error3)}")
+            user_data["auth_source"] = auth_source
+            return user_data
         
-        return user_data
+        # Si aún no existe, hay un problema con el trigger - NO intentar INSERT manual
+        # porque violaría la foreign key constraint
+        raise Exception(f"El trigger no creó el registro en {USER_TABLE_NAME}. El usuario {user_id} debería existir en auth.users pero no se pudo crear el perfil. Por favor, contacta al soporte.")
         
     except Exception as e:
         logger.error(f"Error en ensure_user_persisted: {str(e)}")
@@ -455,9 +475,9 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         )
 
 async def create_default_subscription(user_id: str):
-    """Crea una suscripción por defecto con plan free y trial de 7 días"""
+    """Crea una suscripción por defecto con plan free (sin trial automático)"""
     try:
-        # Obtener el plan "free" (plan gratuito con trial)
+        # Obtener el plan "free" (plan gratuito)
         plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
         
         if not plan_response.data or len(plan_response.data) == 0:
@@ -467,25 +487,24 @@ async def create_default_subscription(user_id: str):
         plan = plan_response.data[0]
         plan_id = plan["id"]
         
-        # Calcular fechas de trial (7 días desde ahora)
+        # Calcular fechas (sin trial, solo plan free)
         now = datetime.utcnow()
-        trial_end = now + timedelta(days=7)
         
-        # Crear suscripción con trial
+        # Crear suscripción sin trial (plan free permanente)
         subscription_data = {
             "user_id": user_id,
             "plan_id": plan_id,
             "status": "active",
-            "trial_start": now.isoformat(),
-            "trial_end": trial_end.isoformat(),
+            "trial_start": None,
+            "trial_end": None,
             "current_period_start": now.isoformat(),
-            "current_period_end": trial_end.isoformat()
+            "current_period_end": None  # Plan free no tiene fecha de fin
         }
         
         subscription_response = supabase.table("subscriptions").insert(subscription_data).execute()
         
         if subscription_response.data:
-            logger.info(f"Suscripción con trial creada para usuario {user_id}")
+            logger.info(f"Suscripción free creada para usuario {user_id}")
         else:
             logger.error(f"Error al crear suscripción para usuario {user_id}")
             
@@ -500,10 +519,21 @@ async def create_default_subscription(user_id: str):
 class SignUpRequest(BaseModel):
     email: EmailStr
     password: str
+    confirm_password: str
+    country: str
+    date_of_birth: str  # Format: YYYY-MM-DD
 
 class SignInRequest(BaseModel):
     email: EmailStr
     password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: Optional[str] = None  # Token puede venir del header o del body
+    password: str
+    confirm_password: str
 
 class UserResponse(BaseModel):
     user_id: str
@@ -1449,7 +1479,7 @@ def decode_jwt(token: str) -> Dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> Dict[str, Any]:
+async def ensure_user_persisted(user_id: str, email: str, auth_source: str, country: Optional[str] = None, date_of_birth: Optional[str] = None) -> Dict[str, Any]:
     """Garantiza que el usuario existe en user_profiles"""
     try:
         # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
@@ -1462,49 +1492,69 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
             user_data["auth_source"] = auth_source
             return user_data
         
-        # Crear nuevo usuario en user_profiles
-        logger.info(f"Creando nuevo usuario {user_id} en {USER_TABLE_NAME}")
-        new_user = {
-            "id": user_id,
-            "email": email,
-            "full_name": None,
-            "avatar_url": None,
-            "preferences": {},
-            "onboarding_completed": False,
-            "created_at": datetime.utcnow().isoformat()
-        }
+        # El trigger debería haber creado el registro básico, ahora lo actualizamos
+        # Si no existe, intentamos crearlo manualmente
+        logger.info(f"Actualizando/creando usuario {user_id} en {USER_TABLE_NAME}")
         
-        insert_response = supabase.table(USER_TABLE_NAME).insert(new_user).execute()
+        # Intentar actualizar primero (el trigger ya debería haber creado el registro)
+        update_data = {}
+        if country:
+            update_data["country"] = country
+        if date_of_birth:
+            update_data["date_of_birth"] = date_of_birth
         
-        if not insert_response.data or len(insert_response.data) == 0:
-            raise Exception("No se pudo insertar el usuario")
+        if update_data:
+            try:
+                update_response = supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                # Verificar si el UPDATE funcionó (puede no devolver datos pero funcionar)
+                # Si no hay error, el UPDATE funcionó, verificar que el registro existe
+                logger.info(f"UPDATE ejecutado, verificando existencia del usuario")
+                response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                if response.data and len(response.data) > 0:
+                    user_data = response.data[0]
+                    user_data["auth_source"] = auth_source
+                    logger.info(f"Usuario {user_id} actualizado y verificado exitosamente")
+                    return user_data
+            except Exception as update_error:
+                logger.warning(f"Error actualizando usuario (puede que no exista aún): {str(update_error)}")
         
-        logger.info(f"Usuario {user_id} creado exitosamente")
-        user_data = insert_response.data[0]
-        # Agregar auth_source al response para compatibilidad
-        user_data["auth_source"] = auth_source
+        # Si la actualización falló, verificar si el registro existe (puede que el trigger lo haya creado)
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        if response.data and len(response.data) > 0:
+            # El registro existe, actualizar con los datos faltantes
+            logger.info(f"Usuario {user_id} encontrado, actualizando datos adicionales")
+            user_data = response.data[0]
+            if update_data:
+                try:
+                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                    user_data = response.data[0] if response.data else user_data
+                except Exception as update_error2:
+                    logger.warning(f"Error en segunda actualización: {str(update_error2)}")
+            user_data["auth_source"] = auth_source
+            return user_data
         
-        # Crear suscripción automática con trial de 14 días
-        await create_default_subscription(user_id)
+        # Si no existe, esperar un poco más para que el trigger se ejecute
+        import asyncio
+        await asyncio.sleep(1.0)  # Esperar 1 segundo adicional
         
-        # Enviar email de bienvenida/onboarding
-        try:
-            user_name = user_data.get("full_name") or email.split("@")[0]
-            email_template = get_onboarding_email_template(user_name, email)
-            send_result = send_alert_email(
-                to_email=email,
-                subject=email_template["subject"],
-                html_content=email_template["html_content"]
-            )
-            if send_result.get("success"):
-                logger.info(f"✅ Email de bienvenida enviado a {email}")
-            else:
-                logger.warning(f"⚠️ No se pudo enviar email de bienvenida: {send_result.get('error')}")
-        except Exception as email_error:
-            logger.error(f"Error enviando email de bienvenida: {str(email_error)}")
-            # No fallar el registro si el email falla
+        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        if response.data and len(response.data) > 0:
+            logger.info(f"Usuario {user_id} encontrado después de esperar")
+            user_data = response.data[0]
+            if update_data:
+                try:
+                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                    user_data = response.data[0] if response.data else user_data
+                except Exception as update_error3:
+                    logger.warning(f"Error en actualización final: {str(update_error3)}")
+            user_data["auth_source"] = auth_source
+            return user_data
         
-        return user_data
+        # Si aún no existe, hay un problema con el trigger - NO intentar INSERT manual
+        # porque violaría la foreign key constraint
+        raise Exception(f"El trigger no creó el registro en {USER_TABLE_NAME}. El usuario {user_id} debería existir en auth.users pero no se pudo crear el perfil. Por favor, contacta al soporte.")
         
     except Exception as e:
         logger.error(f"Error en ensure_user_persisted: {str(e)}")
@@ -1514,9 +1564,9 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str) -> D
         )
 
 async def create_default_subscription(user_id: str):
-    """Crea una suscripción por defecto con plan free y trial de 7 días"""
+    """Crea una suscripción por defecto con plan free (sin trial automático)"""
     try:
-        # Obtener el plan "free" (plan gratuito con trial)
+        # Obtener el plan "free" (plan gratuito)
         plan_response = supabase.table("subscription_plans").select("*").eq("name", "free").execute()
         
         if not plan_response.data or len(plan_response.data) == 0:
@@ -1526,25 +1576,24 @@ async def create_default_subscription(user_id: str):
         plan = plan_response.data[0]
         plan_id = plan["id"]
         
-        # Calcular fechas de trial (7 días desde ahora)
+        # Calcular fechas (sin trial, solo plan free)
         now = datetime.utcnow()
-        trial_end = now + timedelta(days=7)
         
-        # Crear suscripción con trial
+        # Crear suscripción sin trial (plan free permanente)
         subscription_data = {
             "user_id": user_id,
             "plan_id": plan_id,
             "status": "active",
-            "trial_start": now.isoformat(),
-            "trial_end": trial_end.isoformat(),
+            "trial_start": None,
+            "trial_end": None,
             "current_period_start": now.isoformat(),
-            "current_period_end": trial_end.isoformat()
+            "current_period_end": None  # Plan free no tiene fecha de fin
         }
         
         subscription_response = supabase.table("subscriptions").insert(subscription_data).execute()
         
         if subscription_response.data:
-            logger.info(f"Suscripción con trial creada para usuario {user_id}")
+            logger.info(f"Suscripción free creada para usuario {user_id}")
         else:
             logger.error(f"Error al crear suscripción para usuario {user_id}")
             
@@ -1559,10 +1608,21 @@ async def create_default_subscription(user_id: str):
 class SignUpRequest(BaseModel):
     email: EmailStr
     password: str
+    confirm_password: str
+    country: str
+    date_of_birth: str  # Format: YYYY-MM-DD
 
 class SignInRequest(BaseModel):
     email: EmailStr
     password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: Optional[str] = None  # Token puede venir del header o del body
+    password: str
+    confirm_password: str
 
 class UserResponse(BaseModel):
     user_id: str
@@ -1581,8 +1641,38 @@ class AuthResponse(BaseModel):
 
 @app.post("/auth/signup", response_model=AuthResponse, tags=["Authentication"])
 async def signup(signup_data: SignUpRequest):
-    """Registro de nuevo usuario con email y password"""
+    """Registro de nuevo usuario con email, password, country y date_of_birth"""
     try:
+        # Validar que las contraseñas coincidan
+        if signup_data.password != signup_data.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Las contraseñas no coinciden"
+            )
+        
+        # Validar longitud de contraseña
+        if len(signup_data.password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña debe tener al menos 6 caracteres"
+            )
+        
+        # Validar fecha de nacimiento
+        try:
+            birth_date = datetime.strptime(signup_data.date_of_birth, "%Y-%m-%d")
+            # Verificar que sea mayor de 13 años (requisito común)
+            age = (datetime.now() - birth_date).days / 365.25
+            if age < 13:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Debes ser mayor de 13 años para registrarte"
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Formato de fecha inválido. Use YYYY-MM-DD"
+            )
+        
         logger.info(f"Registrando usuario: {signup_data.email}")
         auth_response = supabase.auth.sign_up({
             "email": signup_data.email,
@@ -1598,8 +1688,19 @@ async def signup(signup_data: SignUpRequest):
         user_id = auth_response.user.id
         email = auth_response.user.email
         
-        # Persistir en tabla custom
-        user_data = await ensure_user_persisted(user_id, email, "email_password")
+        # Esperar un momento para que el trigger cree el registro en user_profiles
+        import asyncio
+        await asyncio.sleep(1.0)  # Esperar 1 segundo para que el trigger se ejecute
+        
+        # Persistir/actualizar en tabla custom con country y date_of_birth
+        # El trigger ya creó el registro básico, ahora lo actualizamos con los datos adicionales
+        user_data = await ensure_user_persisted(
+            user_id, 
+            email, 
+            "email_password",
+            country=signup_data.country,
+            date_of_birth=signup_data.date_of_birth
+        )
         
         # Obtener token
         access_token = auth_response.session.access_token if auth_response.session else None
@@ -1690,111 +1791,170 @@ async def signin(signin_data: SignInRequest):
                 detail=f"Error al autenticar: {error_detail}"
             )
 
-@app.get("/auth/oauth/{provider_name}", tags=["OAuth"])
-async def oauth_login(provider_name: str):
-    """Inicia el flujo OAuth con el proveedor especificado"""
+# OAuth endpoints removed - using traditional email/password registration only
+
+@app.post("/auth/forgot-password", tags=["Authentication"])
+async def forgot_password(request: ForgotPasswordRequest):
+    """Solicitar recuperación de contraseña"""
     try:
-        provider_map = {
-            "google": "google",
-            "outlook": "azure",
-            "microsoft": "azure"
+        logger.info(f"Solicitando recuperación de contraseña para: {request.email}")
+        
+        # Enviar email de recuperación usando Supabase Auth
+        try:
+            supabase.auth.reset_password_for_email(
+                request.email,
+                {
+                    "redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/reset-password.html"
+                }
+            )
+            logger.info(f"Email de recuperación enviado a {request.email}")
+        except Exception as email_error:
+            logger.warning(f"Error enviando email de recuperación: {str(email_error)}")
+            # Continuar de todas formas para no revelar si el email existe
+        
+        # Siempre retornar éxito (por seguridad, no revelar si el email existe)
+        return {
+            "message": "Si el email existe, recibirás un enlace para recuperar tu contraseña"
         }
         
-        provider = provider_map.get(provider_name.lower())
-        
-        if not provider:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Proveedor '{provider_name}' no soportado. Usa: google, outlook"
-            )
-        
-        logger.info(f"🔐 Iniciando OAuth con proveedor: {provider}")
-        
-        # URL de callback - debe ser la URL completa de tu frontend (puerto 8080)
-        redirect_to = "http://localhost:8080/login.html"
-        logger.info(f"📍 Redirect URL configurada: {redirect_to}")
-        
-        # Construir la URL de OAuth directamente
-        base_url = SUPABASE_URL.replace('/rest/v1', '').replace('/v1', '').rstrip('/')
-        
-        # Construir URL de autorización OAuth
-        oauth_url = f"{base_url}/auth/v1/authorize?provider={provider}&redirect_to={redirect_to}"
-        
-        logger.info(f"🌐 URL de OAuth construida: {oauth_url}")
-        logger.info(f"🚀 Redirigiendo a {provider} OAuth...")
-        
-        # Redirigir directamente a la URL de OAuth de Supabase
-        return RedirectResponse(url=oauth_url, status_code=302)
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error inesperado en oauth_login: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al iniciar OAuth: {str(e)}"
-        )
+        logger.error(f"Error en forgot_password: {str(e)}")
+        # Retornar éxito incluso si hay error (por seguridad)
+        return {
+            "message": "Si el email existe, recibirás un enlace para recuperar tu contraseña"
+        }
 
-@app.get("/auth/callback", tags=["OAuth"])
-async def oauth_callback(request: Request):
-    """Callback de OAuth - Redirige al frontend"""
-    # Redirigir al frontend - el hash fragment se mantendrá
-    frontend_url = "http://localhost:8080/login.html"
-    return RedirectResponse(url=frontend_url)
-
-@app.post("/auth/oauth/complete", response_model=AuthResponse, tags=["OAuth"])
-async def oauth_complete(request: Request):
-    """Completa el flujo OAuth después de que el frontend captura el token"""
+@app.post("/auth/reset-password", tags=["Authentication"])
+async def reset_password(request: ResetPasswordRequest, authorization: Optional[str] = Header(None)):
+    """Restablecer contraseña con token"""
     try:
-        # Obtener el token del header Authorization
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token de autorización requerido"
-            )
-        
-        access_token = auth_header.replace("Bearer ", "")
-        
-        # Validar y decodificar el token
-        payload = decode_jwt(access_token)
-        user_id = payload.get("sub")
-        email = payload.get("email")
-        
-        if not user_id or not email:
+        # Validar que las contraseñas coincidan
+        if request.password != request.confirm_password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token inválido: falta user_id o email"
+                detail="Las contraseñas no coinciden"
             )
         
-        # Determinar el proveedor desde el token
-        provider = payload.get("app_metadata", {}).get("provider", "unknown")
-        auth_source = "google" if provider == "google" else "outlook" if provider == "azure" else provider
-        
-        logger.info(f"Completando OAuth para usuario {email} con proveedor {auth_source}")
-        
-        # Persistir usuario
-        user_data = await ensure_user_persisted(user_id, email, auth_source)
-        
-        logger.info(f"Usuario {email} persistido exitosamente en {USER_TABLE_NAME}")
-        
-        return AuthResponse(
-            access_token=access_token,
-            user=UserResponse(
-                user_id=user_data["id"],  # user_profiles usa 'id' como PK
-                email=user_data["email"],
-                auth_source=user_data.get("auth_source", auth_source),
-                created_at=user_data["created_at"]
+        # Validar longitud de contraseña
+        if len(request.password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña debe tener al menos 6 caracteres"
             )
-        )
+        
+        # Obtener token del header o del body
+        token = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+        elif request.token:
+            token = request.token
+        
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token de recuperación requerido"
+            )
+        
+        logger.info("Restableciendo contraseña")
+        
+        # En Supabase, cuando el usuario hace clic en el enlace del email de recuperación,
+        # Supabase redirige a la URL con un hash que contiene el token de recuperación.
+        # El token de recuperación debe ser usado con exchange_code_for_session para establecer
+        # una sesión temporal, y luego podemos actualizar la contraseña.
+        
+        try:
+            # El token de recuperación viene en el hash de la URL cuando el usuario hace clic
+            # en el enlace del email. Necesitamos usar exchange_code_for_session para convertir
+            # el token de recuperación en una sesión temporal.
+            
+            # En Supabase, cuando el usuario hace clic en el enlace del email de recuperación,
+            # el token viene en el hash de la URL. Este token es un token de recuperación que
+            # puede ser usado con verify_otp para establecer una sesión temporal.
+            
+            # En Supabase, cuando el usuario hace clic en el enlace del email de recuperación,
+            # Supabase redirige con un hash que contiene el access_token y refresh_token.
+            # Para el flujo PKCE, el token viene como token_hash en los query parameters.
+            # Necesitamos manejar ambos casos.
+            
+            # En Supabase, cuando el usuario hace clic en el enlace del email de recuperación,
+            # Supabase redirige con un hash que contiene el access_token y refresh_token.
+            # Para el flujo PKCE, el token viene como token_hash en los query parameters.
+            # Intentar primero con set_session (más común en flujo implícito) y luego con verify_otp (PKCE)
+            
+            try:
+                # Intentar primero establecer la sesión directamente con el token
+                # (esto funciona si el token es un access_token del hash en el flujo implícito)
+                session_result = supabase.auth.set_session(token, token)
+                
+                # Verificar que la sesión se estableció correctamente
+                current_user_response = supabase.auth.get_user()
+                if not current_user_response.user:
+                    raise Exception("No se pudo establecer la sesión")
+                
+                # Ahora intentar actualizar la contraseña
+                result = supabase.auth.update_user({
+                    "password": request.password
+                })
+                
+                if not result.user:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="No se pudo actualizar la contraseña. Por favor, intenta de nuevo."
+                    )
+                
+                logger.info(f"Contraseña restablecida exitosamente (método set_session) para usuario {result.user.id}")
+                
+            except Exception as session_error:
+                logger.warning(f"Error en set_session: {str(session_error)}")
+                # Si set_session falla, intentar con verify_otp (flujo PKCE)
+                try:
+                    # Intentar con token_hash (flujo PKCE)
+                    verify_response = supabase.auth.verify_otp({
+                        "token_hash": token,
+                        "type": "recovery"
+                    })
+                    
+                    if not hasattr(verify_response, 'session') or not verify_response.session:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Token inválido o expirado. Por favor, solicita un nuevo enlace de recuperación."
+                        )
+                    
+                    # Ahora que tenemos la sesión, podemos actualizar la contraseña
+                    result = supabase.auth.update_user({
+                        "password": request.password
+                    })
+                    
+                    if not result.user:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="No se pudo actualizar la contraseña. Por favor, intenta de nuevo."
+                        )
+                    
+                    logger.info(f"Contraseña restablecida exitosamente (método verify_otp) para usuario {result.user.id}")
+                    
+                except Exception as verify_error:
+                    error_msg = str(verify_error)
+                    logger.error(f"Error en verify_otp: {error_msg}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Token inválido o expirado. Por favor, solicita un nuevo enlace de recuperación."
+                    )
+            
+        except HTTPException:
+            raise
+        
+        return {
+            "message": "Contraseña restablecida exitosamente"
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error en oauth_complete: {str(e)}")
+        logger.error(f"Error en reset_password: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al completar OAuth: {str(e)}"
+            detail=f"Error al restablecer contraseña: {str(e)}"
         )
 
 @app.get("/api/v1/user/me", response_model=UserResponse, tags=["User"])
@@ -1876,6 +2036,157 @@ async def get_current_subscription(user = Depends(get_current_user)):
 # ============================================
 # SUBSCRIPTIONS ENDPOINTS
 # ============================================
+
+class StartTrialRequest(BaseModel):
+    plan_name: str  # "plus" o "pro"
+
+@app.post("/api/subscriptions/start-trial", tags=["Subscriptions"])
+async def start_trial(
+    request: StartTrialRequest,
+    user = Depends(get_current_user)
+):
+    """Iniciar un trial gratuito para un plan (7 días Plus, 3 días Pro)"""
+    try:
+        user_id = user.id
+        
+        # Validar que el plan sea válido para trial
+        valid_trial_plans = {
+            "plus": 7,  # 7 días de trial
+            "pro": 3    # 3 días de trial
+        }
+        
+        plan_name = request.plan_name.lower()
+        if plan_name not in valid_trial_plans:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El plan '{plan_name}' no tiene trial disponible. Solo 'plus' (7 días) y 'pro' (3 días) tienen trials."
+            )
+        
+        trial_days = valid_trial_plans[plan_name]
+        
+        # Verificar si el usuario ya tiene una suscripción activa
+        subscription_response = supabase.table("subscriptions") \
+            .select("*, subscription_plans(*)") \
+            .eq("user_id", user_id) \
+            .eq("status", "active") \
+            .execute()
+        
+        current_subscription = subscription_response.data[0] if subscription_response.data else None
+        
+        # Si ya tiene un trial activo o una suscripción pagada, no permitir otro trial
+        if current_subscription:
+            current_plan_name = current_subscription.get("subscription_plans", {}).get("name") if isinstance(current_subscription.get("subscription_plans"), dict) else None
+            if not current_plan_name:
+                # Intentar obtener el plan_name de otra forma
+                plan_response = supabase.table("subscription_plans") \
+                    .select("name") \
+                    .eq("id", current_subscription.get("plan_id")) \
+                    .execute()
+                if plan_response.data:
+                    current_plan_name = plan_response.data[0].get("name")
+            
+            # Verificar si ya tiene un trial activo
+            trial_end = current_subscription.get("trial_end")
+            if trial_end:
+                trial_end_date = datetime.fromisoformat(trial_end.replace('Z', '+00:00'))
+                if trial_end_date > datetime.utcnow():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Ya tienes un trial activo. Espera a que termine antes de iniciar otro."
+                    )
+            
+            # Si ya tiene el plan que quiere hacer trial, no permitir
+            if current_plan_name == plan_name:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Ya tienes el plan {plan_name}. No puedes iniciar un trial para un plan que ya tienes."
+                )
+        
+        # Obtener el plan solicitado
+        plan_response = supabase.table("subscription_plans") \
+            .select("*") \
+            .eq("name", plan_name) \
+            .execute()
+        
+        if not plan_response.data or len(plan_response.data) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Plan '{plan_name}' no encontrado"
+            )
+        
+        plan = plan_response.data[0]
+        plan_id = plan["id"]
+        
+        # Calcular fechas del trial
+        now = datetime.utcnow()
+        trial_end = now + timedelta(days=trial_days)
+        
+        # Si ya tiene una suscripción, actualizarla; si no, crear una nueva
+        if current_subscription:
+            # Actualizar suscripción existente
+            update_data = {
+                "plan_id": plan_id,
+                "status": "active",
+                "trial_start": now.isoformat(),
+                "trial_end": trial_end.isoformat(),
+                "current_period_start": now.isoformat(),
+                "current_period_end": trial_end.isoformat()
+            }
+            
+            update_response = supabase.table("subscriptions") \
+                .update(update_data) \
+                .eq("id", current_subscription["id"]) \
+                .execute()
+            
+            if not update_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Error al actualizar la suscripción"
+                )
+            
+            logger.info(f"Trial de {trial_days} días iniciado para usuario {user_id} con plan {plan_name}")
+            
+            return {
+                "message": f"Trial de {trial_days} días iniciado exitosamente",
+                "trial_end": trial_end.isoformat(),
+                "days_remaining": trial_days
+            }
+        else:
+            # Crear nueva suscripción con trial
+            subscription_data = {
+                "user_id": user_id,
+                "plan_id": plan_id,
+                "status": "active",
+                "trial_start": now.isoformat(),
+                "trial_end": trial_end.isoformat(),
+                "current_period_start": now.isoformat(),
+                "current_period_end": trial_end.isoformat()
+            }
+            
+            insert_response = supabase.table("subscriptions").insert(subscription_data).execute()
+            
+            if not insert_response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Error al crear la suscripción con trial"
+                )
+            
+            logger.info(f"Trial de {trial_days} días iniciado para usuario {user_id} con plan {plan_name}")
+            
+            return {
+                "message": f"Trial de {trial_days} días iniciado exitosamente",
+                "trial_end": trial_end.isoformat(),
+                "days_remaining": trial_days
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error iniciando trial: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al iniciar trial: {str(e)}"
+        )
 
 @app.get("/api/subscription-plans")
 async def get_subscription_plans():
@@ -2001,6 +2312,14 @@ async def account():
 @app.get("/login.html")
 async def login():
     return FileResponse("login.html")
+
+@app.get("/forgot-password.html")
+async def forgot_password_page():
+    return FileResponse("forgot-password.html")
+
+@app.get("/reset-password.html")
+async def reset_password_page():
+    return FileResponse("reset-password.html")
 
 @app.get("/subscription-success.html")
 async def subscription_success():

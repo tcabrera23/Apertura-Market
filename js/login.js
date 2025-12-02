@@ -12,8 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeForms();
     checkAuthStatus();
     
-    // Verificar si hay token en la URL (callback de OAuth)
-    handleOAuthCallback();
+    // Set max date for date picker (must be 13+ years old)
+    const dateInput = document.getElementById('signUpDateOfBirth');
+    if (dateInput) {
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() - 13);
+        dateInput.max = maxDate.toISOString().split('T')[0];
+    }
 });
 
 // Inicializar tabs
@@ -50,13 +55,9 @@ function initializeTabs() {
 function initializeForms() {
     const signInBtn = document.getElementById('signInBtn');
     const signUpBtn = document.getElementById('signUpBtn');
-    const googleSignInBtn = document.getElementById('googleSignInBtn');
-    const outlookSignInBtn = document.getElementById('outlookSignInBtn');
 
     signInBtn.addEventListener('click', handleSignIn);
     signUpBtn.addEventListener('click', handleSignUp);
-    googleSignInBtn.addEventListener('click', () => handleOAuth('google'));
-    outlookSignInBtn.addEventListener('click', () => handleOAuth('outlook'));
 
     // Permitir submit con Enter
     document.getElementById('signInEmail').addEventListener('keypress', (e) => {
@@ -69,6 +70,9 @@ function initializeForms() {
         if (e.key === 'Enter') handleSignUp();
     });
     document.getElementById('signUpPassword').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSignUp();
+    });
+    document.getElementById('signUpConfirmPassword').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleSignUp();
     });
 }
@@ -131,14 +135,33 @@ async function handleSignIn() {
 async function handleSignUp() {
     const email = document.getElementById('signUpEmail').value.trim();
     const password = document.getElementById('signUpPassword').value;
+    const confirmPassword = document.getElementById('signUpConfirmPassword').value;
+    const country = document.getElementById('signUpCountry').value;
+    const dateOfBirth = document.getElementById('signUpDateOfBirth').value;
 
-    if (!email || !password) {
+    // Validaciones
+    if (!email || !password || !confirmPassword || !country || !dateOfBirth) {
         showMessage('Por favor completa todos los campos', 'error');
         return;
     }
 
     if (password.length < 6) {
         showMessage('La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showMessage('Las contraseñas no coinciden', 'error');
+        return;
+    }
+
+    // Validar fecha de nacimiento (debe ser mayor de 13 años)
+    const birthDate = new Date(dateOfBirth);
+    const today = new Date();
+    const age = (today - birthDate) / (1000 * 60 * 60 * 24 * 365.25);
+    
+    if (age < 13) {
+        showMessage('Debes ser mayor de 13 años para registrarte', 'error');
         return;
     }
 
@@ -153,7 +176,13 @@ async function handleSignUp() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ 
+                email, 
+                password, 
+                confirm_password: confirmPassword,
+                country: country,
+                date_of_birth: dateOfBirth
+            }),
         });
 
         const data = await response.json();
@@ -186,67 +215,7 @@ async function handleSignUp() {
     }
 }
 
-// Manejar OAuth
-function handleOAuth(provider) {
-    // Redirigir a la URL de OAuth del backend
-    window.location.href = `${AUTH_API_BASE_URL}/oauth/${provider}`;
-}
-
-// Manejar callback de OAuth
-function handleOAuthCallback() {
-    const hash = window.location.hash;
-    if (!hash) return;
-
-    // Extraer access_token del hash fragment
-    const params = new URLSearchParams(hash.substring(1));
-    const token = params.get('access_token');
-
-    if (token) {
-        // Completar el flujo OAuth
-        completeOAuth(token);
-    }
-}
-
-// Completar flujo OAuth
-async function completeOAuth(token) {
-    try {
-        const response = await fetch(`${AUTH_API_BASE_URL}/oauth/complete`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.detail || data.message || 'Error al completar autenticación');
-        }
-
-        // Guardar token y datos del usuario
-        accessToken = data.access_token;
-        localStorage.setItem('access_token', accessToken);
-        localStorage.setItem('user_data', JSON.stringify(data.user));
-
-        showMessage('¡Autenticación exitosa! Redirigiendo...', 'success');
-        
-        // Limpiar hash de la URL
-        window.history.replaceState(null, null, window.location.pathname);
-        
-        // Redirigir a la URL guardada o al dashboard
-        const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
-        localStorage.removeItem('redirect_after_login');
-        
-        setTimeout(() => {
-            window.location.href = redirectUrl;
-        }, 1000);
-
-    } catch (error) {
-        console.error('Error completando OAuth:', error);
-        showMessage(error.message || 'Error al completar autenticación', 'error');
-    }
-}
+// OAuth removed - using traditional email/password registration only
 
 // Verificar estado de autenticación
 function checkAuthStatus() {
@@ -315,5 +284,4 @@ function clearMessage() {
 // Exportar funciones para uso global
 window.handleSignIn = handleSignIn;
 window.handleSignUp = handleSignUp;
-window.handleOAuth = handleOAuth;
 
