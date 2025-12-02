@@ -166,7 +166,6 @@ function createRuleCard(rule) {
                 <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">${typeLabels[rule.rule_type] || rule.type || rule.rule_type}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📊 ${rule.ticker}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value_threshold || rule.value}</span>
-                <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📧 ${rule.email}</span>
             </div>
         </div>
         <div class="ml-4">
@@ -186,8 +185,8 @@ async function createRule() {
         name: document.getElementById('ruleName').value,
         rule_type: document.getElementById('ruleType').value,  // Cambiado de 'type' a 'rule_type'
         ticker: document.getElementById('ruleTicker').value.toUpperCase(),
-        value: parseFloat(document.getElementById('ruleValue').value),
-        email: document.getElementById('ruleEmail').value
+        value: parseFloat(document.getElementById('ruleValue').value)
+        // Email is automatically taken from authenticated user's account
     };
 
     try {
@@ -278,18 +277,18 @@ async function deleteRule(ruleId) {
 // Chat functions
 async function sendChatMessage() {
     const chatInput = document.getElementById('chatInput');
-    const chatEmail = document.getElementById('chatEmail');
     const chatMessages = document.getElementById('chatMessages');
     const message = chatInput.value.trim();
-    const email = chatEmail.value.trim();
 
     if (!message) {
         return;
     }
 
-    if (!email) {
-        alert('Por favor, ingresa tu email para recibir notificaciones.');
-        chatEmail.focus();
+    // Check if user is authenticated
+    const token = getAuthToken();
+    if (!token) {
+        alert('Por favor, inicia sesión para crear reglas.');
+        window.location.href = 'login.html';
         return;
     }
 
@@ -316,8 +315,8 @@ async function sendChatMessage() {
             method: 'POST',
             headers: headers,
             body: JSON.stringify({
-                message: message,
-                email: email
+                message: message
+                // Email is automatically taken from authenticated user's account
             })
         });
 
@@ -337,9 +336,8 @@ async function sendChatMessage() {
                     `📋 Nombre: ${result.rule.name}\n` +
                     `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
                     `🎯 Ticker: ${result.rule.ticker}\n` +
-                    `💵 Valor: ${result.rule.value}\n` +
-                    `📧 Email: ${result.rule.email}\n\n` +
-                    `Por favor, inicia sesión para guardar esta regla.`,
+                    `💵 Valor: ${result.rule.value}\n\n` +
+                    `Por favor, inicia sesión para guardar esta regla. Las notificaciones se enviarán a tu email de cuenta.`,
                     'assistant',
                     false,
                     'text-yellow-600 dark:text-yellow-400'
@@ -351,8 +349,8 @@ async function sendChatMessage() {
                     `📋 Nombre: ${result.rule.name}\n` +
                     `📊 Tipo: ${getTypeLabel(result.rule.rule_type || result.rule.type)}\n` +
                     `🎯 Ticker: ${result.rule.ticker}\n` +
-                    `💵 Valor: ${result.rule.value}\n` +
-                    `📧 Email: ${result.rule.email}`,
+                    `💵 Valor: ${result.rule.value}\n\n` +
+                    `Las notificaciones se enviarán a tu email de cuenta.`,
                     'assistant',
                     false,
                     'text-green-600 dark:text-green-400'

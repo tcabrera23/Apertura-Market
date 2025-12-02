@@ -43,15 +43,25 @@ async function loadUserInfo() {
         const userData = await userResponse.json();
         
         // Actualizar email
-        document.getElementById('userEmail').textContent = userData.email || 'N/A';
+        const emailEl = document.getElementById('userEmail');
+        if (emailEl) {
+            emailEl.innerHTML = ''; // Limpiar placeholder
+            emailEl.textContent = userData.email || 'N/A';
+        }
         
         // Actualizar fecha de registro
-        if (userData.created_at) {
-            const memberSince = new Date(userData.created_at);
-            document.getElementById('memberSince').textContent = memberSince.toLocaleDateString('es-ES', { 
-                year: 'numeric', 
-                month: 'long' 
-            });
+        const memberSinceEl = document.getElementById('memberSince');
+        if (memberSinceEl) {
+            memberSinceEl.innerHTML = ''; // Limpiar placeholder
+            if (userData.created_at) {
+                const memberSince = new Date(userData.created_at);
+                memberSinceEl.textContent = memberSince.toLocaleDateString('es-ES', { 
+                    year: 'numeric', 
+                    month: 'long' 
+                });
+            } else {
+                memberSinceEl.textContent = 'N/A';
+            }
         }
 
         // Cargar suscripción
@@ -111,6 +121,10 @@ function displayPlanInfo(subscription) {
     const planPriceEl = document.getElementById('currentPlanPrice');
     
     if (!planNameEl || !planPriceEl) return;
+
+    // Limpiar placeholders
+    planNameEl.innerHTML = '';
+    planPriceEl.innerHTML = '';
 
     // Determinar nombre del plan
     let displayName = subscription.display_name || subscription.plan_name || 'Plan Básico';

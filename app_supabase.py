@@ -246,7 +246,7 @@ class RuleCreate(BaseModel):
     rule_type: str  # 'price_below', 'price_above', 'pe_below', 'pe_above', 'max_distance'
     ticker: str
     value: float
-    email: str
+    email: Optional[str] = None  # Email is optional, will use user.email if not provided
 
 class RuleUpdate(BaseModel):
     name: Optional[str] = None
@@ -642,6 +642,125 @@ async def get_news(category: str = Query("general", description="News category")
         return []
 
 # ============================================
+# EARNINGS CALENDAR ENDPOINTS
+# ============================================
+
+@app.get("/api/earnings-calendar")
+async def get_earnings_calendar(
+    year: Optional[int] = Query(None, description="Year to filter (default: current year)"),
+    month: Optional[int] = Query(None, description="Month to filter (1-12, default: current month)")
+):
+    """
+    Get earnings calendar for all tracked assets.
+    Returns earnings dates grouped by date.
+    """
+    try:
+        # Use current year/month if not provided
+        now = datetime.now()
+        target_year = year or now.year
+        target_month = month or now.month
+        
+        # Combine all assets
+        all_assets = {**TRACKING_ASSETS, **PORTFOLIO_ASSETS, **ARGENTINA_ASSETS}
+        
+        earnings_events = []
+        
+        for ticker, name in all_assets.items():
+            try:
+                stock = yf.Ticker(ticker)
+                info = stock.info
+                
+                # Try to get earnings date from info
+                earnings_date = None
+                
+                # Check multiple possible fields for earnings date
+                if 'earningsDate' in info and info.get('earningsDate'):
+                    earnings_date = info.get('earningsDate')
+                elif 'nextFiscalYearEnd' in info and info.get('nextFiscalYearEnd'):
+                    # Sometimes earnings date is in nextFiscalYearEnd
+                    earnings_date = info.get('nextFiscalYearEnd')
+                elif 'mostRecentQuarter' in info and info.get('mostRecentQuarter'):
+                    # Try to calculate next earnings from most recent quarter
+                    most_recent = info.get('mostRecentQuarter')
+                    if most_recent:
+                        try:
+                            # Parse timestamp and add ~3 months for next quarter
+                            if isinstance(most_recent, (int, float)):
+                                earnings_date = datetime.fromtimestamp(most_recent) + timedelta(days=90)
+                            else:
+                                earnings_date = datetime.strptime(str(most_recent), '%Y-%m-%d') + timedelta(days=90)
+                        except:
+                            pass
+                
+                # Also try calendar attribute
+                if not earnings_date:
+                    try:
+                        calendar = stock.calendar
+                        if calendar is not None and not calendar.empty:
+                            # Get the next earnings date from calendar
+                            if 'Earnings Date' in calendar.columns:
+                                earnings_date = calendar['Earnings Date'].iloc[0]
+                            elif len(calendar) > 0:
+                                # Try first row
+                                earnings_date = calendar.index[0] if hasattr(calendar.index[0], 'date') else None
+                    except Exception as e:
+                        logger.debug(f"Error getting calendar for {ticker}: {e}")
+                
+                # Convert earnings_date to datetime if it's not None
+                if earnings_date:
+                    if isinstance(earnings_date, (int, float)):
+                        earnings_date = datetime.fromtimestamp(earnings_date)
+                    elif isinstance(earnings_date, str):
+                        try:
+                            # Try different date formats
+                            for fmt in ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M:%S%z']:
+                                try:
+                                    earnings_date = datetime.strptime(earnings_date, fmt)
+                                    break
+                                except:
+                                    continue
+                            if isinstance(earnings_date, str):
+                                # If still string, try to parse as timestamp
+                                earnings_date = datetime.fromtimestamp(float(earnings_date))
+                        except:
+                            logger.debug(f"Could not parse earnings_date for {ticker}: {earnings_date}")
+                            continue
+                    
+                    # Filter by target month/year
+                    if earnings_date.year == target_year and earnings_date.month == target_month:
+                        earnings_events.append({
+                            "ticker": ticker,
+                            "name": name,
+                            "date": earnings_date.strftime("%Y-%m-%d"),
+                            "datetime": earnings_date.isoformat(),
+                            "day": earnings_date.day,
+                            "month": earnings_date.month,
+                            "year": earnings_date.year
+                        })
+            except Exception as e:
+                logger.debug(f"Error fetching earnings for {ticker}: {e}")
+                continue
+        
+        # Group by date
+        events_by_date = {}
+        for event in earnings_events:
+            date_key = event["date"]
+            if date_key not in events_by_date:
+                events_by_date[date_key] = []
+            events_by_date[date_key].append(event)
+        
+        return {
+            "year": target_year,
+            "month": target_month,
+            "events": events_by_date,
+            "total_events": len(earnings_events)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching earnings calendar: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching earnings calendar: {str(e)}")
+
+# ============================================
 # RULES ENDPOINTS (Supabase Integration)
 # ============================================
 
@@ -697,13 +816,18 @@ async def create_rule(rule: RuleCreate, user = Depends(get_current_user)):
             logger.warning(f"Error checking plan limit, continuando: {str(rpc_error)}")
             # Continuar si hay error en la verificación del límite (no bloquear creación)
         
+        # Use user's email from authentication
+        user_email = user.email if hasattr(user, 'email') and user.email else None
+        if not user_email:
+            raise HTTPException(status_code=400, detail="No se pudo obtener el email del usuario autenticado")
+        
         rule_data = {
             "user_id": user.id,
             "name": rule.name,
             "rule_type": rule.rule_type,
             "ticker": rule.ticker,
             "value_threshold": rule.value,
-            "email": rule.email,
+            "email": user_email,  # Use authenticated user's email
             "is_active": True
         }
         
@@ -751,7 +875,7 @@ Tu objetivo es extraer los siguientes campos del mensaje del usuario:
 - type: El tipo de regla. Opciones válidas: "price_below", "price_above", "pe_below", "pe_above", "max_distance"
 - ticker: El símbolo del activo (ej: NVDA, AAPL, BTC-USD, META)
 - value: El valor numérico de referencia (porcentaje o número según el tipo)
-- email: El email del usuario (si se proporciona en el mensaje)
+- email: El email del usuario (opcional, solo si se menciona explícitamente en el mensaje)
 
 Tipos de reglas:
 - "price_below": Precio debajo de un valor específico
@@ -851,14 +975,24 @@ Responde SOLO con un JSON válido, sin texto adicional. Si falta información cr
                 "raw_response": response_content
             }
 
-        # Use provided email or try to extract from rule_data
-        email = chat_message.email or rule_data.get("email")
-        if not email:
-            return {
-                "success": False,
-                "error": "Se requiere un email para las notificaciones. Por favor, proporciona tu email.",
-                "raw_response": response_content
-            }
+        # Use user's email from authentication if available, otherwise use provided email
+        if user:
+            email = user.email if hasattr(user, 'email') and user.email else None
+            if not email:
+                return {
+                    "success": False,
+                    "error": "No se pudo obtener el email del usuario autenticado.",
+                    "raw_response": response_content
+                }
+        else:
+            # No user authenticated, use provided email or try to extract from rule_data
+            email = chat_message.email or rule_data.get("email")
+            if not email:
+                return {
+                    "success": False,
+                    "error": "Se requiere autenticación o proporcionar un email para las notificaciones.",
+                    "raw_response": response_content
+                }
 
         # Map type to rule_type (for Supabase schema)
         type_mapping = {
@@ -1692,6 +1826,10 @@ async def dashboard():
 @app.get("/news.html")
 async def news():
     return FileResponse("news.html")
+
+@app.get("/calendar.html")
+async def calendar():
+    return FileResponse("calendar.html")
 
 @app.get("/pricing.html")
 async def pricing():

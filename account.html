@@ -33,6 +33,21 @@
             }
         }
     </script>
+    <style>
+        .loading-placeholder {
+            display: inline-block;
+            color: #9ca3af;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
 </head>
 
 <body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -51,6 +66,7 @@
                     <li><a href="dashboard.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Dashboard</a></li>
                     <li><a href="news.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Noticias</a></li>
                     <li><a href="rules.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Reglas</a></li>
+                    <li><a href="calendar.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Calendario</a></li>
                     <li><a href="account.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Account</a></li>
                 </ul>
                 <div class="flex items-center gap-4">
@@ -88,8 +104,12 @@
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Plan Actual</h2>
                         <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg border border-green-200 dark:border-green-700">
                             <div>
-                                <h3 class="text-xl font-bold text-green-700 dark:text-green-400" id="currentPlanName">Plan Pro</h3>
-                                <p class="text-gray-600 dark:text-gray-400" id="currentPlanPrice">$29.99/mes</p>
+                                <h3 class="text-xl font-bold text-green-700 dark:text-green-400" id="currentPlanName">
+                                    <span class="loading-placeholder">Cargando...</span>
+                                </h3>
+                                <p class="text-gray-600 dark:text-gray-400" id="currentPlanPrice">
+                                    <span class="loading-placeholder">Cargando...</span>
+                                </p>
                             </div>
                             <button class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/30 hover:shadow-xl transition-all font-semibold" onclick="openUpgradeModal()">
                                 Actualizar Plan
@@ -117,11 +137,15 @@
                         <div class="space-y-3">
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                                <p class="font-semibold text-gray-900 dark:text-white" id="userEmail">usuario@example.com</p>
+                                <p class="font-semibold text-gray-900 dark:text-white" id="userEmail">
+                                    <span class="loading-placeholder">Cargando...</span>
+                                </p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">Miembro desde</p>
-                                <p class="font-semibold text-gray-900 dark:text-white" id="memberSince">Enero 2025</p>
+                                <p class="font-semibold text-gray-900 dark:text-white" id="memberSince">
+                                    <span class="loading-placeholder">Cargando...</span>
+                                </p>
                             </div>
                         </div>
                     </div>

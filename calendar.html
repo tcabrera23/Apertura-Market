@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Noticias financieras - BullAnalytics">
-    <title>Noticias - BullAnalytics</title>
+    <meta name="description" content="Calendario de Resultados - BullAnalytics">
+    <title>Calendario de Resultados - BullAnalytics</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -49,9 +49,9 @@
                 <ul class="hidden md:flex items-center gap-6">
                     <li><a href="index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Inicio</a></li>
                     <li><a href="dashboard.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Dashboard</a></li>
-                    <li><a href="news.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Noticias</a></li>
+                    <li><a href="news.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Noticias</a></li>
                     <li><a href="rules.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Reglas</a></li>
-                    <li><a href="calendar.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Calendario</a></li>
+                    <li><a href="calendar.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Calendario</a></li>
                     <li><a href="account.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Account</a></li>
                 </ul>
                 <div class="flex items-center gap-4">
@@ -69,39 +69,57 @@
         </div>
     </nav>
 
-    <!-- News Header -->
+    <!-- Calendar Header -->
     <header class="pt-20 pb-8 bg-gradient-to-r from-white via-green-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h1 class="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
-                📰 Noticias Financieras
+                📅 Calendario de Resultados
             </h1>
-            <p class="text-gray-600 dark:text-gray-400">Mantente informado con las últimas noticias del mercado</p>
+            <p class="text-gray-600 dark:text-gray-400">Fechas de presentación de balances y resultados financieros</p>
         </div>
     </header>
 
-    <!-- News Content -->
+    <!-- Calendar Content -->
     <main class="min-h-screen pb-12">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- News Controls -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                <div class="flex flex-wrap gap-2">
-                    <button class="category-pill px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-semibold shadow-lg" data-category="general">General</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="usa">USA</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="china">China</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="europe">Europa</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="crypto">Crypto</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="tech">Tech</button>
-                    <button class="category-pill px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium" data-category="ai">AI</button>
+            <!-- Month Navigation -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <button id="prevMonth" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="text-center">
+                        <h2 id="currentMonth" class="text-2xl font-bold text-gray-900 dark:text-white">Cargando...</h2>
+                        <p id="currentYear" class="text-gray-600 dark:text-gray-400">Cargando...</p>
+                    </div>
+                    <button id="nextMonth" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
-            <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="newsLoading">
-                <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
-                <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando noticias...</p>
+            <!-- Calendar Grid -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div id="calendarContainer" class="grid grid-cols-7 gap-2">
+                    <!-- Calendar will be rendered here -->
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <p>Cargando calendario...</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="newsGrid">
-                <!-- News cards will be inserted here -->
+            <!-- Events List -->
+            <div id="eventsList" class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Eventos del Mes</h3>
+                <div id="eventsContainer" class="space-y-3">
+                    <div class="text-center py-4 text-gray-500 dark:text-gray-400">
+                        <p>Cargando eventos...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -110,14 +128,15 @@
     <footer class="py-8 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <p class="text-center text-gray-600 dark:text-gray-400 text-sm">
-                Noticias obtenidas de Yahoo Finance. © 2025 <span class="font-semibold text-green-500">BullAnalytics</span>.
+                © 2025 <span class="font-semibold text-green-500">BullAnalytics</span>.
             </p>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
-    <script src="js/news.js"></script>
+    <script src="js/calendar.js"></script>
 </body>
 
 </html>
+

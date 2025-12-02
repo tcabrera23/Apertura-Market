@@ -63,3 +63,6 @@ tendrian la opcion igual de la free trial por 7 dias del plan plus o 3 dias del 
 publicar el saas y seguir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
 claro seria la seccion de About Us
 tendria que editar los agentes de IA para agregarle tests, evals, safety, registro de tokens etc.
+
+agregar calendario de resultados notificaciones
+arreglar los watchlists y el buscador de activos. 
