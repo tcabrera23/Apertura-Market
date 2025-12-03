@@ -672,6 +672,34 @@ async def get_argentina_assets():
     
     return results
 
+@app.get("/api/asset/{ticker}/history")
+async def get_asset_history(ticker: str, period: str = "1y", interval: str = "1d"):
+    """Get historical price data for an asset"""
+    try:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period=period, interval=interval)
+        
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data found for {ticker}")
+        
+        # Convert to list of dicts
+        history_data = []
+        for date, row in hist.iterrows():
+            history_data.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "open": float(row['Open']),
+                "high": float(row['High']),
+                "low": float(row['Low']),
+                "close": float(row['Close']),
+                "volume": float(row['Volume'])
+            })
+        
+        return history_data
+        
+    except Exception as e:
+        logger.error(f"Error fetching history for {ticker}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching history for {ticker}")
+
 # ============================================
 # NEWS ENDPOINT
 # ============================================

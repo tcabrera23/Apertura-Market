@@ -108,16 +108,35 @@ creo
 - agrega fotos genericas que encuentres en internet para la portada de cada card con su tema especifico. luego yo me voy a encargar de personalizar las imagenes.
 
 @dashboard.html
-- si encontras logica entre el dashboard y @app_supabase.py que busca hacer graficos con plotly y renderizarlos con react, descartala. directamente vamos a utilizar "lightweight charts" de Trading View.
-- recorda que los graficos muestran un analisis comparativo en cada tab por sus activos. ejemplo: un treemap de "Seguimiento de Activos Populares" que me muestre el P/E por activo en color rojo y en tooltips o una view aparte, vea datos como el promedio de la tab y el valor que tiene cada activo. 
-- los graficos deben presentarse por cada tab debajo de su tabla, segun las columnas que tiene disponibles. el usuario debe poder personalizar los ejes de visualizacion (x,y)
-- hay columnas que no estan capturando el valor de la clave, como se ve en la imagen. asegurate de que se puedan capturar correctamente y de agregar mas mètricas. 
-
-
-
-
+- agregar mas metricas a las cryptomonedas (buscar en gemini que le puede interesar a un comprador de crypto o trader)
+- el usuario tiene full permiso CRUD en sus wathclist, es decir que debe tener algun boton que le permita editarla (nombre, agregar o eliminar activo, eliminar wathclist)
+- editar el html content del chat widget para que no haya desborde ()
+- analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
+- revisar como manejar los casos en los que a los activos le fallan las imagenes (buscar en otro sitio?)
 - lo ideal es encontrar la mas a la izquierda de todas en pe ratio y diff vs max
 - creo que el debt vs equity hay que dividirlo por 100
+- mas metricas en crypto y activos - editar la tab de portafolio
+
+@news.html
+- agregar mas headers? de diferentes temas
+- traduccion al español ya que originalmente vienen en ingles -> meter google translate
+
+@rules.html
+- tambien revisar el agente
+- editar los estilos de los encabezados
+- configurar full permiso CRUD para los usuarios en esa tab
+
+@calendar.html
+- revisar interfaz (quizas el orden de los divs)
+
+@Account.html
+- revisar botones, cupones y subscripciones
+
+backend:
+revisar los correos y los planes de cada usuario
+migrar todo hacia el nuevo dominio
+agregar calculadora de interes compuesto
+
 
 
 
