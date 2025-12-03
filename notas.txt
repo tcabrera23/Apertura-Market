@@ -21,7 +21,6 @@ Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye 
 
 
 antigravity: 
-repasa la documentacion y dame prompts para generar campañas, videos, engagement, imagenes, marketing etc para mi aplicacion BullAnalytics y su Bull Agent
 
 publicar el saas y seuir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
 claro seria la seccion de About Us
@@ -38,3 +37,40 @@ analisis dashboards - safety de agents y tracker
 cambiar todos los dominios lpm
 **PUBLICAR**
 
+estamos seguros que funcionan las integraciones via email? las alertas
+
+- agregar a cada chat widget un mini footer con la leyenda "Powered by Apertura IA"
+- editar cada header y footer de la plataforma
+- editar el texto y estilos con gradientes
+- agregar la opcion de cerrar sesion 
+- cambiar la imagen adjunta del index
+- evaluar seccion de videos
+- la seccion de languages que sea con google translate, ya que no tiene sentido escribir codigo HTMl por cada lenguaje por ahora
+- repasa la documentacion y dame prompts para generar campañas, videos, engagement, imagenes, marketing etc para mi aplicacion BullAnalytics y su Bull Agent
+- seccion about/releases
+- editar activos en portafolio para cambiarlo a acciones
+- corregir dashboard.html con info de tablas y graficos
+
+
+
+index.html
+
+Inicio
+Sobre Nosotros (somos una plataforma inteligente que recolecta datos de diversas fuentes como yahoo finance y trading view)
+Planes
+Contacto -> Footer (Powered by Apertura IA)
+
+
+(ya logueado)
+Pienso que dashboard deberia pasar a llamarse Inicio
+Inicio
+Noticias
+Calendario
+Reglas
+Account
+Mismo footer para todos los html
+
+Me gustaria cambiar los headers ("Monitor de Activos Financieros no me convence")
+
+
+falta ajustar en mobile toda la plataforma y los chat widgets content

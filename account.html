@@ -164,7 +164,7 @@
     </main>
 
     <!-- Upgrade Plan Modal -->
-    <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="upgradeModal">
+    <div class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm" id="upgradeModal" style="display: none;">
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                 <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Seleccionar Plan</h3>
@@ -256,6 +256,7 @@
     <script src="js/account.js"></script>
     <script src="js/subscription.js"></script>
     <script>
+        console.log('Account page script loading...');
         const API_BASE_URL = 'http://localhost:8080/api';
         
         // Función para obtener token (debe estar disponible globalmente)
@@ -265,43 +266,187 @@
         
         let selectedPlan = null;
         let availablePlans = [];
-
+        let appliedCoupon = null;
+        
+        // Declarar funciones globalmente primero para evitar errores de referencia
         function openUpgradeModal() {
-            document.getElementById('upgradeModal').classList.remove('hidden');
-            document.getElementById('upgradeModal').classList.add('flex');
+            console.log('Opening upgrade modal...');
+            const modal = document.getElementById('upgradeModal');
+            if (!modal) {
+                console.error('Modal element not found!');
+                alert('Error: No se encontró el modal. Por favor, recarga la página.');
+                return;
+            }
+            // Remover hidden y mostrar el modal
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            console.log('Modal displayed, classes:', modal.className);
+            // Asegurar que el contenedor de planes esté visible
+            const plansContainer = document.getElementById('plansContainer');
+            if (plansContainer) {
+                plansContainer.style.display = 'grid';
+            }
             loadAvailablePlans();
         }
+        
+        function openCancelModal() {
+            console.log('Opening cancel modal...');
+            const modal = document.getElementById('cancelModal');
+            if (!modal) {
+                console.error('Cancel modal element not found!');
+                return;
+            }
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+        }
+        
+        function closeCancelModal() {
+            const modal = document.getElementById('cancelModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        }
+        
+        function confirmCancel() {
+            if (confirm('¿Estás seguro de que deseas cancelar tu suscripción?')) {
+                alert('Suscripción cancelada. Lamentamos verte partir.');
+                closeCancelModal();
+            }
+        }
+        
+        // Asignar a window para disponibilidad global
+        window.openUpgradeModal = openUpgradeModal;
+        window.openCancelModal = openCancelModal;
+        window.closeCancelModal = closeCancelModal;
+        window.confirmCancel = confirmCancel;
+        
+        console.log('Functions assigned to window:', {
+            openUpgradeModal: typeof window.openUpgradeModal,
+            openCancelModal: typeof window.openCancelModal,
+            closeCancelModal: typeof window.closeCancelModal,
+            confirmCancel: typeof window.confirmCancel
+        });
+        
+        // Asegurar que las funciones estén disponibles cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM loaded, setting up button listeners...');
+                setupButtonListeners();
+            });
+        } else {
+            // DOM ya está listo
+            console.log('DOM already ready, setting up button listeners...');
+            setupButtonListeners();
+        }
+        
+        function setupButtonListeners() {
+            // Asignar event listeners a los botones como respaldo
+            const upgradeBtn = document.querySelector('button[onclick*="openUpgradeModal"]');
+            if (upgradeBtn) {
+                console.log('Found upgrade button, adding listener');
+                upgradeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Upgrade button clicked');
+                    openUpgradeModal();
+                });
+            } else {
+                console.warn('Upgrade button not found!');
+            }
+            
+            const cancelBtn = document.querySelector('button[onclick*="openCancelModal"]');
+            if (cancelBtn) {
+                console.log('Found cancel button, adding listener');
+                cancelBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Cancel button clicked');
+                    openCancelModal();
+                });
+            } else {
+                console.warn('Cancel button not found!');
+            }
+        }
+
 
         function closeUpgradeModal() {
-            document.getElementById('upgradeModal').classList.add('hidden');
-            document.getElementById('upgradeModal').classList.remove('flex');
+            const modal = document.getElementById('upgradeModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
             selectedPlan = null;
-            document.getElementById('paypalCheckoutContainer').classList.add('hidden');
+            appliedCoupon = null;
+            const paypalContainer = document.getElementById('paypalCheckoutContainer');
+            if (paypalContainer) {
+                paypalContainer.classList.add('hidden');
+            }
+            const couponSection = document.getElementById('couponSection');
+            if (couponSection) {
+                couponSection.classList.add('hidden');
+            }
             // Limpiar contenedor de PayPal
             const container = document.getElementById('paypal-button-container');
             if (container) {
                 container.innerHTML = '';
             }
+            // Limpiar input de cupón
+            const couponInput = document.getElementById('couponCodeInput');
+            if (couponInput) {
+                couponInput.value = '';
+            }
+            const couponMessage = document.getElementById('couponMessage');
+            if (couponMessage) {
+                couponMessage.innerHTML = '';
+            }
         }
+        
+        window.closeUpgradeModal = closeUpgradeModal;
 
         async function loadAvailablePlans() {
+            console.log('Loading available plans...');
             const container = document.getElementById('plansContainer');
+            if (!container) {
+                console.error('Plans container not found!');
+                return;
+            }
             container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-3"><p>Cargando planes...</p></div>';
 
             try {
+                console.log(`Fetching from: ${API_BASE_URL}/subscription-plans`);
                 const response = await fetch(`${API_BASE_URL}/subscription-plans`);
-                if (!response.ok) throw new Error('Error cargando planes');
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    throw new Error(`Error cargando planes: ${response.status} ${errorText}`);
+                }
                 
                 availablePlans = await response.json();
+                console.log('Available plans:', availablePlans);
                 renderPlans(availablePlans);
             } catch (error) {
                 console.error('Error loading plans:', error);
-                container.innerHTML = '<div class="text-center py-8 text-red-500 col-span-3"><p>Error al cargar los planes</p></div>';
+                if (container) {
+                    container.innerHTML = `<div class="text-center py-8 text-red-500 col-span-3"><p>Error al cargar los planes: ${error.message}</p></div>`;
+                }
             }
         }
 
         function renderPlans(plans) {
+            console.log('Rendering plans:', plans);
             const container = document.getElementById('plansContainer');
+            if (!container) {
+                console.error('Plans container not found in renderPlans!');
+                return;
+            }
+            
+            if (!plans || plans.length === 0) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-3"><p>No hay planes disponibles</p></div>';
+                return;
+            }
+            
             const token = getAuthToken();
             
             if (!token) {
@@ -376,7 +521,7 @@
 
         let appliedCoupon = null;
 
-        function selectPlan(planName) {
+        window.selectPlan = function(planName) {
             // Remover resaltado de planes anteriores
             document.querySelectorAll('.selected-plan-card').forEach(card => {
                 card.classList.remove('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
@@ -394,7 +539,7 @@
             }
 
             // Mostrar información del plan seleccionado
-            updatePlanInfo();
+            window.updatePlanInfo();
 
             // Mostrar sección de cupón y contenedor de PayPal
             document.getElementById('couponSection').classList.remove('hidden');
@@ -404,9 +549,9 @@
             appliedCoupon = null;
             document.getElementById('couponCodeInput').value = '';
             document.getElementById('couponMessage').innerHTML = '';
-        }
+        };
 
-        function updatePlanInfo() {
+        window.updatePlanInfo = function() {
             const infoContainer = document.getElementById('selectedPlanInfo');
             const price = parseFloat(selectedPlan.price || 0);
             let finalPrice = price;
@@ -438,9 +583,9 @@
                     </div>
                 </div>
             `;
-        }
+        };
 
-        async function validateCoupon() {
+        window.validateCoupon = async function() {
             const couponCode = document.getElementById('couponCodeInput').value.trim();
             const messageDiv = document.getElementById('couponMessage');
             const validateBtn = document.getElementById('validateCouponBtn');
@@ -563,7 +708,7 @@
             document.getElementById('paypalCheckoutContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        async function createSubscriptionWithCoupon() {
+        window.createSubscriptionWithCoupon = async function() {
             const token = getAuthToken();
             if (!token) {
                 alert('Debes iniciar sesión para crear una suscripción');
@@ -652,24 +797,6 @@
             } catch (error) {
                 console.error('Error verificando suscripción:', error);
                 alert('Error verificando la suscripción. Por favor, contacta al soporte.');
-            }
-        }
-
-
-        function openCancelModal() {
-            document.getElementById('cancelModal').classList.remove('hidden');
-            document.getElementById('cancelModal').classList.add('flex');
-        }
-
-        function closeCancelModal() {
-            document.getElementById('cancelModal').classList.add('hidden');
-            document.getElementById('cancelModal').classList.remove('flex');
-        }
-
-        function confirmCancel() {
-            if (confirm('¿Estás seguro de que deseas cancelar tu suscripción?')) {
-                alert('Suscripción cancelada. Lamentamos verte partir.');
-                closeCancelModal();
             }
         }
     </script>
