@@ -182,6 +182,27 @@
                     </div>
                 </div>
                 
+                <!-- Coupon Code Section -->
+                <div id="couponSection" class="hidden mt-6 p-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-4">¿Tienes un código de cupón?</h4>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            id="couponCodeInput" 
+                            placeholder="Ingresa tu código de cupón"
+                            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                        >
+                        <button 
+                            id="validateCouponBtn" 
+                            onclick="validateCoupon()"
+                            class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold"
+                        >
+                            Aplicar
+                        </button>
+                    </div>
+                    <div id="couponMessage" class="mt-2 text-sm"></div>
+                </div>
+                
                 <!-- PayPal Checkout Container -->
                 <div id="paypalCheckoutContainer" class="hidden mt-6 p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-gray-200 dark:border-gray-600">
                     <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Completar Pago</h4>
@@ -189,7 +210,16 @@
                         <!-- Información del plan seleccionado -->
                     </div>
                     <div id="paypal-button-container" class="flex justify-center">
-                        <!-- PayPal button se renderizará aquí -->
+                        <button 
+                            id="createSubscriptionBtn"
+                            onclick="createSubscriptionWithCoupon()"
+                            class="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all font-semibold flex items-center gap-2"
+                        >
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                            </svg>
+                            Continuar con PayPal
+                        </button>
                     </div>
                 </div>
             </div>
@@ -344,6 +374,8 @@
             });
         }
 
+        let appliedCoupon = null;
+
         function selectPlan(planName) {
             // Remover resaltado de planes anteriores
             document.querySelectorAll('.selected-plan-card').forEach(card => {
@@ -362,26 +394,115 @@
             }
 
             // Mostrar información del plan seleccionado
+            updatePlanInfo();
+
+            // Mostrar sección de cupón y contenedor de PayPal
+            document.getElementById('couponSection').classList.remove('hidden');
+            document.getElementById('paypalCheckoutContainer').classList.remove('hidden');
+            
+            // Limpiar cupón aplicado al cambiar de plan
+            appliedCoupon = null;
+            document.getElementById('couponCodeInput').value = '';
+            document.getElementById('couponMessage').innerHTML = '';
+        }
+
+        function updatePlanInfo() {
             const infoContainer = document.getElementById('selectedPlanInfo');
             const price = parseFloat(selectedPlan.price || 0);
+            let finalPrice = price;
+            let discountText = '';
+            
+            if (appliedCoupon && appliedCoupon.valid) {
+                if (appliedCoupon.coupon.discount_percent) {
+                    finalPrice = price * (1 - appliedCoupon.coupon.discount_percent / 100);
+                    discountText = `<p class="text-sm text-green-600 dark:text-green-400">Descuento: ${appliedCoupon.coupon.discount_percent}%</p>`;
+                } else if (appliedCoupon.coupon.type === 'free_access') {
+                    finalPrice = 0;
+                    discountText = `<p class="text-sm text-green-600 dark:text-green-400">Acceso gratis por ${appliedCoupon.coupon.duration_months || 12} meses</p>`;
+                }
+            }
             
             infoContainer.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
                         <h5 class="font-bold text-gray-900 dark:text-white">${selectedPlan.display_name || selectedPlan.name}</h5>
                         <p class="text-sm text-gray-600 dark:text-gray-400">${selectedPlan.description || ''}</p>
+                        ${discountText}
                     </div>
                     <div class="text-right">
+                        ${price !== finalPrice ? `<p class="text-sm text-gray-500 line-through">$${price.toFixed(2)}/mes</p>` : ''}
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                            ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
-                            ${price > 0 ? '<span class="text-sm font-normal">/mes</span>' : ''}
+                            ${finalPrice === 0 ? 'Gratis' : `$${finalPrice.toFixed(2)}`}
+                            ${finalPrice > 0 ? '<span class="text-sm font-normal">/mes</span>' : ''}
                         </p>
                     </div>
                 </div>
             `;
+        }
 
-            // Mostrar contenedor de PayPal
-            document.getElementById('paypalCheckoutContainer').classList.remove('hidden');
+        async function validateCoupon() {
+            const couponCode = document.getElementById('couponCodeInput').value.trim();
+            const messageDiv = document.getElementById('couponMessage');
+            const validateBtn = document.getElementById('validateCouponBtn');
+            
+            if (!couponCode) {
+                messageDiv.innerHTML = '<p class="text-red-500">Por favor ingresa un código de cupón</p>';
+                return;
+            }
+            
+            if (!selectedPlan) {
+                messageDiv.innerHTML = '<p class="text-red-500">Por favor selecciona un plan primero</p>';
+                return;
+            }
+            
+            const token = getAuthToken();
+            if (!token) {
+                messageDiv.innerHTML = '<p class="text-red-500">Debes iniciar sesión para validar cupones</p>';
+                return;
+            }
+            
+            validateBtn.disabled = true;
+            validateBtn.textContent = 'Validando...';
+            messageDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/coupons/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: couponCode,
+                        plan_name: selectedPlan.name
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Error validando cupón');
+                }
+                
+                if (data.valid) {
+                    appliedCoupon = data;
+                    messageDiv.innerHTML = `<p class="text-green-600 dark:text-green-400">✓ ${data.message}</p>`;
+                    // Actualizar información del plan con el descuento
+                    updatePlanInfo();
+                } else {
+                    appliedCoupon = null;
+                    messageDiv.innerHTML = `<p class="text-red-500">${data.message || 'Cupón inválido'}</p>`;
+                    updatePlanInfo();
+                }
+            } catch (error) {
+                console.error('Error validating coupon:', error);
+                messageDiv.innerHTML = `<p class="text-red-500">${error.message || 'Error validando cupón'}</p>`;
+                appliedCoupon = null;
+                updatePlanInfo();
+            } finally {
+                validateBtn.disabled = false;
+                validateBtn.textContent = 'Aplicar';
+            }
         }
 
         function initializeTrialButtons() {
@@ -438,71 +559,61 @@
                 button.textContent = originalText;
             }
             
-            // Renderizar botón de PayPal
-            renderPayPalButton(selectedPlan);
-            
             // Scroll al contenedor de PayPal
             document.getElementById('paypalCheckoutContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        function renderPayPalButton(plan) {
-            const container = document.getElementById('paypal-button-container');
-            container.innerHTML = ''; // Limpiar contenedor anterior
-            
-            if (!plan.paypal_plan_id) {
-                container.innerHTML = '<p class="text-red-500">Error: Plan ID de PayPal no configurado</p>';
+        async function createSubscriptionWithCoupon() {
+            const token = getAuthToken();
+            if (!token) {
+                alert('Debes iniciar sesión para crear una suscripción');
                 return;
             }
-
-            // PayPal Client ID (debería venir del backend o estar en una variable de entorno)
-            const PAYPAL_CLIENT_ID = 'AV6sbA4gR729v953GH_NPURUQNOgdZCPL7XMXHWPg4VtfahVRw290OW_vjysf4BfcNrLtPYTBYnFAtif';
             
-            // Cargar SDK de PayPal si no está cargado
-            if (!window.paypal) {
-                const script = document.createElement('script');
-                script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&vault=true&intent=subscription`;
-                script.setAttribute('data-sdk-integration-source', 'button-factory');
-                script.onload = () => {
-                    initializePayPalButton(plan);
-                };
-                document.head.appendChild(script);
-            } else {
-                initializePayPalButton(plan);
+            if (!selectedPlan) {
+                alert('Por favor selecciona un plan');
+                return;
             }
-        }
-
-        function initializePayPalButton(plan) {
-            const container = document.getElementById('paypal-button-container');
-            container.innerHTML = '<div id="paypal-button"></div>';
             
-            paypal.Buttons({
-                style: {
-                    shape: 'pill',
-                    color: 'gold',
-                    layout: 'vertical',
-                    label: 'subscribe'
-                },
-                createSubscription: function(data, actions) {
-                    return actions.subscription.create({
-                        plan_id: plan.paypal_plan_id
-                    });
-                },
-                onApprove: function(data, actions) {
-                    // Cuando el usuario aprueba la suscripción
-                    console.log('Suscripción aprobada:', data);
-                    
-                    // Verificar suscripción en el backend
-                    verifyPayPalSubscription(data.subscriptionID);
-                },
-                onCancel: function(data) {
-                    console.log('Suscripción cancelada:', data);
-                    alert('El proceso de suscripción fue cancelado.');
-                },
-                onError: function(err) {
-                    console.error('Error en PayPal:', err);
-                    alert('Ocurrió un error al procesar el pago. Por favor, intenta de nuevo.');
+            const button = document.getElementById('createSubscriptionBtn');
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Creando suscripción...';
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/subscriptions/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        plan_name: selectedPlan.name,
+                        coupon_code: appliedCoupon && appliedCoupon.valid ? document.getElementById('couponCodeInput').value.trim() : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || 'Error creando suscripción');
                 }
-            }).render('#paypal-button');
+                
+                // Redirigir al usuario a PayPal para aprobar el pago
+                if (data.approval_url) {
+                    window.location.href = data.approval_url;
+                } else {
+                    throw new Error('No se recibió URL de aprobación de PayPal');
+                }
+            } catch (error) {
+                console.error('Error creating subscription:', error);
+                alert(error.message || 'Error creando suscripción. Por favor, intenta de nuevo.');
+                if (button) {
+                    button.disabled = false;
+                    button.textContent = 'Continuar con PayPal';
+                }
+            }
         }
 
         async function verifyPayPalSubscription(subscriptionId) {

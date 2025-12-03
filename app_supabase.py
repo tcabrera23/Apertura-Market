@@ -2251,6 +2251,8 @@ async def get_current_subscription(user = Depends(get_current_user)):
 async def validate_coupon(coupon: CouponValidate, user = Depends(get_current_user)):
     """Validate a coupon code"""
     try:
+        coupon_code = coupon.code.strip().upper()
+        
         # Get plan_id
         plan_response = supabase.table("subscription_plans") \
             .select("id") \
@@ -2261,17 +2263,87 @@ async def validate_coupon(coupon: CouponValidate, user = Depends(get_current_use
         if not plan_response.data:
             raise HTTPException(status_code=404, detail="Plan not found")
         
-        # Validate coupon using Supabase function
-        validation_response = supabase.rpc("validate_coupon", {
-            "p_code": coupon.code,
-            "p_user_id": user.id,
-            "p_plan_id": plan_response.data["id"]
-        }).execute()
+        plan_id = plan_response.data["id"]
         
-        return validation_response.data
+        # Buscar cupón
+        coupon_response = supabase.table("coupons") \
+            .select("*") \
+            .eq("code", coupon_code) \
+            .eq("is_active", True) \
+            .execute()
+        
+        if not coupon_response.data or len(coupon_response.data) == 0:
+            return {
+                "valid": False,
+                "message": "Código de cupón inválido o inactivo"
+            }
+        
+        coupon_data = coupon_response.data[0]
+        
+        # Verificar que el cupón es para el plan correcto
+        if coupon_data.get("plan_id") and coupon_data["plan_id"] != plan_id:
+            return {
+                "valid": False,
+                "message": "Este cupón no es válido para el plan seleccionado"
+            }
+        
+        # Verificar límite de redenciones
+        if coupon_data.get("max_redemptions"):
+            times_redeemed = coupon_data.get("times_redeemed", 0)
+            if times_redeemed >= coupon_data["max_redemptions"]:
+                return {
+                    "valid": False,
+                    "message": "Este cupón ha alcanzado su límite de usos"
+                }
+        
+        # Verificar si el usuario ya usó este cupón
+        existing_redemption = supabase.table("coupon_redemptions") \
+            .select("*") \
+            .eq("coupon_id", coupon_data["id"]) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if existing_redemption.data and len(existing_redemption.data) > 0:
+            return {
+                "valid": False,
+                "message": "Ya has usado este cupón anteriormente"
+            }
+        
+        # Verificar fechas de validez
+        now = datetime.now()
+        if coupon_data.get("valid_from"):
+            valid_from = datetime.fromisoformat(coupon_data["valid_from"].replace("Z", "+00:00"))
+            if now < valid_from:
+                return {
+                    "valid": False,
+                    "message": "Este cupón aún no es válido"
+                }
+        
+        if coupon_data.get("valid_until"):
+            valid_until = datetime.fromisoformat(coupon_data["valid_until"].replace("Z", "+00:00"))
+            if now > valid_until:
+                return {
+                    "valid": False,
+                    "message": "Este cupón ha expirado"
+                }
+        
+        # Cupón válido
+        return {
+            "valid": True,
+            "coupon": {
+                "code": coupon_data["code"],
+                "type": coupon_data.get("coupon_type"),
+                "discount_percent": coupon_data.get("discount_percent"),
+                "discount_amount": coupon_data.get("discount_amount"),
+                "duration_months": coupon_data.get("duration_months"),
+                "description": coupon_data.get("description")
+            },
+            "message": "Cupón válido"
+        }
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Error validating coupon: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error validating coupon: {str(e)}")
 
 # ============================================
@@ -2660,6 +2732,7 @@ async def test_all_templates(email: str = Query(..., description="Email destino 
 
 class CreateSubscriptionRequest(BaseModel):
     plan_name: str  # 'plus' o 'pro'
+    coupon_code: Optional[str] = None  # Código de cupón opcional
 
 def get_paypal_access_token() -> str:
     """Obtiene token de acceso de PayPal"""
@@ -2714,6 +2787,7 @@ async def create_subscription(
             raise HTTPException(status_code=404, detail=f"Plan '{request.plan_name}' no encontrado")
         
         plan = plan_response.data[0]
+        plan_id = plan["id"]
         paypal_plan_id = plan.get("paypal_plan_id")
         
         if not paypal_plan_id:
@@ -2722,7 +2796,79 @@ async def create_subscription(
                 detail=f"Plan '{request.plan_name}' no tiene paypal_plan_id configurado. Configúralo en Supabase."
             )
         
-        # 2. Verificar si el usuario ya tiene una suscripción activa
+        # 2. Validar y aplicar cupón si se proporciona
+        coupon_id = None
+        coupon_data = None
+        if request.coupon_code:
+            coupon_code = request.coupon_code.strip().upper()
+            logger.info(f"Validando cupón: {coupon_code} para plan: {request.plan_name}")
+            
+            # Buscar cupón
+            coupon_response = supabase.table("coupons") \
+                .select("*") \
+                .eq("code", coupon_code) \
+                .eq("is_active", True) \
+                .execute()
+            
+            if not coupon_response.data or len(coupon_response.data) == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Código de cupón inválido o inactivo"
+                )
+            
+            coupon_data = coupon_response.data[0]
+            
+            # Verificar que el cupón es para el plan correcto
+            if coupon_data.get("plan_id") and coupon_data["plan_id"] != plan_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Este cupón no es válido para el plan seleccionado"
+                )
+            
+            # Verificar límite de redenciones
+            if coupon_data.get("max_redemptions"):
+                times_redeemed = coupon_data.get("times_redeemed", 0)
+                if times_redeemed >= coupon_data["max_redemptions"]:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Este cupón ha alcanzado su límite de usos"
+                    )
+            
+            # Verificar si el usuario ya usó este cupón
+            existing_redemption = supabase.table("coupon_redemptions") \
+                .select("*") \
+                .eq("coupon_id", coupon_data["id"]) \
+                .eq("user_id", user.id) \
+                .execute()
+            
+            if existing_redemption.data and len(existing_redemption.data) > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Ya has usado este cupón anteriormente"
+                )
+            
+            # Verificar fechas de validez
+            now = datetime.now()
+            if coupon_data.get("valid_from"):
+                valid_from = datetime.fromisoformat(coupon_data["valid_from"].replace("Z", "+00:00"))
+                if now < valid_from:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Este cupón aún no es válido"
+                    )
+            
+            if coupon_data.get("valid_until"):
+                valid_until = datetime.fromisoformat(coupon_data["valid_until"].replace("Z", "+00:00"))
+                if now > valid_until:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Este cupón ha expirado"
+                    )
+            
+            coupon_id = coupon_data["id"]
+            logger.info(f"Cupón válido: {coupon_code}, tipo: {coupon_data.get('coupon_type')}")
+        
+        # 3. Verificar si el usuario ya tiene una suscripción activa
         existing_sub = supabase.table("subscriptions") \
             .select("*") \
             .eq("user_id", user.id) \
@@ -2735,7 +2881,7 @@ async def create_subscription(
                 detail="Ya tienes una suscripción activa o pendiente. Cancela la actual antes de crear una nueva."
             )
         
-        # 3. Obtener email del usuario
+        # 4. Obtener email del usuario
         user_profile = supabase.table("user_profiles") \
             .select("email") \
             .eq("id", user.id) \
@@ -2744,7 +2890,10 @@ async def create_subscription(
         
         user_email = user_profile.data.get("email") if user_profile.data else user.id
         
-        # 4. Crear suscripción en PayPal
+        # 5. Crear suscripción en PayPal
+        # Nota: PayPal no soporta cupones directamente en suscripciones
+        # Para cupones de tipo "free_access" (como *PREMIUM*), manejaremos el período gratis en Supabase
+        # Para cupones de tipo "percentage", el descuento se aplicará manualmente después
         access_token = get_paypal_access_token()
         
         headers = {
@@ -2793,14 +2942,15 @@ async def create_subscription(
         
         logger.info(f"Suscripción creada en PayPal: {paypal_subscription_id}")
         
-        # 5. Guardar referencia en Supabase (status='pending_approval' hasta aprobación)
+        # 6. Guardar referencia en Supabase (status='pending_approval' hasta aprobación)
         subscription_record = {
             "user_id": user.id,
             "plan_id": plan["id"],
             "status": "pending_approval",
             "paypal_subscription_id": paypal_subscription_id,
             "current_period_start": None,  # Se actualizará con webhook
-            "current_period_end": None
+            "current_period_end": None,
+            "coupon_id": coupon_id  # Guardar referencia al cupón
         }
         
         supabase_response = supabase.table("subscriptions").insert(subscription_record).execute()
@@ -2809,7 +2959,28 @@ async def create_subscription(
             logger.error("No se pudo guardar la suscripción en Supabase")
             raise HTTPException(status_code=500, detail="Error guardando suscripción en base de datos")
         
-        # 6. Obtener approval_url
+        subscription_db_id = supabase_response.data[0]["id"]
+        
+        # 7. Registrar el uso del cupón si se aplicó
+        if coupon_id:
+            # Incrementar times_redeemed
+            supabase.table("coupons") \
+                .update({"times_redeemed": coupon_data.get("times_redeemed", 0) + 1}) \
+                .eq("id", coupon_id) \
+                .execute()
+            
+            # Registrar en coupon_redemptions
+            supabase.table("coupon_redemptions") \
+                .insert({
+                    "coupon_id": coupon_id,
+                    "user_id": user.id,
+                    "subscription_id": subscription_db_id
+                }) \
+                .execute()
+            
+            logger.info(f"Cupón {request.coupon_code} aplicado y registrado para usuario {user.id}")
+        
+        # 8. Obtener approval_url
         approval_url = None
         for link in subscription_data.get("links", []):
             if link.get("rel") == "approve":

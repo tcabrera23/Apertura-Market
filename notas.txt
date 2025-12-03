@@ -5,9 +5,7 @@ https://github.com/ranaroussi/yfinance/blob/main/yfinance/scrapers/fundamentals.
 
 
 el logo con header y footer estandarizados
-agregarle el free trial al plan plus - sacarle el fondo del logo en el dark mode
-agregar alguna seccion de partnerships o clientes utilizando esto
-integrar el calendario de resultados y cambiar las imagenes de reglas
+
 
 agregar algun background de stock market? 
 agregar un video mostrando: 
@@ -21,69 +19,22 @@ agregar algunos activos mas de los populares
 Agregarle la calculadora de interes compuesto si puedo con cosas mas complejas: https://javilinares.com/calculadora-interes-compuesto/
 Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye la pagina
 
-en diferencia vs max se quedo bugueado
-
-cambiar el dark mode a un negro mas oscuro como el de apertura ia
-cambiar los colores de los chat widgets y nombres a BullAgent
-revisar tab de analisis
-
 
 antigravity: 
 repasa la documentacion y dame prompts para generar campañas, videos, engagement, imagenes, marketing etc para mi aplicacion BullAnalytics y su Bull Agent
 
-
-deberia eliminar nuevamente mi cuenta de user_profiles
-chequear porque se cambia la info de usuario a tomas tipo porque se sobreescribe
-
-ok ahora al crear la primera regla eso persiste en la base de datos, pero me tiene que dejar crear nuevas o modificar cosas de esa. ME FUNCIONA AL RECARGAR LA PAGINA. deberia funcionar sin recargarla
-esos cambios del usuario solo afectan en su cuenta! 
-- no se porque de repente se rompio la api de news
-- ahora da error al buscar activos
-- el panel de account no carga el historial de alertas
-
-
-
-agrega un modo de language para que el usuario pueda cambiar el idioma. asi como tenemos el modo oscuro y claro, el usuario debe poder elegir ver el contenido de la web en español o en ingles o portugues. 
-
-
-
-eliminar login con oauth y exigir formulario manual de
-correo
-contraseña
-confirmar contraseña
-country (lista desplegable)
-date of birth (calendar view)
-
-(crear una copia de nuestro index)
-
-ya tendria solucionado el login via formulario
-todos al registrarse tienen el plan gratuito y actualizan su plan desde el panel de account
-tendrian la opcion igual de la free trial por 7 dias del plan plus o 3 dias del plan pro
-**quedaria chequear que funcione bien todo el tema del login y los pagos**
-publicar el saas y seguir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
+publicar el saas y seuir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
 claro seria la seccion de About Us
 tendria que editar los agentes de IA para agregarle tests, evals, safety, registro de tokens etc.
 
-arreglar los watchlists y el buscador de activos. 
-
-
-Perfecto. Ahora necesito algo complicado. Asi que analiza paso a paso los cambios a realizar. Necesito que reestructuremos el login en el back y el front.
-Quiero dejar de usar los metodos oauth e implementar un registro tipico con formulario que solicite: 
-- correo
-- contraseña
-- confirmar contraseña
-- country (lista desplegable)
-- date of birth (calendar view)
-
-Una vez que el usuario se registra, recibe el mail de onboarding de bienvenida. Todos los usuarios al registrarse entran con el plan gratuito. Luego, pueden
-actualizarlo desde el panel de Account, donde pueden escoger una free trial por 7 dias del plan "Plus" o por 3 dias el plan "Pro".
-Ademas, maneja los casos donde el usuario se olvida su contraseña y necesita recuperarla, etc. 
-
-
-me quedaria pendiente que funcionen los graficos. por ahora lo descarto.....
-
 agregar politica de privacidad y terminos de servicio
-
 sacarle un screenshot a la tabla y pedirle a alguna ia que me genere graficos con plotly y me los renderize con react a ver como anda
-
 agregar opcion de cerrar sesion, etc
+ahora el boton de "Actualizar Plan" no funciona
+solo falta arreglar el registro de un nuevo usuario, chequear mail de onboarding
+luego chequear email de alertas.
+por ultimo, verficiar los pagos de paypal
+analisis dashboards - safety de agents y tracker
+cambiar todos los dominios lpm
+**PUBLICAR**
+
