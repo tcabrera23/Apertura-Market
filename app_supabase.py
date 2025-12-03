@@ -2393,6 +2393,10 @@ async def forgot_password_page():
 async def reset_password_page():
     return FileResponse("reset-password.html")
 
+@app.get("/blog.html")
+async def blog():
+    return FileResponse("blog.html")
+
 @app.get("/subscription-success.html")
 async def subscription_success():
     return FileResponse("subscription-success.html")
