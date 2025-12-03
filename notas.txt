@@ -74,3 +74,10 @@ Me gustaria cambiar los headers ("Monitor de Activos Financieros no me convence"
 
 
 falta ajustar en mobile toda la plataforma y los chat widgets content
+y me falta armar el resumen generado por IA de las noticias como el analisis semanal de joveninversor
+o tambien meterle los 
+otro tema, como mi plataforma o mi agente puede conocer a su usuario si no persisto informacion de el en alguna bd?
+ahh y tengo que dar mi numero de wsp en el plan pro
+faltar agregar las alertas via telegram o eliminarlo por ahora
+modificar un poco lo de asistente de IA con la configuracion de Reglas
+se repite bastante el contenido en toda la web, tratar de reducirlo (Inteligencia que trabaja para ti)
