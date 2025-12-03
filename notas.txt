@@ -81,3 +81,9 @@ ahh y tengo que dar mi numero de wsp en el plan pro
 faltar agregar las alertas via telegram o eliminarlo por ahora
 modificar un poco lo de asistente de IA con la configuracion de Reglas
 se repite bastante el contenido en toda la web, tratar de reducirlo (Inteligencia que trabaja para ti)
+
+la seccion de blog se incorpora al header de todos los html y el boton en index debe cambiar su nombre de manual de usuario a novedades
+pedirle a la ia que me genere los tds y pdp
+
+                    <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="en">EN</button>
+                    <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="pt">PT</button>
