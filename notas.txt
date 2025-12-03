@@ -85,8 +85,16 @@ se repite bastante el contenido en toda la web, tratar de reducirlo (Inteligenci
 la seccion de blog se incorpora al header de todos los html y el boton en index debe cambiar su nombre de manual de usuario a novedades
 pedirle a la ia que me genere los tds y pdp
 
+el panel de reglas debe permitir el full CRUD al usuario ya que es totalmente personalizable. 
+cambiar la interfaz de ejemplos de reglas
 
 
+lo extraño es que al registrarme como nuevo usuario, no se activo la sub gratuita
+INFO:     127.0.0.1:56848 - "GET /api/subscriptions/current HTTP/1.1" 404 Not Found
+
+
+
+creo
 
 modiifcar el footer del blog que quedo mezclado con el viejo
 

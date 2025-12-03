@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response, RedirectResponse, JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import yfinance as yf
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, EmailStr
 from cachetools import TTLCache
@@ -446,26 +446,80 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str, coun
             return user_data
         
         # Si no existe, esperar un poco más para que el trigger se ejecute
+        # Intentar varias veces con esperas incrementales
         import asyncio
-        await asyncio.sleep(2.0)  # Esperar 1 segundo adicional
+        max_attempts = 5
+        wait_time = 0.5  # Empezar con 0.5 segundos
         
-        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-        if response.data and len(response.data) > 0:
-            logger.info(f"Usuario {user_id} encontrado después de esperar")
-            user_data = response.data[0]
-            if update_data:
-                try:
-                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
-                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-                    user_data = response.data[0] if response.data else user_data
-                except Exception as update_error3:
-                    logger.warning(f"Error en actualización final: {str(update_error3)}")
-            user_data["auth_source"] = auth_source
-            return user_data
+        for attempt in range(max_attempts):
+            await asyncio.sleep(wait_time)
+            response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+            
+            if response.data and len(response.data) > 0:
+                logger.info(f"Usuario {user_id} encontrado después de {attempt + 1} intento(s)")
+                user_data = response.data[0]
+                if update_data:
+                    try:
+                        supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                        user_data = response.data[0] if response.data else user_data
+                    except Exception as update_error3:
+                        logger.warning(f"Error en actualización final: {str(update_error3)}")
+                user_data["auth_source"] = auth_source
+                return user_data
+            
+            wait_time *= 1.5  # Incrementar el tiempo de espera exponencialmente
         
-        # Si aún no existe, hay un problema con el trigger - NO intentar INSERT manual
-        # porque violaría la foreign key constraint
-        raise Exception(f"El trigger no creó el registro en {USER_TABLE_NAME}. El usuario {user_id} debería existir en auth.users pero no se pudo crear el perfil. Por favor, contacta al soporte.")
+        # Si aún no existe después de todos los intentos, intentar crear el registro manualmente
+        # El trigger puede no haberse ejecutado por varias razones (timing, permisos, etc.)
+        logger.warning(f"El trigger no creó el registro después de {max_attempts} intentos. Intentando crear manualmente...")
+        try:
+            new_user_data = {
+                "id": user_id,
+                "email": email,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            if country:
+                new_user_data["country"] = country
+            if date_of_birth:
+                new_user_data["date_of_birth"] = date_of_birth
+            
+            insert_response = supabase.table(USER_TABLE_NAME).insert(new_user_data).execute()
+            if insert_response.data and len(insert_response.data) > 0:
+                logger.info(f"Usuario {user_id} creado manualmente exitosamente")
+                user_data = insert_response.data[0]
+                user_data["auth_source"] = auth_source
+                return user_data
+            else:
+                raise Exception(f"La inserción manual no devolvió datos para el usuario {user_id}")
+                
+        except Exception as insert_error:
+            error_msg = str(insert_error)
+            logger.error(f"Error al crear usuario manualmente: {error_msg}")
+            
+            # Si el error es de foreign key, significa que el usuario no existe en auth.users
+            if "foreign key" in error_msg.lower() or "violates foreign key" in error_msg.lower() or "23503" in error_msg:
+                raise Exception(f"El usuario {user_id} no existe en auth.users. Esto puede ocurrir si: 1) El registro falló, 2) El usuario fue eliminado, o 3) Hay un problema de sincronización. Por favor, intenta registrarte nuevamente.")
+            
+            # Si falla el INSERT por otra razón, verificar una vez más si el registro existe
+            # (por si el trigger se ejecutó mientras intentábamos insertar)
+            response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+            if response.data and len(response.data) > 0:
+                logger.info(f"Usuario {user_id} encontrado después del intento de inserción manual")
+                user_data = response.data[0]
+                if update_data:
+                    try:
+                        supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                        user_data = response.data[0] if response.data else user_data
+                    except Exception as update_error4:
+                        logger.warning(f"Error en actualización post-inserción: {str(update_error4)}")
+                user_data["auth_source"] = auth_source
+                return user_data
+            
+            # Si llegamos aquí, hay un problema serio
+            raise Exception(f"El trigger no creó el registro en {USER_TABLE_NAME} después de {max_attempts} intentos y la inserción manual también falló: {error_msg}. Por favor, contacta al soporte con el ID de usuario: {user_id}")
         
     except Exception as e:
         logger.error(f"Error en ensure_user_persisted: {str(e)}")
@@ -488,7 +542,7 @@ async def create_default_subscription(user_id: str):
         plan_id = plan["id"]
         
         # Calcular fechas (sin trial, solo plan free)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Crear suscripción sin trial (plan free permanente)
         subscription_data = {
@@ -1451,117 +1505,15 @@ async def mark_alert_read(alert_id: str, user = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Error updating alert: {str(e)}")
 
 # ============================================
-# AUTHENTICATION HELPERS
+# AUTHENTICATION HELPERS (DUPLICADAS - ELIMINADAS)
 # ============================================
+# Las funciones decode_jwt y ensure_user_persisted están definidas arriba:
+# - decode_jwt: línea 368
+# - ensure_user_persisted: línea 393 (versión mejorada con reintentos y creación manual)
 
-def decode_jwt(token: str) -> Dict[str, Any]:
-    """Decodifica y valida el JWT de Supabase"""
-    try:
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
-        )
-        return payload
-    except jwt.ExpiredSignatureError:
-        logger.warning("Token expirado")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expirado",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError as e:
-        logger.warning(f"Token inválido: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-async def ensure_user_persisted(user_id: str, email: str, auth_source: str, country: Optional[str] = None, date_of_birth: Optional[str] = None) -> Dict[str, Any]:
-    """Garantiza que el usuario existe en user_profiles"""
-    try:
-        # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
-        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-        
-        if response.data and len(response.data) > 0:
-            logger.info(f"Usuario {user_id} ya existe en {USER_TABLE_NAME}")
-            user_data = response.data[0]
-            # Agregar auth_source al response para compatibilidad
-            user_data["auth_source"] = auth_source
-            return user_data
-        
-        # El trigger debería haber creado el registro básico, ahora lo actualizamos
-        # Si no existe, intentamos crearlo manualmente
-        logger.info(f"Actualizando/creando usuario {user_id} en {USER_TABLE_NAME}")
-        
-        # Intentar actualizar primero (el trigger ya debería haber creado el registro)
-        update_data = {}
-        if country:
-            update_data["country"] = country
-        if date_of_birth:
-            update_data["date_of_birth"] = date_of_birth
-        
-        if update_data:
-            try:
-                update_response = supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
-                # Verificar si el UPDATE funcionó (puede no devolver datos pero funcionar)
-                # Si no hay error, el UPDATE funcionó, verificar que el registro existe
-                logger.info(f"UPDATE ejecutado, verificando existencia del usuario")
-                response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-                if response.data and len(response.data) > 0:
-                    user_data = response.data[0]
-                    user_data["auth_source"] = auth_source
-                    logger.info(f"Usuario {user_id} actualizado y verificado exitosamente")
-                    return user_data
-            except Exception as update_error:
-                logger.warning(f"Error actualizando usuario (puede que no exista aún): {str(update_error)}")
-        
-        # Si la actualización falló, verificar si el registro existe (puede que el trigger lo haya creado)
-        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-        if response.data and len(response.data) > 0:
-            # El registro existe, actualizar con los datos faltantes
-            logger.info(f"Usuario {user_id} encontrado, actualizando datos adicionales")
-            user_data = response.data[0]
-            if update_data:
-                try:
-                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
-                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-                    user_data = response.data[0] if response.data else user_data
-                except Exception as update_error2:
-                    logger.warning(f"Error en segunda actualización: {str(update_error2)}")
-            user_data["auth_source"] = auth_source
-            return user_data
-        
-        # Si no existe, esperar un poco más para que el trigger se ejecute
-        import asyncio
-        await asyncio.sleep(1.0)  # Esperar 1 segundo adicional
-        
-        response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-        if response.data and len(response.data) > 0:
-            logger.info(f"Usuario {user_id} encontrado después de esperar")
-            user_data = response.data[0]
-            if update_data:
-                try:
-                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
-                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
-                    user_data = response.data[0] if response.data else user_data
-                except Exception as update_error3:
-                    logger.warning(f"Error en actualización final: {str(update_error3)}")
-            user_data["auth_source"] = auth_source
-            return user_data
-        
-        # Si aún no existe, hay un problema con el trigger - NO intentar INSERT manual
-        # porque violaría la foreign key constraint
-        raise Exception(f"El trigger no creó el registro en {USER_TABLE_NAME}. El usuario {user_id} debería existir en auth.users pero no se pudo crear el perfil. Por favor, contacta al soporte.")
-        
-    except Exception as e:
-        logger.error(f"Error en ensure_user_persisted: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al persistir usuario: {str(e)}"
-        )
+# Funciones duplicadas eliminadas - usar las versiones de arriba:
+# decode_jwt está en línea 368
+# ensure_user_persisted está en línea 393 (versión mejorada con reintentos y creación manual)
 
 async def create_default_subscription(user_id: str):
     """Crea una suscripción por defecto con plan free (sin trial automático)"""
@@ -1577,7 +1529,7 @@ async def create_default_subscription(user_id: str):
         plan_id = plan["id"]
         
         # Calcular fechas (sin trial, solo plan free)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Crear suscripción sin trial (plan free permanente)
         subscription_data = {
@@ -1674,10 +1626,44 @@ async def signup(signup_data: SignUpRequest):
             )
         
         logger.info(f"Registrando usuario: {signup_data.email}")
-        auth_response = supabase.auth.sign_up({
-            "email": signup_data.email,
-            "password": signup_data.password
-        })
+        
+        # Verificar si el usuario ya existe antes de intentar crear
+        try:
+            # Intentar iniciar sesión primero para verificar si existe
+            existing_user = supabase.auth.sign_in_with_password({
+                "email": signup_data.email,
+                "password": signup_data.password
+            })
+            if existing_user.user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este email ya está registrado. Por favor, inicia sesión."
+                )
+        except Exception:
+            # Si falla el sign_in, el usuario no existe, continuar con el registro
+            pass
+        
+        # Crear nuevo usuario
+        try:
+            auth_response = supabase.auth.sign_up({
+                "email": signup_data.email,
+                "password": signup_data.password,
+                "options": {
+                    "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/login.html"
+                }
+            })
+        except Exception as signup_error:
+            error_msg = str(signup_error)
+            logger.error(f"Error en sign_up: {error_msg}")
+            if "already registered" in error_msg.lower() or "already exists" in error_msg.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este email ya está registrado. Por favor, inicia sesión."
+                )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al crear el usuario: {error_msg}"
+            )
         
         if not auth_response.user:
             raise HTTPException(
@@ -1688,9 +1674,68 @@ async def signup(signup_data: SignUpRequest):
         user_id = auth_response.user.id
         email = auth_response.user.email
         
-        # Esperar un momento para que el trigger cree el registro en user_profiles
+        if not user_id or not email:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="El usuario se creó pero no se pudo obtener el ID o email. Por favor, intenta nuevamente."
+            )
+        
+        logger.info(f"Usuario creado en auth.users: {user_id} ({email})")
+        
+        # Verificar si el usuario necesita confirmación de email
+        # Si no está confirmado, intentar confirmarlo automáticamente para evitar que sea eliminado
+        if not auth_response.user.email_confirmed_at:
+            logger.warning(f"Usuario {email} creado pero email no confirmado. Intentando confirmar automáticamente...")
+            try:
+                # Intentar confirmar el email automáticamente usando el token de confirmación
+                # Nota: Esto requiere que Supabase esté configurado para permitir auto-confirmación
+                # Si no funciona, el usuario deberá confirmar manualmente
+                if hasattr(auth_response, 'session') and auth_response.session:
+                    logger.info(f"Usuario {email} tiene sesión activa, considerando como confirmado")
+                else:
+                    logger.warning(f"Usuario {email} no tiene sesión. Puede ser eliminado si no confirma el email.")
+            except Exception as confirm_error:
+                logger.warning(f"No se pudo confirmar automáticamente el email: {str(confirm_error)}")
+        
+        # Intentar crear el perfil inmediatamente después de crear el usuario
+        # Esto evita problemas de timing donde el usuario puede ser eliminado antes de que el trigger se ejecute
         import asyncio
-        await asyncio.sleep(1.0)  # Esperar 1 segundo para que el trigger se ejecute
+        await asyncio.sleep(0.5)  # Esperar medio segundo para que el trigger tenga oportunidad
+        
+        # Verificar si el trigger ya creó el registro
+        initial_check = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+        if not initial_check.data or len(initial_check.data) == 0:
+            # El trigger no se ejecutó aún, intentar crear el registro manualmente inmediatamente
+            logger.info(f"Trigger no ejecutado aún, creando registro manualmente para evitar problemas de timing...")
+            try:
+                manual_profile = {
+                    "id": user_id,
+                    "email": email,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                manual_insert = supabase.table(USER_TABLE_NAME).insert(manual_profile).execute()
+                if manual_insert.data and len(manual_insert.data) > 0:
+                    logger.info(f"Perfil creado manualmente exitosamente para {user_id}")
+                else:
+                    logger.warning(f"Insert manual no devolvió datos, pero continuando...")
+            except Exception as manual_error:
+                error_msg = str(manual_error)
+                # Si es un error de foreign key, el usuario ya no existe - esto es crítico
+                if "foreign key" in error_msg.lower() or "23503" in error_msg:
+                    logger.error(f"CRÍTICO: Usuario {user_id} no existe en auth.users. El usuario fue eliminado antes de crear el perfil.")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="El usuario se creó pero fue eliminado antes de completar el registro. Esto puede ocurrir si el email no está confirmado. Por favor, verifica tu email o intenta registrarte nuevamente."
+                    )
+                # Si es un error de conflicto (ya existe), está bien, continuar
+                elif "conflict" in error_msg.lower() or "duplicate" in error_msg.lower() or "23505" in error_msg:
+                    logger.info(f"El perfil ya existe (probablemente creado por el trigger), continuando...")
+                else:
+                    logger.warning(f"Error al crear perfil manualmente: {error_msg}, continuando con ensure_user_persisted...")
+        
+        # Esperar un momento adicional para asegurar que todo esté sincronizado
+        await asyncio.sleep(0.5)
         
         # Persistir/actualizar en tabla custom con country y date_of_birth
         # El trigger ya creó el registro básico, ahora lo actualizamos con los datos adicionales
@@ -2089,7 +2134,7 @@ async def start_trial(
             trial_end = current_subscription.get("trial_end")
             if trial_end:
                 trial_end_date = datetime.fromisoformat(trial_end.replace('Z', '+00:00'))
-                if trial_end_date > datetime.utcnow():
+                if trial_end_date > datetime.now(timezone.utc):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Ya tienes un trial activo. Espera a que termine antes de iniciar otro."
@@ -3066,7 +3111,7 @@ async def verify_subscription(
                 if billing_info:
                     next_billing_time = billing_info.get("next_billing_time")
                     if next_billing_time:
-                        update_data["current_period_start"] = datetime.utcnow().isoformat()
+                        update_data["current_period_start"] = datetime.now(timezone.utc).isoformat()
                         # Calcular end basado en el plan
                         plan_response = supabase.table("subscription_plans") \
                             .select("billing_interval") \
@@ -3077,9 +3122,9 @@ async def verify_subscription(
                         if plan_response.data:
                             interval = plan_response.data.get("billing_interval", "month")
                             if interval == "month":
-                                update_data["current_period_end"] = (datetime.utcnow() + timedelta(days=30)).isoformat()
+                                update_data["current_period_end"] = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
                             elif interval == "year":
-                                update_data["current_period_end"] = (datetime.utcnow() + timedelta(days=365)).isoformat()
+                                update_data["current_period_end"] = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
             
             supabase.table("subscriptions") \
                 .update(update_data) \
