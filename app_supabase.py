@@ -328,6 +328,11 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             ema_26 = hist['Close'].ewm(span=26, adjust=False).mean()
             macd = float((ema_12 - ema_26).iloc[-1]) if not (ema_12 - ema_26).empty else None
         
+        # Get additional metrics
+        revenue = info.get('totalRevenue')
+        revenue_growth = info.get('revenueGrowth')
+        price_to_book = info.get('priceToBook')
+        
         asset_data = AssetData(
             name=f"{name} ({ticker})",
             ticker=ticker,
@@ -346,10 +351,12 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             macd=macd,
             sma_50=sma_50,
             sma_200=sma_200,
-            revenue=float(info.get('totalRevenue')) if info.get('totalRevenue') else None,
+            revenue=float(revenue) if revenue else None,
+            revenue_growth=float(revenue_growth) if revenue_growth else None,
             profit_margin=float(info.get('profitMargins')) if info.get('profitMargins') else None,
             return_on_equity=float(info.get('returnOnEquity')) if info.get('returnOnEquity') else None,
             debt_to_equity=float(info.get('debtToEquity')) if info.get('debtToEquity') else None,
+            price_to_book=float(price_to_book) if price_to_book else None,
             beta=float(info.get('beta')) if info.get('beta') else None,
             logo_url=logo_url
         )
@@ -1758,6 +1765,30 @@ async def signup(signup_data: SignUpRequest):
         
         logger.info(f"Usuario {email} registrado exitosamente")
         
+        # Crear suscripción gratuita por defecto
+        try:
+            await create_default_subscription(user_id)
+            logger.info(f"Suscripción gratuita creada para usuario {user_id}")
+        except Exception as sub_error:
+            logger.error(f"Error al crear suscripción gratuita: {str(sub_error)}")
+            # No fallar el registro si la suscripción falla, solo loguear el error
+        
+        # Enviar email de onboarding
+        try:
+            user_name = email.split("@")[0] if email else "Usuario"
+            onboarding_template = get_onboarding_email_template(user_name, email)
+            send_alert_email(
+                to_email=email,
+                subject=onboarding_template["subject"],
+                html_content=onboarding_template["html_content"],
+                sender_name="BullAnalytics",
+                sender_email="noreply@aperturaia.com"
+            )
+            logger.info(f"Email de onboarding enviado a {email}")
+        except Exception as email_error:
+            logger.error(f"Error al enviar email de onboarding: {str(email_error)}")
+            # No fallar el registro si el email falla, solo loguear el error
+        
         return AuthResponse(
             access_token=access_token,
             user=UserResponse(
@@ -2043,7 +2074,7 @@ async def get_current_user_profile(user = Depends(get_current_user)):
 
 @app.get("/api/subscriptions/current")
 async def get_current_subscription(user = Depends(get_current_user)):
-    """Obtiene la suscripción actual del usuario"""
+    """Obtiene la suscripción actual del usuario. Si no existe, crea una suscripción gratuita por defecto."""
     try:
         response = supabase.table("subscriptions") \
             .select("*, subscription_plans(*)") \
@@ -2054,7 +2085,24 @@ async def get_current_subscription(user = Depends(get_current_user)):
             .execute()
         
         if not response.data or len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="No active subscription found")
+            # No hay suscripción activa, crear una suscripción gratuita por defecto
+            logger.info(f"Usuario {user.id} no tiene suscripción activa, creando suscripción gratuita por defecto...")
+            try:
+                await create_default_subscription(user.id)
+                # Intentar obtener la suscripción nuevamente
+                response = supabase.table("subscriptions") \
+                    .select("*, subscription_plans(*)") \
+                    .eq("user_id", user.id) \
+                    .eq("status", "active") \
+                    .order("created_at", desc=True) \
+                    .limit(1) \
+                    .execute()
+                
+                if not response.data or len(response.data) == 0:
+                    raise HTTPException(status_code=404, detail="No se pudo crear la suscripción por defecto")
+            except Exception as create_error:
+                logger.error(f"Error al crear suscripción por defecto: {str(create_error)}")
+                raise HTTPException(status_code=404, detail="No active subscription found and could not create default subscription")
         
         subscription = response.data[0]
         plan = subscription.get("subscription_plans", {})
@@ -2253,7 +2301,7 @@ async def get_subscription_plans():
 
 @app.get("/api/subscriptions/current")
 async def get_current_subscription(user = Depends(get_current_user)):
-    """Obtiene la suscripción actual del usuario"""
+    """Obtiene la suscripción actual del usuario. Si no existe, crea una suscripción gratuita por defecto."""
     try:
         response = supabase.table("subscriptions") \
             .select("*, subscription_plans(*)") \
@@ -2264,7 +2312,24 @@ async def get_current_subscription(user = Depends(get_current_user)):
             .execute()
         
         if not response.data or len(response.data) == 0:
-            raise HTTPException(status_code=404, detail="No active subscription found")
+            # No hay suscripción activa, crear una suscripción gratuita por defecto
+            logger.info(f"Usuario {user.id} no tiene suscripción activa, creando suscripción gratuita por defecto...")
+            try:
+                await create_default_subscription(user.id)
+                # Intentar obtener la suscripción nuevamente
+                response = supabase.table("subscriptions") \
+                    .select("*, subscription_plans(*)") \
+                    .eq("user_id", user.id) \
+                    .eq("status", "active") \
+                    .order("created_at", desc=True) \
+                    .limit(1) \
+                    .execute()
+                
+                if not response.data or len(response.data) == 0:
+                    raise HTTPException(status_code=404, detail="No se pudo crear la suscripción por defecto")
+            except Exception as create_error:
+                logger.error(f"Error al crear suscripción por defecto: {str(create_error)}")
+                raise HTTPException(status_code=404, detail="No active subscription found and could not create default subscription")
         
         subscription = response.data[0]
         plan = subscription.get("subscription_plans", {})

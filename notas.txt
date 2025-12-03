@@ -89,23 +89,35 @@ el panel de reglas debe permitir el full CRUD al usuario ya que es totalmente pe
 cambiar la interfaz de ejemplos de reglas
 
 
-lo extraño es que al registrarme como nuevo usuario, no se activo la sub gratuita
+lo extraño es que al registrarme como nuevo usuario, no se activo la sub gratuita. tampoco recibi el mail de onboarding de brevo
 INFO:     127.0.0.1:56848 - "GET /api/subscriptions/current HTTP/1.1" 404 Not Found
 
+probar mañana el crear un nuevo usuario, etc
+y si ya la despliego y pruebo todo ahi? con la confirmacion de mail incluso
+antes aseguarme que la interfaz para cambiar de plan funcione
 
+chequear que los cupones aplican 
+que el mail de onboarding llega y de alerta tambien - abrir brevo
 
 creo
 
-modiifcar el footer del blog que quedo mezclado con el viejo
+
+
+@blog.html
+- edita las cards de "Guías de Uso para BullAnalytics" para que esten con el mismo formato que las otras secciones como "Releases y Novedades".
+- agrega fotos genericas que encuentres en internet para la portada de cada card con su tema especifico. luego yo me voy a encargar de personalizar las imagenes.
+
+@dashboard.html
+- si encontras logica entre el dashboard y @app_supabase.py que busca hacer graficos con plotly y renderizarlos con react, descartala. directamente vamos a utilizar "lightweight charts" de Trading View.
+- recorda que los graficos muestran un analisis comparativo en cada tab por sus activos. ejemplo: un treemap de "Seguimiento de Activos Populares" que me muestre el P/E por activo en color rojo y en tooltips o una view aparte, vea datos como el promedio de la tab y el valor que tiene cada activo. 
+- los graficos deben presentarse por cada tab debajo de su tabla, segun las columnas que tiene disponibles. el usuario debe poder personalizar los ejes de visualizacion (x,y)
+- hay columnas que no estan capturando el valor de la clave, como se ve en la imagen. asegurate de que se puedan capturar correctamente y de agregar mas mètricas. 
 
 
 
 
-
-
-
-
-
+- lo ideal es encontrar la mas a la izquierda de todas en pe ratio y diff vs max
+- creo que el debt vs equity hay que dividirlo por 100
 
 
 

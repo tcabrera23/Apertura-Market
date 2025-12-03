@@ -775,18 +775,17 @@ function renderTable(category, data, tableBody, tableEl, loadingEl) {
     }
 
     // Render analysis charts below the table
-    // Wait a bit to ensure React is loaded and Babel has processed analisis.js
     const renderCharts = () => {
         if (typeof window.renderAnalysisCharts === 'function') {
             console.log(`Rendering charts for ${category} with ${data.length} assets`);
             window.renderAnalysisCharts(category, data);
         } else {
-            // Retry if function not available yet (Babel may still be processing)
+            // Retry if function not available yet
             console.warn(`renderAnalysisCharts not available for ${category}, retrying...`);
             setTimeout(renderCharts, 200);
         }
     };
-    setTimeout(renderCharts, 300);
+    setTimeout(renderCharts, 100);
 }
 
 // Create table row from asset data
@@ -794,7 +793,7 @@ function createTableRow(asset, isCrypto = false) {
     const row = document.createElement('tr');
     row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
     row.setAttribute('data-name', asset.name);
-    row.setAttribute('data-price', asset.price);
+    row.setAttribute('data-price', asset.price || 0);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
     row.setAttribute('data-revenue', asset.revenue || 0);
     row.setAttribute('data-revenue_growth', asset.revenue_growth || 0);
@@ -805,6 +804,7 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-beta', asset.beta || 0);
     row.setAttribute('data-volume', asset.volume || 0);
     row.setAttribute('data-rsi', asset.rsi || 0);
+    row.setAttribute('data-diff', asset.diff_from_max || 0);
 
     // Helper function to create a cell
     const createCell = (value, formatter = null, colorClass = null, columnKey = null) => {
