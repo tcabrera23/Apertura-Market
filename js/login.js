@@ -138,10 +138,16 @@ async function handleSignUp() {
     const confirmPassword = document.getElementById('signUpConfirmPassword').value;
     const country = document.getElementById('signUpCountry').value;
     const dateOfBirth = document.getElementById('signUpDateOfBirth').value;
+    const acceptTerms = document.getElementById('acceptTerms')?.checked;
 
     // Validaciones
     if (!email || !password || !confirmPassword || !country || !dateOfBirth) {
         showMessage('Por favor completa todos los campos', 'error');
+        return;
+    }
+
+    if (!acceptTerms) {
+        showMessage('Debes aceptar los Términos de Servicio y la Política de Privacidad para continuar', 'error');
         return;
     }
 

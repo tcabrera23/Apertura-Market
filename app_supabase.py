@@ -2397,6 +2397,11 @@ async def reset_password_page():
 async def blog():
     return FileResponse("blog.html")
 
+@app.get("/docs/LEGAL.md")
+async def serve_legal_md():
+    """Serve legal markdown file"""
+    return FileResponse("docs/LEGAL.md", media_type="text/markdown")
+
 @app.get("/subscription-success.html")
 async def subscription_success():
     return FileResponse("subscription-success.html")
