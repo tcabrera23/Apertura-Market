@@ -534,7 +534,11 @@ function createPriceHistoryChart(container, ticker, assetData, period = '1y') {
     // Clean up existing chart
     const chartKey = `${ticker}-price-history`;
     if (chartInstances[chartKey]) {
-        chartInstances[chartKey].remove();
+        try {
+            chartInstances[chartKey].remove();
+        } catch (e) {
+            console.warn('Error removing chart:', e);
+        }
         delete chartInstances[chartKey];
     }
     
@@ -555,21 +559,39 @@ function createPriceHistoryChart(container, ticker, assetData, period = '1y') {
     // Loading state
     wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Cargando datos históricos...</div>`;
     
-    // Fetch historical data
-    fetch(`${API_BASE_URL}/asset/${ticker}/history?period=${period}&interval=1d`)
-        .then(res => res.json())
+    // Check if LightweightCharts is available with retry mechanism
+    const checkLibrary = (retries = 5) => {
+        if (typeof LightweightCharts === 'undefined') {
+            if (retries > 0) {
+                setTimeout(() => checkLibrary(retries - 1), 500);
+            } else {
+                wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">Error: La biblioteca de gráficos no está disponible. Por favor recarga la página.</div>`;
+            }
+            return;
+        }
+        
+        // Library is available, proceed with fetch
+        loadChartData();
+    };
+    
+    const loadChartData = () => {
+        // Fetch historical data
+        fetch(`${API_BASE_URL}/asset/${ticker}/history?period=${period}&interval=1d`)
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.json();
+        })
         .then(historyData => {
+            console.log('History data received:', historyData);
+            
             if (!historyData || historyData.length === 0) {
                 wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">No hay datos históricos disponibles</div>`;
                 return;
             }
             
             wrapper.innerHTML = '';
-            
-            if (typeof LightweightCharts === 'undefined') {
-                wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">Cargando biblioteca de gráficos...</div>`;
-                return;
-            }
             
             // Create chart
             const chart = LightweightCharts.createChart(wrapper, {
@@ -601,54 +623,118 @@ function createPriceHistoryChart(container, ticker, assetData, period = '1y') {
                 }
             });
             
-            // Add area series
-            const areaSeries = chart.addAreaSeries({
-                lineColor: theme.upColor,
-                topColor: theme.areaTopColor,
-                bottomColor: theme.areaBottomColor,
-                lineWidth: 2
-            });
-            
-            // Convert data to TradingView format (YYYY-MM-DD format)
-            const chartData = historyData.map(item => ({
-                time: item.date, // Already in YYYY-MM-DD format from backend
-                value: item.close
-            }));
-            
-            areaSeries.setData(chartData);
-            
-            // Add previous close line (if available)
-            if (assetData && historyData.length > 1) {
-                // Calculate previous close from first data point or use current price
-                const previousClose = historyData[0].close;
-                if (previousClose) {
-                    areaSeries.createPriceLine({
-                        price: previousClose,
-                        color: theme.downColor,
-                        lineWidth: 1,
-                        lineStyle: LightweightCharts.LineStyle.Dashed,
-                        axisLabelVisible: true,
-                        title: `Cierre: ${formatCurrency(previousClose)}`
+            // Add area series - check for different API versions
+            let areaSeries;
+            try {
+                // Try addSeries with AreaSeries (v5+ API)
+                if (typeof LightweightCharts.AreaSeries !== 'undefined' && typeof chart.addSeries === 'function') {
+                    areaSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+                        lineColor: theme.upColor,
+                        topColor: theme.areaTopColor,
+                        bottomColor: theme.areaBottomColor,
+                        lineWidth: 2
                     });
                 }
+                // Try addAreaSeries (older API)
+                else if (typeof chart.addAreaSeries === 'function') {
+                    areaSeries = chart.addAreaSeries({
+                        lineColor: theme.upColor,
+                        topColor: theme.areaTopColor,
+                        bottomColor: theme.areaBottomColor,
+                        lineWidth: 2
+                    });
+                }
+                // Fallback to addLineSeries with area fill
+                else {
+                    areaSeries = chart.addLineSeries({
+                        color: theme.upColor,
+                        lineWidth: 2,
+                        priceLineVisible: false,
+                        lastValueVisible: true
+                    });
+                    // Note: LineSeries doesn't support area fill in all versions
+                    // We'll use a line chart as fallback
+                }
+            } catch (e) {
+                console.error('Error creating area series:', e);
+                // Final fallback to basic line series
+                areaSeries = chart.addLineSeries({
+                    color: theme.upColor,
+                    lineWidth: 2
+                });
             }
             
-            // Fit content and handle resize
-            chart.timeScale().fitContent();
+            // Convert data to TradingView format
+            // TradingView expects dates in YYYY-MM-DD format as strings
+            const chartData = historyData
+                .map(item => {
+                    // Ensure date is in correct format
+                    let dateStr = item.date;
+                    if (dateStr && dateStr.length === 10) {
+                        // Already in YYYY-MM-DD format
+                        return {
+                            time: dateStr,
+                            value: parseFloat(item.close) || 0
+                        };
+                    }
+                    return null;
+                })
+                .filter(item => item !== null && item.value > 0)
+                .sort((a, b) => a.time.localeCompare(b.time)); // Sort by date
             
-            // Store chart instance
-            chartInstances[chartKey] = chart;
+            console.log('Chart data prepared:', chartData.slice(0, 5), '...', chartData.slice(-5));
             
-            // Handle resize
-            const resizeObserver = new ResizeObserver(() => {
-                chart.applyOptions({ width: wrapper.clientWidth });
-            });
-            resizeObserver.observe(wrapper);
+            if (chartData.length === 0) {
+                wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">No se pudieron procesar los datos históricos</div>`;
+                return;
+            }
+            
+            try {
+                areaSeries.setData(chartData);
+                
+                // Add previous close line (if available)
+                if (assetData && historyData.length > 1) {
+                    // Use first data point as previous close reference
+                    const previousClose = parseFloat(historyData[0].close);
+                    if (previousClose && !isNaN(previousClose)) {
+                        areaSeries.createPriceLine({
+                            price: previousClose,
+                            color: theme.downColor,
+                            lineWidth: 1,
+                            lineStyle: LightweightCharts.LineStyle.Dashed,
+                            axisLabelVisible: true,
+                            title: `Cierre: ${formatCurrency(previousClose)}`
+                        });
+                    }
+                }
+                
+                // Fit content and handle resize
+                chart.timeScale().fitContent();
+                
+                // Store chart instance
+                chartInstances[chartKey] = chart;
+                
+                // Handle resize
+                const resizeObserver = new ResizeObserver(() => {
+                    chart.applyOptions({ width: wrapper.clientWidth });
+                });
+                resizeObserver.observe(wrapper);
+            } catch (chartError) {
+                console.error('Error creating chart:', chartError);
+                wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">Error al crear el gráfico: ${chartError.message}</div>`;
+            }
         })
         .catch(error => {
             console.error('Error loading price history:', error);
-            wrapper.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: ${theme.text};">Error al cargar datos históricos</div>`;
+            wrapper.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: ${theme.text}; gap: 8px;">
+                <div style="font-weight: 600;">Error al cargar datos históricos</div>
+                <div style="font-size: 12px; opacity: 0.7;">${error.message || 'Error desconocido'}</div>
+            </div>`;
         });
+    };
+    
+    // Start checking for library
+    checkLibrary();
 }
 
 // Create Asset Info Panel
