@@ -1501,6 +1501,84 @@ async def delete_watchlist(watchlist_id: str, user = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting watchlist: {str(e)}")
 
+@app.delete("/api/watchlists/{watchlist_id}/assets/{ticker}")
+async def delete_asset_from_watchlist(
+    watchlist_id: str,
+    ticker: str,
+    user = Depends(get_current_user)
+):
+    """Remove an asset from a watchlist"""
+    try:
+        # Verify watchlist belongs to user
+        watchlist_response = supabase.table("watchlists") \
+            .select("id") \
+            .eq("id", watchlist_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not watchlist_response.data:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+        
+        # Delete the asset
+        response = supabase.table("watchlist_assets") \
+            .delete() \
+            .eq("watchlist_id", watchlist_id) \
+            .eq("ticker", ticker.upper()) \
+            .execute()
+        
+        return {"message": "Asset removed from watchlist"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error removing asset: {str(e)}")
+
+@app.patch("/api/watchlists/{watchlist_id}")
+async def update_watchlist(
+    watchlist_id: str,
+    watchlist_update: Dict[str, Any],
+    user = Depends(get_current_user)
+):
+    """Update a watchlist (name, description, etc.)"""
+    try:
+        # Verify watchlist belongs to user
+        watchlist_response = supabase.table("watchlists") \
+            .select("id") \
+            .eq("id", watchlist_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not watchlist_response.data:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+        
+        # Prepare update data
+        update_data = {}
+        if "name" in watchlist_update:
+            update_data["name"] = watchlist_update["name"]
+        if "description" in watchlist_update:
+            update_data["description"] = watchlist_update["description"]
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Update watchlist
+        response = supabase.table("watchlists") \
+            .update(update_data) \
+            .eq("id", watchlist_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Watchlist not found")
+        
+        return {
+            "message": "Watchlist updated successfully",
+            "watchlist": response.data[0]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating watchlist: {str(e)}")
+
 # ============================================
 # ALERTS ENDPOINTS (Supabase Integration)
 # ============================================

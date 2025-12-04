@@ -109,13 +109,15 @@ creo
 
 @dashboard.html
 - agregar mas metricas a las cryptomonedas (buscar en gemini que le puede interesar a un comprador de crypto o trader)
-- el usuario tiene full permiso CRUD en sus wathclist, es decir que debe tener algun boton que le permita editarla (nombre, agregar o eliminar activo, eliminar wathclist)
-- editar el html content del chat widget para que no haya desborde ()
 - analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
-- revisar como manejar los casos en los que a los activos le fallan las imagenes (buscar en otro sitio?)
-- lo ideal es encontrar la mas a la izquierda de todas en pe ratio y diff vs max
 - creo que el debt vs equity hay que dividirlo por 100
 - mas metricas en crypto y activos - editar la tab de portafolio
+
+- en los graficos, ofrece un treemap solo cuando la cantidad de activos en una tab es mayor a 7. caso contrario es mejor un grafico de torta como visual
+- usa los graficos con cache de 60 segundos tambien, para ofrecer una experiencia real y veloz. 
+- hay pocos casos en los que no aparecen los logos de los activos. resolvelo para que todos los activos tengan su logo. 
+- el usuario tiene full permiso CRUD en sus wathclist, es decir que debe tener algun boton que le permita editarla (nombre, agregar o eliminar activo, eliminar wathclist)
+
 
 @news.html
 - agregar mas headers? de diferentes temas
@@ -136,9 +138,11 @@ backend:
 revisar los correos y los planes de cada usuario
 migrar todo hacia el nuevo dominio
 agregar calculadora de interes compuesto
+imagenes de los chats
 
-
-
+cryptos: 
+agregar volumen diario, media movil de 50 y 200 dias (para todos los activos)
+https://gemini.google.com/app/15d1237b2190dff0?hl=es
 
                     <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="en">EN</button>
                     <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="pt">PT</button>

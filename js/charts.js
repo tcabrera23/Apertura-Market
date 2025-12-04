@@ -4,6 +4,28 @@
 // Chart instances storage
 const chartInstances = {};
 
+// Chart data cache (60 seconds)
+const chartCache = {
+    data: {},
+    timestamps: {}
+};
+
+const CHART_CACHE_DURATION = 60000; // 60 seconds
+
+function getCachedChartData(key) {
+    const cached = chartCache.data[key];
+    const timestamp = chartCache.timestamps[key];
+    if (cached && timestamp && (Date.now() - timestamp) < CHART_CACHE_DURATION) {
+        return cached;
+    }
+    return null;
+}
+
+function setCachedChartData(key, data) {
+    chartCache.data[key] = data;
+    chartCache.timestamps[key] = Date.now();
+}
+
 // TradingView color schemes
 const TRADINGVIEW_THEMES = {
     dark: {
@@ -121,6 +143,151 @@ function calculateAverage(data, metricKey) {
     
     if (values.length === 0) return null;
     return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+// Create Pie Chart with TradingView styling
+function createPieChart(container, data, metric, category) {
+    container.innerHTML = '';
+    
+    const theme = getTheme();
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative w-full overflow-hidden';
+    wrapper.style.height = '450px';
+    wrapper.style.backgroundColor = theme.panel;
+    wrapper.style.borderRadius = '8px';
+    wrapper.style.border = `1px solid ${theme.border}`;
+    container.appendChild(wrapper);
+    
+    const canvas = document.createElement('canvas');
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    wrapper.appendChild(canvas);
+    
+    const ctx = canvas.getContext('2d');
+    const rect = wrapper.getBoundingClientRect();
+    const width = rect.width || container.clientWidth || 800;
+    const height = 450;
+    
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    // Filter and prepare data
+    const validData = data
+        .map(asset => ({
+            name: asset.name || asset.ticker,
+            ticker: asset.ticker,
+            value: asset[metric.key]
+        }))
+        .filter(item => item.value !== null && item.value !== undefined && !isNaN(item.value) && item.value > 0)
+        .sort((a, b) => b.value - a.value);
+    
+    if (validData.length === 0) {
+        ctx.fillStyle = theme.text;
+        ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No hay datos disponibles', width / 2, height / 2);
+        return;
+    }
+    
+    const avg = calculateAverage(data, metric.key);
+    const total = validData.reduce((sum, item) => sum + item.value, 0);
+    
+    const padding = 16;
+    const headerHeight = 60;
+    const centerX = width / 2;
+    const centerY = (height + headerHeight) / 2;
+    const radius = Math.min(width, height - headerHeight - padding * 2) / 2 - 20;
+    
+    // Draw header
+    ctx.fillStyle = theme.background;
+    ctx.fillRect(0, 0, width, headerHeight);
+    
+    ctx.fillStyle = theme.text;
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Gráfico de Torta - ${metric.label}`, padding, 28);
+    
+    ctx.strokeStyle = theme.grid;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(padding, 42);
+    ctx.lineTo(width - padding, 42);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    ctx.fillStyle = theme.text;
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(`Promedio: ${metric.format(avg)}`, padding, 56);
+    
+    // Draw pie chart
+    let currentAngle = -Math.PI / 2; // Start from top
+    
+    // Color palette
+    const colors = [
+        '#26A69A', '#EF5350', '#42A5F5', '#AB47BC', '#FFA726',
+        '#66BB6A', '#EC407A', '#26C6DA', '#FFCA28', '#78909C'
+    ];
+    
+    validData.forEach((item, index) => {
+        const sliceAngle = (item.value / total) * 2 * Math.PI;
+        const color = colors[index % colors.length];
+        
+        // Draw slice
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = theme.background;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw label
+        const labelAngle = currentAngle + sliceAngle / 2;
+        const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+        const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'center';
+        const ticker = item.ticker.length > 8 ? item.ticker.substring(0, 8) : item.ticker;
+        ctx.fillText(ticker, labelX, labelY);
+        
+        currentAngle += sliceAngle;
+    });
+    
+    // Draw legend on the right
+    const legendX = width - 200;
+    const legendY = headerHeight + 20;
+    let legendIndex = 0;
+    
+    validData.forEach((item, index) => {
+        const y = legendY + legendIndex * 25;
+        const color = colors[index % colors.length];
+        const percentage = ((item.value / total) * 100).toFixed(1);
+        
+        // Color box
+        ctx.fillStyle = color;
+        ctx.fillRect(legendX, y - 8, 12, 12);
+        
+        // Label
+        ctx.fillStyle = theme.text;
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'left';
+        const displayName = item.ticker.length > 12 ? item.ticker.substring(0, 12) + '...' : item.ticker;
+        ctx.fillText(`${displayName} (${percentage}%)`, legendX + 18, y + 2);
+        
+        // Value
+        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = theme.text + '80';
+        ctx.fillText(metric.format(item.value), legendX + 18, y + 14);
+        
+        legendIndex++;
+    });
 }
 
 // Create Treemap Chart with TradingView styling
@@ -851,11 +1018,11 @@ window.renderAnalysisCharts = function(category, data) {
     // Create chart container HTML with 2x2 grid layout
     container.innerHTML = `
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Top Left: Treemap Chart -->
+            <!-- Top Left: Treemap/Pie Chart -->
             <div style="background-color: ${theme.panel}; border: 1px solid ${theme.border}; border-radius: 8px; padding: 20px;">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 style="color: ${theme.text}; font-size: 18px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        Treemap - Análisis Comparativo
+                    <h3 id="${category}-chart-title" style="color: ${theme.text}; font-size: 18px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                        ${data.length <= 7 ? 'Gráfico de Torta' : 'Treemap'} - Análisis Comparativo
                     </h3>
                 </div>
                 <div class="mb-4">
@@ -978,10 +1145,19 @@ window.renderAnalysisCharts = function(category, data) {
     const ySelect = document.getElementById(`${category}-y-metric`);
     const assetSelect = document.getElementById(`${category}-asset-select`);
     const periodSelect = document.getElementById(`${category}-period-select`);
+    const chartTitle = document.getElementById(`${category}-chart-title`);
     
     treemapSelect?.addEventListener('change', (e) => {
         const metric = availableMetrics.find(m => m.key === e.target.value);
-        if (metric) renderTreemap(category, metric);
+        if (metric) {
+            renderTreemap(category, metric);
+            // Update title based on data length
+            if (chartTitle && data.length <= 7) {
+                chartTitle.textContent = `Gráfico de Torta - Análisis Comparativo`;
+            } else if (chartTitle) {
+                chartTitle.textContent = `Treemap - Análisis Comparativo`;
+            }
+        }
     });
     
     xSelect?.addEventListener('change', (e) => {
@@ -1095,7 +1271,29 @@ function renderTreemap(category, metric) {
     if (!container || !window.chartData || !window.chartData[category]) return;
     
     const data = window.chartData[category];
-    createTreemapChart(container, data, metric, category);
+    const cacheKey = `${category}-treemap-${metric.key}`;
+    
+    // Check cache (60 seconds)
+    const cached = getCachedChartData(cacheKey);
+    if (cached && cached.data) {
+        // Re-render from cache
+        if (data.length <= 7) {
+            createPieChart(container, data, metric, category);
+        } else {
+            createTreemapChart(container, data, metric, category);
+        }
+        return;
+    }
+    
+    // Render based on data length
+    if (data.length <= 7) {
+        createPieChart(container, data, metric, category);
+    } else {
+        createTreemapChart(container, data, metric, category);
+    }
+    
+    // Cache the result
+    setCachedChartData(cacheKey, { data: true });
 }
 
 function renderScatterChart(category, xMetric, yMetric) {

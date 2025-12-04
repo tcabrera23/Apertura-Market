@@ -359,6 +359,228 @@ async function saveWatchlist(name, assets) {
     }
 }
 
+// Delete watchlist
+async function deleteWatchlist(watchlistId, watchlistName) {
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            alert('Por favor, inicia sesión para eliminar listas');
+            return;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/watchlists/${watchlistId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Error al eliminar la lista: ${errorText}`);
+        }
+        
+        // Remove tab and content
+        const tabButton = document.querySelector(`.tab-button[data-tab="${watchlistName}"]`);
+        const tabContent = document.getElementById(`${watchlistName}-tab`);
+        
+        if (tabButton) tabButton.remove();
+        if (tabContent) tabContent.remove();
+        
+        // Reload watchlists to refresh the list
+        await loadCustomWatchlists();
+        
+        alert(`Lista "${watchlistName}" eliminada exitosamente`);
+    } catch (error) {
+        console.error('Error deleting watchlist:', error);
+        alert('Error al eliminar la lista. Por favor, intenta de nuevo.');
+    }
+}
+
+// Open edit watchlist modal
+function openEditWatchlistModal(watchlistId, watchlistName, watchlistAssets) {
+    const modal = document.getElementById('watchlistModal');
+    const nameInput = document.getElementById('watchlistName');
+    const selectedAssets = document.getElementById('selectedAssets');
+    const saveBtn = document.getElementById('saveWatchlistBtn');
+    const modalTitle = modal.querySelector('h3');
+    
+    // Change modal title
+    if (modalTitle) {
+        modalTitle.textContent = 'Editar Lista';
+    }
+    
+    // Set watchlist name
+    if (nameInput) {
+        nameInput.value = watchlistName;
+        nameInput.setAttribute('data-watchlist-id', watchlistId);
+    }
+    
+    // Load existing assets
+    selectedAssetsList = [];
+    if (watchlistAssets && Array.isArray(watchlistAssets)) {
+        watchlistAssets.forEach(asset => {
+            selectedAssetsList.push({
+                symbol: asset.ticker || asset.ticker,
+                name: asset.asset_name || asset.name || asset.ticker
+            });
+        });
+    }
+    updateSelectedAssetsDisplay();
+    
+    // Change save button text and behavior
+    if (saveBtn) {
+        saveBtn.textContent = 'Guardar Cambios';
+        saveBtn.onclick = async () => {
+            await updateWatchlist(watchlistId, nameInput.value.trim(), selectedAssetsList);
+        };
+    }
+    
+    // Show modal
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Update watchlist
+async function updateWatchlist(watchlistId, newName, assets) {
+    try {
+        if (!newName) {
+            alert('Por favor, ingresa un nombre para la lista');
+            return;
+        }
+        
+        const token = getAuthToken();
+        if (!token) {
+            alert('Por favor, inicia sesión para editar listas');
+            return;
+        }
+        
+        // Convert assets to dict format
+        const assetsDict = {};
+        assets.forEach(asset => {
+            assetsDict[asset.symbol] = asset.name;
+        });
+        
+        // Update watchlist name (if changed)
+        // Note: We'll need to add an update endpoint or handle this differently
+        // For now, we'll delete and recreate if name changed, or just update assets
+        
+        // First, get current watchlist to check if name changed
+        const getResponse = await fetch(`${API_BASE_URL}/watchlists`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!getResponse.ok) {
+            throw new Error('Error al obtener la lista');
+        }
+        
+        const watchlists = await getResponse.json();
+        const currentWatchlist = watchlists.find(w => w.id === watchlistId);
+        
+        if (!currentWatchlist) {
+            throw new Error('Lista no encontrada');
+        }
+        
+        // Update watchlist name if changed
+        if (newName !== currentWatchlist.name) {
+            const updateResponse = await fetch(`${API_BASE_URL}/watchlists/${watchlistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: newName
+                })
+            });
+            
+            if (!updateResponse.ok) {
+                throw new Error('Error al actualizar el nombre de la lista');
+            }
+        }
+        
+        // Get current assets
+        const currentAssets = (currentWatchlist.watchlist_assets || []).map(a => a.ticker);
+        const newAssets = assets.map(a => a.symbol.toUpperCase());
+        
+        // Find assets to remove
+        const assetsToRemove = currentAssets.filter(ticker => !newAssets.includes(ticker));
+        const assetsToAdd = assets.filter(asset => !currentAssets.includes(asset.symbol.toUpperCase()));
+        
+        // Remove assets
+        for (const ticker of assetsToRemove) {
+            try {
+                await fetch(`${API_BASE_URL}/watchlists/${watchlistId}/assets/${ticker}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+            } catch (e) {
+                console.warn('Error deleting asset:', e);
+            }
+        }
+        
+        // Add new assets
+        for (const asset of assetsToAdd) {
+            try {
+                await fetch(`${API_BASE_URL}/watchlists/${watchlistId}/assets`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        ticker: asset.symbol,
+                        asset_name: asset.name
+                    })
+                });
+            } catch (e) {
+                console.warn('Error adding asset:', e);
+            }
+        }
+        
+        // Close modal
+        const modal = document.getElementById('watchlistModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        document.body.style.overflow = '';
+        
+        // Reset form
+        document.getElementById('watchlistName').value = '';
+        document.getElementById('watchlistName').removeAttribute('data-watchlist-id');
+        document.getElementById('assetSearch').value = '';
+        const searchResults = document.getElementById('searchResults');
+        searchResults.classList.add('hidden');
+        selectedAssetsList = [];
+        updateSelectedAssetsDisplay();
+        
+        // Reset save button
+        const saveBtn = document.getElementById('saveWatchlistBtn');
+        if (saveBtn) {
+            saveBtn.textContent = 'Crear Lista';
+            saveBtn.onclick = async () => {
+                await saveWatchlist(document.getElementById('watchlistName').value.trim(), selectedAssetsList);
+            };
+        }
+        
+        // Reload watchlists
+        await loadCustomWatchlists();
+        
+        alert(`Lista "${newName}" actualizada exitosamente`);
+    } catch (error) {
+        console.error('Error updating watchlist:', error);
+        alert('Error al actualizar la lista. Por favor, intenta de nuevo.');
+    }
+}
+
 async function loadCustomWatchlists() {
     try {
         const token = getAuthToken();
@@ -441,11 +663,23 @@ async function loadCustomWatchlists() {
             tabContent.innerHTML = `
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900 dark:text-white">${watchlistName}</h2>
-                    <button class="flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-config="${watchlistName}" title="Configurar vista">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-90 transition-transform duration-300">
-                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" fill="currentColor"/>
-                        </svg>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button class="edit-watchlist-btn flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 dark:hover:border-blue-600 transition-all shadow-sm hover:shadow-md" data-watchlist-id="${watchlistId}" data-watchlist-name="${watchlistName}" title="Editar lista">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button class="flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md" data-config="${watchlistName}" title="Configurar vista">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="hover:rotate-90 transition-transform duration-300">
+                                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                        <button class="delete-watchlist-btn flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-600 transition-all shadow-sm hover:shadow-md" data-watchlist-id="${watchlistId}" data-watchlist-name="${watchlistName}" title="Eliminar lista">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="${watchlistName}-loading">
                     <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
@@ -883,9 +1117,45 @@ function createTableRow(asset, isCrypto = false) {
         logoImg.src = `https://logo.clearbit.com/${domain}`;
     }
 
-    // Hide logo if it fails to load
+    // Improved logo fallback system
     logoImg.onerror = function () {
-        this.style.display = 'none';
+        // Try alternative logo sources
+        const ticker = (asset.ticker || asset.symbol || '').toUpperCase();
+        
+        // Try Yahoo Finance logo API
+        if (!isCrypto) {
+            this.src = `https://logo.clearbit.com/${ticker.toLowerCase()}.com`;
+            this.onerror = function() {
+                // Try finnhub logo
+                this.src = `https://finnhub.io/api/logo?symbol=${ticker}`;
+                this.onerror = function() {
+                    // Try another fallback - use first letter as placeholder
+                    this.style.display = 'none';
+                    // Create a placeholder div with initial
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0';
+                    placeholder.style.backgroundColor = '#6B7280';
+                    placeholder.textContent = ticker.charAt(0);
+                    if (nameContainer.firstChild === logoImg) {
+                        nameContainer.replaceChild(placeholder, logoImg);
+                    }
+                };
+            };
+        } else {
+            // For crypto, try alternative sources
+            const cryptoSymbol = ticker.replace('-USD', '').toLowerCase();
+            this.src = `https://cryptoicons.org/api/icon/${cryptoSymbol}/200`;
+            this.onerror = function() {
+                this.style.display = 'none';
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0';
+                placeholder.style.backgroundColor = '#6B7280';
+                placeholder.textContent = cryptoSymbol.charAt(0).toUpperCase();
+                if (nameContainer.firstChild === logoImg) {
+                    nameContainer.replaceChild(placeholder, logoImg);
+                }
+            };
+        }
     };
 
     nameContainer.appendChild(logoImg);
