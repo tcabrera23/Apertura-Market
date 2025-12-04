@@ -759,6 +759,48 @@ async function loadCustomWatchlists() {
                     forceRefreshAssets(watchlistName);
                 });
             }
+            
+            // Add edit watchlist button handler
+            const editBtn = tabContent.querySelector('.edit-watchlist-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const btn = e.currentTarget;
+                    const wlId = btn.getAttribute('data-watchlist-id');
+                    const wlName = btn.getAttribute('data-watchlist-name');
+                    console.log('Edit button clicked:', wlId, wlName, watchlistAssets);
+                    if (wlId && wlName) {
+                        openEditWatchlistModal(wlId, wlName, watchlistAssets || []);
+                    } else {
+                        console.error('Missing watchlist ID or name:', { wlId, wlName });
+                    }
+                });
+            } else {
+                console.warn('Edit button not found for watchlist:', watchlistName);
+            }
+            
+            // Add delete watchlist button handler
+            const deleteBtn = tabContent.querySelector('.delete-watchlist-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const btn = e.currentTarget;
+                    const wlId = btn.getAttribute('data-watchlist-id');
+                    const wlName = btn.getAttribute('data-watchlist-name');
+                    console.log('Delete button clicked:', wlId, wlName);
+                    if (wlId && wlName) {
+                        if (confirm(`¿Estás seguro de que deseas eliminar la lista "${wlName}"?`)) {
+                            deleteWatchlist(wlId, wlName);
+                        }
+                    } else {
+                        console.error('Missing watchlist ID or name for delete:', { wlId, wlName });
+                    }
+                });
+            } else {
+                console.warn('Delete button not found for watchlist:', watchlistName);
+            }
         });
 
         // Re-initialize tabs to include new ones, but preserve current active tab

@@ -231,14 +231,19 @@ function createPieChart(container, data, metric, category) {
         '#66BB6A', '#EC407A', '#26C6DA', '#FFCA28', '#78909C'
     ];
     
+    // Adjust centerX to make room for legend on the right
+    const legendWidth = 220;
+    const adjustedCenterX = (width - legendWidth) / 2;
+    const adjustedRadius = Math.min((width - legendWidth) / 2 - 40, (height - headerHeight - padding * 2) / 2 - 20);
+    
     validData.forEach((item, index) => {
         const sliceAngle = (item.value / total) * 2 * Math.PI;
         const color = colors[index % colors.length];
         
         // Draw slice
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
-        ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+        ctx.moveTo(adjustedCenterX, centerY);
+        ctx.arc(adjustedCenterX, centerY, adjustedRadius, currentAngle, currentAngle + sliceAngle);
         ctx.closePath();
         ctx.fillStyle = color;
         ctx.fill();
@@ -246,45 +251,64 @@ function createPieChart(container, data, metric, category) {
         ctx.lineWidth = 2;
         ctx.stroke();
         
-        // Draw label
-        const labelAngle = currentAngle + sliceAngle / 2;
-        const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
-        const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        const ticker = item.ticker.length > 8 ? item.ticker.substring(0, 8) : item.ticker;
-        ctx.fillText(ticker, labelX, labelY);
+        // Draw percentage inside the slice (only if slice is large enough)
+        const percentage = ((item.value / total) * 100).toFixed(1);
+        if (sliceAngle > 0.15) { // Only show percentage if slice is > ~27 degrees
+            const labelAngle = currentAngle + sliceAngle / 2;
+            const labelX = adjustedCenterX + Math.cos(labelAngle) * (adjustedRadius * 0.6);
+            const labelY = centerY + Math.sin(labelAngle) * (adjustedRadius * 0.6);
+            
+            // White text with shadow for better visibility
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`${percentage}%`, labelX, labelY);
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
         
         currentAngle += sliceAngle;
     });
     
-    // Draw legend on the right
-    const legendX = width - 200;
-    const legendY = headerHeight + 20;
+    // Draw legend on the right (outside the pie chart)
+    const legendX = width - legendWidth + 10;
+    const legendY = headerHeight + 30;
     let legendIndex = 0;
     
     validData.forEach((item, index) => {
-        const y = legendY + legendIndex * 25;
+        const y = legendY + legendIndex * 28;
         const color = colors[index % colors.length];
         const percentage = ((item.value / total) * 100).toFixed(1);
         
         // Color box
         ctx.fillStyle = color;
-        ctx.fillRect(legendX, y - 8, 12, 12);
+        ctx.fillRect(legendX, y - 8, 14, 14);
+        ctx.strokeStyle = theme.border;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(legendX, y - 8, 14, 14);
         
-        // Label
+        // Ticker/Name
         ctx.fillStyle = theme.text;
-        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'left';
-        const displayName = item.ticker.length > 12 ? item.ticker.substring(0, 12) + '...' : item.ticker;
-        ctx.fillText(`${displayName} (${percentage}%)`, legendX + 18, y + 2);
+        const displayName = item.ticker.length > 15 ? item.ticker.substring(0, 15) + '...' : item.ticker;
+        ctx.fillText(displayName, legendX + 20, y + 2);
+        
+        // Percentage
+        ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillStyle = theme.text + 'CC';
+        ctx.fillText(`${percentage}%`, legendX + 20, y + 16);
         
         // Value
         ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.fillStyle = theme.text + '80';
-        ctx.fillText(metric.format(item.value), legendX + 18, y + 14);
+        ctx.fillText(metric.format(item.value), legendX + 20, y + 28);
         
         legendIndex++;
     });
@@ -1119,7 +1143,7 @@ window.renderAnalysisCharts = function(category, data) {
             <div style="background-color: ${theme.panel}; border: 1px solid ${theme.border}; border-radius: 8px; padding: 20px;">
                 <div class="flex items-center justify-between mb-4">
                     <h3 style="color: ${theme.text}; font-size: 18px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                        Resumen de Métricas
+                        Resumen de Métricas por Tabla
                     </h3>
                 </div>
                 <div id="${category}-summary-container" class="w-full" style="min-height: 400px;">

@@ -683,12 +683,27 @@
     <!-- Using version 3.x which has addAreaSeries method -->
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 
+    <!-- Google Translate -->
+    <div id="google_translate_element" style="position: fixed; top: 80px; right: 20px; z-index: 1000; display: none;"></div>
+    
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
+    <script src="js/google-translate.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/table-config.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/investment-chat.js"></script>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,pt,fr,de,it',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 
 </html>

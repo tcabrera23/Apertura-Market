@@ -101,35 +101,31 @@ que el mail de onboarding llega y de alerta tambien - abrir brevo
 
 creo
 
+agrega en todos los html el google translate y dale un estilo mas tradicional al borde derecho. aseguremos una buena UX permitiendo un switch comodo entre ES y EN
 
 
 @blog.html
 - edita las cards de "Guías de Uso para BullAnalytics" para que esten con el mismo formato que las otras secciones como "Releases y Novedades".
 - agrega fotos genericas que encuentres en internet para la portada de cada card con su tema especifico. luego yo me voy a encargar de personalizar las imagenes.
 
+@rules.html
+- editar los estilos de los encabezados de ejemplo para que sean mas profesional
+- configurar full permiso CRUD para los usuarios en esa tab (cambios en su propia cuenta)
+- tambien revisar el agente
+
 @dashboard.html
 - agregar mas metricas a las cryptomonedas (buscar en gemini que le puede interesar a un comprador de crypto o trader)
 - analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
 - creo que el debt vs equity hay que dividirlo por 100
-- mas metricas en crypto y activos - editar la tab de portafolio
-
-- en los graficos, ofrece un treemap solo cuando la cantidad de activos en una tab es mayor a 7. caso contrario es mejor un grafico de torta como visual
-- usa los graficos con cache de 60 segundos tambien, para ofrecer una experiencia real y veloz. 
-- hay pocos casos en los que no aparecen los logos de los activos. resolvelo para que todos los activos tengan su logo. 
-- el usuario tiene full permiso CRUD en sus wathclist, es decir que debe tener algun boton que le permita editarla (nombre, agregar o eliminar activo, eliminar wathclist)
+- mas metricas en crypto y activos - editar la tab de portafolio - media movil
+- revisar dividendos de activos
 
 
-@news.html
-- agregar mas headers? de diferentes temas
-- traduccion al español ya que originalmente vienen en ingles -> meter google translate
-
-@rules.html
-- tambien revisar el agente
-- editar los estilos de los encabezados
-- configurar full permiso CRUD para los usuarios en esa tab
+corregir como aparece el google translate
 
 @calendar.html
 - revisar interfaz (quizas el orden de los divs)
+- falta que en rules y supabase agreguemos reglas por el calendario? a lo mejor el usuario quiere un resumen del balance de x accion (cuando x presente balance, enviame un resumen financiero como un analista profesional)
 
 @Account.html
 - revisar botones, cupones y subscripciones
@@ -139,6 +135,9 @@ revisar los correos y los planes de cada usuario
 migrar todo hacia el nuevo dominio
 agregar calculadora de interes compuesto
 imagenes de los chats
+
+evaluar nuevos pricing ya que tenemos la app en desarrollo. 
+7.5 y 10 usd por planes
 
 cryptos: 
 agregar volumen diario, media movil de 50 y 200 dias (para todos los activos)
