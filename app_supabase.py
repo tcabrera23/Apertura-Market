@@ -3410,16 +3410,72 @@ async def create_subscription(
         
         # 3. Verificar si el usuario ya tiene una suscripción activa
         existing_sub = supabase.table("subscriptions") \
-            .select("*") \
+            .select("*, subscription_plans(*)") \
             .eq("user_id", user.id) \
             .in_("status", ["active", "pending_approval"]) \
+            .order("created_at", desc=True) \
+            .limit(1) \
             .execute()
         
+        # Si tiene una suscripción activa, verificar si es un upgrade/downgrade
         if existing_sub.data and len(existing_sub.data) > 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Ya tienes una suscripción activa o pendiente. Cancela la actual antes de crear una nueva."
-            )
+            current_subscription = existing_sub.data[0]
+            current_plan_id = current_subscription.get("plan_id")
+            current_plan_name = current_subscription.get("subscription_plans", {}).get("name") if isinstance(current_subscription.get("subscription_plans"), dict) else None
+            
+            # Si el plan es el mismo, rechazar
+            if current_plan_id == plan_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ya tienes una suscripción activa con el plan '{request.plan_name}'. Selecciona un plan diferente."
+                )
+            
+            # Es un upgrade/downgrade - cancelar la suscripción actual en PayPal
+            paypal_sub_id = current_subscription.get("paypal_subscription_id")
+            if paypal_sub_id:
+                logger.info(f"Usuario {user.id} tiene suscripción activa ({current_plan_name}). Cancelando para upgrade a {request.plan_name}...")
+                try:
+                    access_token_cancel = get_paypal_access_token()
+                    cancel_headers = {
+                        "Authorization": f"Bearer {access_token_cancel}",
+                        "Content-Type": "application/json"
+                    }
+                    cancel_payload = {
+                        "reason": f"Upgrade de {current_plan_name} a {request.plan_name}"
+                    }
+                    
+                    cancel_response = requests.post(
+                        f"{PAYPAL_BASE_URL}/v1/billing/subscriptions/{paypal_sub_id}/cancel",
+                        headers=cancel_headers,
+                        json=cancel_payload
+                    )
+                    
+                    if cancel_response.status_code in [204, 200]:
+                        logger.info(f"Suscripción {paypal_sub_id} cancelada exitosamente para upgrade")
+                        # Actualizar estado en Supabase
+                        supabase.table("subscriptions") \
+                            .update({
+                                "status": "canceled",
+                                "canceled_at": datetime.now(timezone.utc).isoformat()
+                            }) \
+                            .eq("id", current_subscription["id"]) \
+                            .execute()
+                    else:
+                        logger.warning(f"No se pudo cancelar suscripción en PayPal: {cancel_response.status_code} - {cancel_response.text}")
+                        # Continuar de todas formas para crear la nueva suscripción
+                except Exception as cancel_error:
+                    logger.error(f"Error cancelando suscripción anterior: {str(cancel_error)}")
+                    # Continuar de todas formas para crear la nueva suscripción
+            else:
+                # No tiene paypal_subscription_id, solo actualizar estado en Supabase
+                logger.info(f"Usuario {user.id} tiene suscripción sin PayPal ID. Actualizando estado...")
+                supabase.table("subscriptions") \
+                    .update({
+                        "status": "canceled",
+                        "canceled_at": datetime.now(timezone.utc).isoformat()
+                    }) \
+                    .eq("id", current_subscription["id"]) \
+                    .execute()
         
         # 4. Obtener email del usuario
         user_profile = supabase.table("user_profiles") \
@@ -3483,13 +3539,28 @@ async def create_subscription(
         logger.info(f"Suscripción creada en PayPal: {paypal_subscription_id}")
         
         # 6. Guardar referencia en Supabase (status='pending_approval' hasta aprobación)
+        # Calcular fechas por defecto (se actualizarán con webhook cuando se active)
+        now = datetime.now(timezone.utc)
+        # Para cupones de tipo free_access, calcular período gratis
+        period_end = now
+        if coupon_data and coupon_data.get("coupon_type") == "free_access":
+            duration_months = coupon_data.get("duration_months", 12)
+            period_end = now + timedelta(days=duration_months * 30)
+        else:
+            # Período normal según el plan (mensual o anual)
+            billing_interval = plan.get("billing_interval", "month")
+            if billing_interval == "year":
+                period_end = now + timedelta(days=365)
+            else:
+                period_end = now + timedelta(days=30)
+        
         subscription_record = {
             "user_id": user.id,
             "plan_id": plan["id"],
             "status": "pending_approval",
             "paypal_subscription_id": paypal_subscription_id,
-            "current_period_start": None,  # Se actualizará con webhook
-            "current_period_end": None,
+            "current_period_start": now.isoformat(),  # Fecha actual como valor temporal
+            "current_period_end": period_end.isoformat(),  # Se actualizará con webhook cuando se active
             "coupon_id": coupon_id  # Guardar referencia al cupón
         }
         
