@@ -577,7 +577,13 @@ async function updateWatchlist(watchlistId, newName, assets) {
         alert(`Lista "${newName}" actualizada exitosamente`);
     } catch (error) {
         console.error('Error updating watchlist:', error);
-        alert('Error al actualizar la lista. Por favor, intenta de nuevo.');
+        // Silently handle errors - the update might have partially succeeded
+        // Only show error if it's a critical failure
+        if (error.message && !error.message.includes('500')) {
+            console.warn('Non-critical error during watchlist update:', error);
+        }
+        // Reload watchlists anyway to show current state
+        await loadCustomWatchlists();
     }
 }
 

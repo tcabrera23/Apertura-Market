@@ -60,7 +60,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Form submission
     ruleForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        await createRule();
+        const submitBtn = document.getElementById('ruleSubmitBtn');
+        const ruleId = submitBtn?.getAttribute('data-rule-id');
+        if (ruleId) {
+            await updateRule(ruleId);
+        } else {
+            await createRule();
+        }
+    });
+    
+    // Reset modal when closed
+    closeModalBtn.addEventListener('click', () => {
+        // Reset form handler
+        const submitBtn = document.getElementById('ruleSubmitBtn');
+        if (submitBtn) {
+            submitBtn.textContent = 'Crear Regla';
+            submitBtn.removeAttribute('data-rule-id');
+        }
+        const modalTitleText = document.getElementById('ruleModalTitleText');
+        if (modalTitleText) {
+            modalTitleText.textContent = 'Crear Nueva Regla';
+        }
     });
 });
 
@@ -168,8 +188,13 @@ function createRuleCard(rule) {
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value_threshold || rule.value}</span>
             </div>
         </div>
-        <div class="ml-4">
-            <button class="w-9 h-9 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors" onclick="deleteRule(${rule.id})" title="Eliminar">
+        <div class="ml-4 flex items-center gap-2">
+            <button class="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" onclick="editRule('${rule.id}')" title="Editar">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" fill="currentColor"/>
+                </svg>
+            </button>
+            <button class="w-9 h-9 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors" onclick="deleteRule('${rule.id}')" title="Eliminar">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 6L14 14M6 14L14 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
@@ -226,14 +251,150 @@ async function createRule() {
         console.log('Rule created successfully:', result);
 
         const ruleModal = document.getElementById('ruleModal');
-        ruleModal.style.display = 'none';
+        ruleModal.classList.add('hidden');
+        ruleModal.classList.remove('flex');
         document.getElementById('ruleForm').reset();
         document.body.style.overflow = '';
+        
+        // Reset modal title and button
+        const modalTitleText = document.getElementById('ruleModalTitleText');
+        if (modalTitleText) {
+            modalTitleText.textContent = 'Crear Nueva Regla';
+        }
+        const submitBtn = document.getElementById('ruleSubmitBtn');
+        if (submitBtn) {
+            submitBtn.textContent = 'Crear Regla';
+            submitBtn.removeAttribute('data-rule-id');
+        }
+        
         loadRules();
 
     } catch (error) {
         console.error('Error creating rule:', error);
         alert(`Error al crear la regla: ${error.message || 'Por favor, intenta de nuevo.'}`);
+    }
+}
+
+async function editRule(ruleId) {
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Get rule data
+        const response = await fetch(`${getApiBaseUrl()}/rules`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al cargar regla');
+        }
+
+        const rules = await response.json();
+        const rule = rules.find(r => r.id === ruleId);
+
+        if (!rule) {
+            alert('Regla no encontrada');
+            return;
+        }
+
+        // Populate form with rule data
+        document.getElementById('ruleName').value = rule.name || '';
+        document.getElementById('ruleType').value = rule.rule_type || rule.type || '';
+        document.getElementById('ruleTicker').value = rule.ticker || '';
+        document.getElementById('ruleValue').value = rule.value_threshold || rule.value || '';
+
+        // Change modal title and button
+        const modalTitleText = document.getElementById('ruleModalTitleText');
+        if (modalTitleText) {
+            modalTitleText.textContent = 'Editar Regla';
+        }
+
+        const submitBtn = document.getElementById('ruleSubmitBtn');
+        if (submitBtn) {
+            submitBtn.textContent = 'Guardar Cambios';
+            submitBtn.setAttribute('data-rule-id', ruleId);
+        }
+
+        // Show modal
+        const ruleModal = document.getElementById('ruleModal');
+        ruleModal.classList.remove('hidden');
+        ruleModal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+
+    } catch (error) {
+        console.error('Error loading rule for edit:', error);
+        alert('Error al cargar la regla para editar.');
+    }
+}
+
+async function updateRule(ruleId) {
+    const formData = {
+        name: document.getElementById('ruleName').value,
+        rule_type: document.getElementById('ruleType').value,
+        ticker: document.getElementById('ruleTicker').value.toUpperCase(),
+        value: parseFloat(document.getElementById('ruleValue').value)
+    };
+
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        const response = await fetch(`${getApiBaseUrl()}/rules/${ruleId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_data');
+                alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+                window.location.href = 'login.html';
+                return;
+            }
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || errorData.message || 'Error al actualizar regla');
+        }
+
+        const result = await response.json();
+        console.log('Rule updated successfully:', result);
+
+        // Close modal and reset
+        const ruleModal = document.getElementById('ruleModal');
+        ruleModal.classList.add('hidden');
+        ruleModal.classList.remove('flex');
+        document.getElementById('ruleForm').reset();
+        document.body.style.overflow = '';
+
+        // Reset modal title and button
+        const modalTitleText = document.getElementById('ruleModalTitleText');
+        if (modalTitleText) {
+            modalTitleText.textContent = 'Crear Nueva Regla';
+        }
+
+        const submitBtn = document.getElementById('ruleSubmitBtn');
+        if (submitBtn) {
+            submitBtn.textContent = 'Crear Regla';
+            submitBtn.removeAttribute('data-rule-id');
+        }
+
+        loadRules();
+
+    } catch (error) {
+        console.error('Error updating rule:', error);
+        alert(`Error al actualizar la regla: ${error.message || 'Por favor, intenta de nuevo.'}`);
     }
 }
 

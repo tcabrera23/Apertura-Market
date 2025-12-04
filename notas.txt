@@ -104,29 +104,16 @@ creo
 agrega en todos los html el google translate y dale un estilo mas tradicional al borde derecho. aseguremos una buena UX permitiendo un switch comodo entre ES y EN
 
 
-@blog.html
-- edita las cards de "Guías de Uso para BullAnalytics" para que esten con el mismo formato que las otras secciones como "Releases y Novedades".
-- agrega fotos genericas que encuentres en internet para la portada de cada card con su tema especifico. luego yo me voy a encargar de personalizar las imagenes.
-
-@rules.html
-- editar los estilos de los encabezados de ejemplo para que sean mas profesional
-- configurar full permiso CRUD para los usuarios en esa tab (cambios en su propia cuenta)
-- tambien revisar el agente
 
 @dashboard.html
-- agregar mas metricas a las cryptomonedas (buscar en gemini que le puede interesar a un comprador de crypto o trader)
 - analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
 - creo que el debt vs equity hay que dividirlo por 100
 - mas metricas en crypto y activos - editar la tab de portafolio - media movil
 - revisar dividendos de activos
 
-
-corregir como aparece el google translate
-
 @calendar.html
-- revisar interfaz (quizas el orden de los divs)
 - falta que en rules y supabase agreguemos reglas por el calendario? a lo mejor el usuario quiere un resumen del balance de x accion (cuando x presente balance, enviame un resumen financiero como un analista profesional)
-
+- integrarlo con el agente de rules
 @Account.html
 - revisar botones, cupones y subscripciones
 
@@ -138,6 +125,25 @@ imagenes de los chats
 
 evaluar nuevos pricing ya que tenemos la app en desarrollo. 
 7.5 y 10 usd por planes
+
+
+los datos historicos la api mantenerla en cache
+
+a futuro, meter categoria en reglas asi las pueden clasificar mejor
+
+
+
+integra entre rules.html y el backend la posibiidad de crear reglas basadas en el calendar.html
+por ejemplo, calendar.html se encarga de obtener las fechas de los resultados de las activos (ejemplo de la imagen amd diciembre 27)
+
+
+en calendar estaria bueno achicar el tamanio del calendario, y aumentar la de eventos para poner una breve descripcion, como expectativas del mercado, opininones de analistas, sentimientos, etc
+o ultimos resultados (esperado vs real y vs el Quarter pasado y el año pasado)
+
+en blog.html: 
+agregar un calculadora.html que replique la pagina y comportamiento de javinilinares
+una pagina dedicada a el calculo de interes compuesto, 
+
 
 cryptos: 
 agregar volumen diario, media movil de 50 y 200 dias (para todos los activos)
