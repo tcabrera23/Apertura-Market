@@ -175,7 +175,7 @@
                 </button>
             </div>
             <div class="p-6">
-                <div id="plansContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div id="plansContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <!-- Los planes se cargarán dinámicamente aquí -->
                     <div class="text-center py-8 text-gray-500 dark:text-gray-400">
                         <p>Cargando planes...</p>
@@ -257,157 +257,161 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/dark-mode.js"></script>
-    <script src="js/account.js"></script>
-    <script src="js/subscription.js"></script>
+<script src="js/dark-mode.js"></script>
+<script src="js/account.js"></script>
+<script src="js/subscription.js"></script>
+<script src="js/coupons.js"></script>
     <script>
-        console.log('Account page script loading...');
-        const API_BASE_URL = 'http://localhost:8080/api';
-        
-        // Función para obtener token (debe estar disponible globalmente)
-        function getAuthToken() {
-            return localStorage.getItem('access_token');
+    console.log('Account page script loading...');
+    //const API_BASE_URL = 'http://localhost:8080/api'; NO DEBERIA ESTAR DEFINIDO
+    
+    // Función para obtener token (debe estar disponible globalmente)
+    function getAuthToken() {
+        return localStorage.getItem('access_token');
+    }
+    
+    let selectedPlan = null;
+    let availablePlans = [];
+    let currentUserPlan = null; // Almacenar el plan actual del usuario
+    
+    // Declarar funciones globalmente
+    window.openUpgradeModal = function() {
+        console.log('Opening upgrade modal...');
+        const modal = document.getElementById('upgradeModal');
+        if (!modal) {
+            console.error('Modal element not found!');
+            alert('Error: No se encontró el modal. Por favor, recarga la página.');
+            return;
         }
         
-        let selectedPlan = null;
-        let availablePlans = [];
-        let appliedCoupon = null;
+        // Limpiar estado de selección al abrir el modal
+        selectedPlan = null;
+        appliedCoupon = null;
         
-        // Declarar funciones globalmente primero para evitar errores de referencia
-        function openUpgradeModal() {
-            console.log('Opening upgrade modal...');
-            const modal = document.getElementById('upgradeModal');
-            if (!modal) {
-                console.error('Modal element not found!');
-                alert('Error: No se encontró el modal. Por favor, recarga la página.');
-                return;
-            }
-            // Remover hidden y mostrar el modal
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            console.log('Modal displayed, classes:', modal.className);
-            // Asegurar que el contenedor de planes esté visible
-            const plansContainer = document.getElementById('plansContainer');
-            if (plansContainer) {
-                plansContainer.style.display = 'grid';
-            }
-            loadAvailablePlans();
+        // Ocultar secciones de cupón y PayPal inicialmente
+        const couponSection = document.getElementById('couponSection');
+        const paypalContainer = document.getElementById('paypalCheckoutContainer');
+        if (couponSection) couponSection.classList.add('hidden');
+        if (paypalContainer) paypalContainer.classList.add('hidden');
+        
+        // Limpiar input de cupón
+        const couponInput = document.getElementById('couponCodeInput');
+        const couponMessage = document.getElementById('couponMessage');
+        if (couponInput) couponInput.value = '';
+        if (couponMessage) couponMessage.innerHTML = '';
+        
+        // Remover hidden y mostrar el modal
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        console.log('Modal displayed, classes:', modal.className);
+        // Asegurar que el contenedor de planes esté visible
+        const plansContainer = document.getElementById('plansContainer');
+        if (plansContainer) {
+            plansContainer.style.display = 'grid';
         }
-        
-        function openCancelModal() {
-            console.log('Opening cancel modal...');
-            const modal = document.getElementById('cancelModal');
-            if (!modal) {
-                console.error('Cancel modal element not found!');
-                return;
-            }
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
+        loadAvailablePlans();
+    };
+    
+    window.closeUpgradeModal = function() {
+        const modal = document.getElementById('upgradeModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
         }
-        
-        function closeCancelModal() {
-            const modal = document.getElementById('cancelModal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            }
+        selectedPlan = null;
+        appliedCoupon = null;
+        const paypalContainer = document.getElementById('paypalCheckoutContainer');
+        if (paypalContainer) {
+            paypalContainer.classList.add('hidden');
         }
-        
-        function confirmCancel() {
-            if (confirm('¿Estás seguro de que deseas cancelar tu suscripción?')) {
-                alert('Suscripción cancelada. Lamentamos verte partir.');
-                closeCancelModal();
-            }
+        const couponSection = document.getElementById('couponSection');
+        if (couponSection) {
+            couponSection.classList.add('hidden');
         }
-        
-        // Asignar a window para disponibilidad global
-        window.openUpgradeModal = openUpgradeModal;
-        window.openCancelModal = openCancelModal;
-        window.closeCancelModal = closeCancelModal;
-        window.confirmCancel = confirmCancel;
-        
-        console.log('Functions assigned to window:', {
-            openUpgradeModal: typeof window.openUpgradeModal,
-            openCancelModal: typeof window.openCancelModal,
-            closeCancelModal: typeof window.closeCancelModal,
-            confirmCancel: typeof window.confirmCancel
+        // Limpiar contenedor de PayPal
+        const container = document.getElementById('paypal-button-container');
+        if (container) {
+            container.innerHTML = '';
+        }
+        // Limpiar input de cupón
+        const couponInput = document.getElementById('couponCodeInput');
+        if (couponInput) {
+            couponInput.value = '';
+        }
+        const couponMessage = document.getElementById('couponMessage');
+        if (couponMessage) {
+            couponMessage.innerHTML = '';
+        }
+    };
+    
+    window.openCancelModal = function() {
+        console.log('Opening cancel modal...');
+        const modal = document.getElementById('cancelModal');
+        if (!modal) {
+            console.error('Cancel modal element not found!');
+            return;
+        }
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    };
+    
+    window.closeCancelModal = function() {
+        const modal = document.getElementById('cancelModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }
+    };
+    
+    window.confirmCancel = function() {
+        if (confirm('¿Estás seguro de que deseas cancelar tu suscripción?')) {
+            alert('Suscripción cancelada. Lamentamos verte partir.');
+            window.closeCancelModal();
+        }
+    };
+    
+    // Asegurar que las funciones estén disponibles cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up button listeners...');
+            setupButtonListeners();
         });
-        
-        // Asegurar que las funciones estén disponibles cuando el DOM esté listo
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                console.log('DOM loaded, setting up button listeners...');
-                setupButtonListeners();
+    } else {
+        // DOM ya está listo
+        console.log('DOM already ready, setting up button listeners...');
+        setupButtonListeners();
+    }
+    
+    function setupButtonListeners() {
+        // Asignar event listeners a los botones como respaldo
+        const upgradeBtn = document.querySelector('button[onclick*="openUpgradeModal"]');
+        if (upgradeBtn) {
+            console.log('Found upgrade button, adding listener');
+            upgradeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Upgrade button clicked');
+                openUpgradeModal();
             });
         } else {
-            // DOM ya está listo
-            console.log('DOM already ready, setting up button listeners...');
-            setupButtonListeners();
+            console.warn('Upgrade button not found!');
         }
         
-        function setupButtonListeners() {
-            // Asignar event listeners a los botones como respaldo
-            const upgradeBtn = document.querySelector('button[onclick*="openUpgradeModal"]');
-            if (upgradeBtn) {
-                console.log('Found upgrade button, adding listener');
-                upgradeBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Upgrade button clicked');
-                    openUpgradeModal();
-                });
-            } else {
-                console.warn('Upgrade button not found!');
-            }
-            
-            const cancelBtn = document.querySelector('button[onclick*="openCancelModal"]');
-            if (cancelBtn) {
-                console.log('Found cancel button, adding listener');
-                cancelBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Cancel button clicked');
-                    openCancelModal();
-                });
-            } else {
-                console.warn('Cancel button not found!');
-            }
+        const cancelBtn = document.querySelector('button[onclick*="openCancelModal"]');
+        if (cancelBtn) {
+            console.log('Found cancel button, adding listener');
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Cancel button clicked');
+                openCancelModal();
+            });
+        } else {
+            console.warn('Cancel button not found!');
         }
+    }
 
-
-        function closeUpgradeModal() {
-            const modal = document.getElementById('upgradeModal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-            }
-            selectedPlan = null;
-            appliedCoupon = null;
-            const paypalContainer = document.getElementById('paypalCheckoutContainer');
-            if (paypalContainer) {
-                paypalContainer.classList.add('hidden');
-            }
-            const couponSection = document.getElementById('couponSection');
-            if (couponSection) {
-                couponSection.classList.add('hidden');
-            }
-            // Limpiar contenedor de PayPal
-            const container = document.getElementById('paypal-button-container');
-            if (container) {
-                container.innerHTML = '';
-            }
-            // Limpiar input de cupón
-            const couponInput = document.getElementById('couponCodeInput');
-            if (couponInput) {
-                couponInput.value = '';
-            }
-            const couponMessage = document.getElementById('couponMessage');
-            if (couponMessage) {
-                couponMessage.innerHTML = '';
-            }
-        }
-        
-        window.closeUpgradeModal = closeUpgradeModal;
+   
 
         async function loadAvailablePlans() {
             console.log('Loading available plans...');
@@ -416,7 +420,7 @@
                 console.error('Plans container not found!');
                 return;
             }
-            container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-3"><p>Cargando planes...</p></div>';
+            container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-2"><p>Cargando planes...</p></div>';
 
             try {
                 console.log(`Fetching from: ${API_BASE_URL}/subscription-plans`);
@@ -448,14 +452,14 @@
             }
             
             if (!plans || plans.length === 0) {
-                container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-3"><p>No hay planes disponibles</p></div>';
+                container.innerHTML = '<div class="text-center py-8 text-gray-500 dark:text-gray-400 col-span-2"><p>No hay planes disponibles</p></div>';
                 return;
             }
             
             const token = getAuthToken();
             
             if (!token) {
-                container.innerHTML = '<div class="text-center py-8 text-red-500 col-span-3"><p>Debes iniciar sesión para ver los planes</p></div>';
+                container.innerHTML = '<div class="text-center py-8 text-red-500 col-span-2"><p>Debes iniciar sesión para ver los planes</p></div>';
                 return;
             }
 
@@ -466,6 +470,7 @@
             .then(res => res.ok ? res.json() : null)
             .then(currentSub => {
                 const currentPlanName = currentSub?.plan_name || 'free';
+                currentUserPlan = currentPlanName; // Guardar el plan actual
                 const hasActiveTrial = currentSub?.trial_end && new Date(currentSub.trial_end) > new Date();
                 
                 // Mostrar opciones de trial si el usuario tiene plan free y no tiene trial activo
@@ -477,23 +482,29 @@
                     trialOptions.classList.add('hidden');
                 }
                 
-                container.innerHTML = plans.map(plan => {
+                // Filtrar el plan básico (free) - no debe mostrarse en el modal
+                const filteredPlans = plans.filter(plan => plan.name !== 'free');
+                
+                container.innerHTML = filteredPlans.map(plan => {
                     const isCurrentPlan = plan.name === currentPlanName;
-                    const isFree = plan.name === 'free';
                     const price = parseFloat(plan.price || 0);
+                    const isSelected = plan.name === selectedPlan?.name && !isCurrentPlan;
+                    
+                    // Todos los planes deben ser clickeables para mostrar su información
+                    const cursorClass = 'cursor-pointer';
+                    const hoverClass = 'hover:border-green-500 dark:hover:border-green-500 hover:shadow-lg';
                     
                     return `
-                        <div id="plan-card-${plan.name}" class="p-6 border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all ${isCurrentPlan ? '' : 'hover:shadow-lg'} ${plan.name === selectedPlan?.name ? 'selected-plan-card' : ''}" 
-                             onclick="${isCurrentPlan || isFree ? '' : `selectPlan('${plan.name}')`}">
+                        <div id="plan-card-${plan.name}" class="p-6 border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/20 selected-plan-card' : 'border-gray-200 dark:border-gray-700'} rounded-lg ${hoverClass} ${cursorClass} transition-all" 
+                             onclick="selectPlan('${plan.name}')">
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
                                 ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
                                 <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                                    ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
-                                    ${price > 0 ? `<span class="text-lg font-normal">/mes</span>` : ''}
+                                    $${price.toFixed(2)}
+                                    <span class="text-lg font-normal">/mes</span>
                                 </p>
                                 ${isCurrentPlan ? '<span class="inline-block mt-2 px-3 py-1 bg-green-500 text-white rounded-full text-xs font-semibold">Plan Actual</span>' : ''}
-                                ${isFree ? '<span class="inline-block mt-2 px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-semibold">Gratis</span>' : ''}
                             </div>
                         </div>
                     `;
@@ -501,22 +512,22 @@
             })
             .catch(err => {
                 console.error('Error getting current subscription:', err);
-                // Renderizar planes sin información de plan actual
-                container.innerHTML = plans.map(plan => {
-                    const isFree = plan.name === 'free';
+                // Renderizar planes sin información de plan actual (filtrar plan free)
+                const filteredPlans = plans.filter(plan => plan.name !== 'free');
+                container.innerHTML = filteredPlans.map(plan => {
                     const price = parseFloat(plan.price || 0);
+                    const isSelected = plan.name === selectedPlan?.name;
                     
                     return `
-                        <div id="plan-card-${plan.name}" class="p-6 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all hover:shadow-lg ${plan.name === selectedPlan?.name ? 'selected-plan-card' : ''}" 
-                             onclick="${isFree ? '' : `selectPlan('${plan.name}')`}">
+                        <div id="plan-card-${plan.name}" class="p-6 border-2 ${isSelected ? 'border-green-500 bg-green-50 dark:bg-green-900/20 selected-plan-card' : 'border-gray-200 dark:border-gray-700'} rounded-lg hover:border-green-500 dark:hover:border-green-500 cursor-pointer transition-all hover:shadow-lg" 
+                             onclick="selectPlan('${plan.name}')">
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
                                 ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
                                 <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-                                    ${price === 0 ? 'Gratis' : `$${price.toFixed(2)}`}
-                                    ${price > 0 ? `<span class="text-lg font-normal">/mes</span>` : ''}
+                                    $${price.toFixed(2)}
+                                    <span class="text-lg font-normal">/mes</span>
                                 </p>
-                                ${isFree ? '<span class="inline-block mt-2 px-3 py-1 bg-gray-500 text-white rounded-full text-xs font-semibold">Gratis</span>' : ''}
                             </div>
                         </div>
                     `;
@@ -527,23 +538,51 @@
         let appliedCoupon = null;
 
         window.selectPlan = function(planName) {
-            // Remover resaltado de planes anteriores
-            document.querySelectorAll('.selected-plan-card').forEach(card => {
-                card.classList.remove('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
-                card.classList.add('border-gray-200', 'dark:border-gray-700');
-            });
-
+            const currentPlanName = currentUserPlan || 'free';
+            
+            // Encontrar el plan seleccionado
             selectedPlan = availablePlans.find(p => p.name === planName);
-            if (!selectedPlan) return;
+            if (!selectedPlan) {
+                console.error('Plan no encontrado:', planName);
+                return;
+            }
+            
+            // Remover resaltado de TODOS los planes seleccionados (selected-plan-card)
+            // pero mantener el estilo del plan actual
+            document.querySelectorAll('[id^="plan-card-"]').forEach(card => {
+                const cardPlanName = card.id.replace('plan-card-', '');
+                
+                // Si es el plan actual, mantener solo las clases de "plan actual" (sin selected-plan-card)
+                if (cardPlanName === currentPlanName) {
+                    card.classList.remove('selected-plan-card');
+                    // Asegurar que tenga las clases de plan actual
+                    if (!card.classList.contains('border-green-500')) {
+                        card.classList.add('border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                    }
+                    card.classList.remove('border-gray-200', 'dark:border-gray-700');
+                }
+                // Si no es el plan actual ni el seleccionado, remover todas las clases de resaltado
+                else if (cardPlanName !== planName) {
+                    card.classList.remove('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                    card.classList.add('border-gray-200', 'dark:border-gray-700');
+                }
+            });
 
             // Resaltar plan seleccionado
             const selectedCard = document.getElementById(`plan-card-${planName}`);
             if (selectedCard) {
-                selectedCard.classList.add('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
-                selectedCard.classList.remove('border-gray-200', 'dark:border-gray-700');
+                // Si es el plan actual, no agregar selected-plan-card pero mostrar información
+                if (planName === currentPlanName) {
+                    // Ya tiene el estilo de plan actual, solo asegurar que no tenga selected-plan-card
+                    selectedCard.classList.remove('selected-plan-card');
+                } else {
+                    // Agregar estilo de selección
+                    selectedCard.classList.add('selected-plan-card', 'border-green-500', 'bg-green-50', 'dark:bg-green-900/20');
+                    selectedCard.classList.remove('border-gray-200', 'dark:border-gray-700');
+                }
             }
 
-            // Mostrar información del plan seleccionado
+            // Mostrar información del plan seleccionado (incluso si es el actual)
             window.updatePlanInfo();
 
             // Mostrar sección de cupón y contenedor de PayPal

@@ -2,6 +2,8 @@
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
+console.log('calendar.js loaded');
+
 // Current date tracking
 let currentDate = new Date();
 let currentYear = currentDate.getFullYear();
@@ -31,8 +33,17 @@ async function loadCalendar() {
         }
         
         const data = await response.json();
+        console.log('Calendar data loaded:', data);
         renderCalendar(data);
         renderEventsList(data);
+        
+        // Load analyst insights immediately
+        console.log('About to call loadAnalystInsights');
+        try {
+            await loadAnalystInsights(data);
+        } catch (error) {
+            console.error('Error in loadAnalystInsights call:', error);
+        }
     } catch (error) {
         console.error('Error loading calendar:', error);
         document.getElementById('calendarContainer').innerHTML = `
@@ -74,10 +85,10 @@ function renderCalendar(data) {
         container.appendChild(emptyCell);
     }
     
-    // Add day cells
+    // Add day cells - reduced height by 30% (from ~80px to ~56px)
     for (let day = 1; day <= daysInMonth; day++) {
         const dayCell = document.createElement('div');
-        dayCell.className = 'aspect-square border border-gray-200 dark:border-gray-700 rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer';
+        dayCell.className = 'min-h-[56px] border border-gray-200 dark:border-gray-700 rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer';
         
         const dateKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayEvents = events[dateKey] || [];
@@ -277,6 +288,213 @@ window.addEventListener('resize', () => {
         loadCalendar();
     }, 250);
 });
+
+// Load analyst insights for events in the current month
+async function loadAnalystInsights(calendarData) {
+    console.log('=== loadAnalystInsights START ===');
+    console.log('loadAnalystInsights called with data:', calendarData);
+    try {
+        const tbody = document.getElementById('analystInsightsBody');
+        if (!tbody) {
+            console.error('analystInsightsBody element not found');
+            return;
+        }
+        
+        const events = calendarData.events || {};
+        const allTickers = new Set();
+        
+        // Collect all unique tickers from events
+        Object.values(events).forEach(dayEvents => {
+            dayEvents.forEach(event => {
+                allTickers.add(event.ticker);
+            });
+        });
+        
+        console.log('Found tickers:', Array.from(allTickers));
+        
+        if (allTickers.size === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        No hay eventos este mes
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        console.log('Fetching insights for', allTickers.size, 'tickers');
+        
+        // Fetch analyst insights for each ticker
+        const insightsPromises = Array.from(allTickers).map(async (ticker) => {
+            try {
+                const url = `${API_BASE_URL}/asset/${ticker}/analyst-insights`;
+                console.log(`Fetching insights for ${ticker} from ${url}`);
+                const response = await fetch(url);
+                console.log(`Response for ${ticker}:`, response.status, response.statusText);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`Data received for ${ticker}:`, data);
+                    return { ticker, data };
+                } else {
+                    const errorText = await response.text();
+                    console.error(`Error response for ${ticker}:`, response.status, errorText);
+                    return { ticker, data: null };
+                }
+            } catch (error) {
+                console.error(`Error fetching insights for ${ticker}:`, error);
+                return { ticker, data: null };
+            }
+        });
+        
+        const insightsResults = await Promise.all(insightsPromises);
+        console.log('All insights results:', insightsResults);
+        const insightsMap = new Map();
+        
+        insightsResults.forEach(({ ticker, data }) => {
+            if (data) {
+                console.log(`Adding insights for ${ticker}:`, data);
+                insightsMap.set(ticker, data);
+            } else {
+                console.warn(`No data received for ${ticker}`);
+            }
+        });
+        
+        console.log('Insights map size:', insightsMap.size);
+        console.log('Insights map contents:', Array.from(insightsMap.entries()));
+        renderAnalystInsights(insightsMap, events);
+    } catch (error) {
+        console.error('Error loading analyst insights:', error);
+        const tbody = document.getElementById('analystInsightsBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-8 text-red-500">
+                        Error al cargar análisis de analistas: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Render analyst insights table
+function renderAnalystInsights(insightsMap, events) {
+    console.log('renderAnalystInsights called', insightsMap.size, 'insights');
+    const tbody = document.getElementById('analystInsightsBody');
+    
+    if (!tbody) {
+        console.error('analystInsightsBody element not found in renderAnalystInsights');
+        return;
+    }
+    
+    if (insightsMap.size === 0) {
+        console.log('No insights data, showing empty message');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No hay datos de analistas disponibles
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Get all events and group by ticker
+    const tickerEvents = new Map();
+    Object.values(events).forEach(dayEvents => {
+        dayEvents.forEach(event => {
+            if (!tickerEvents.has(event.ticker)) {
+                tickerEvents.set(event.ticker, event);
+            }
+        });
+    });
+    
+    const rows = Array.from(tickerEvents.entries()).map(([ticker, event]) => {
+        const insight = insightsMap.get(ticker);
+        
+        if (!insight) {
+            return `
+                <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td class="py-4 px-4">
+                        <div class="font-semibold text-gray-900 dark:text-white">${event.name}</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">${ticker}</div>
+                    </td>
+                    <td colspan="7" class="py-4 px-4 text-gray-500 dark:text-gray-400 text-sm">
+                        Datos no disponibles
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Format recommendations
+        const recs = insight.recommendations;
+        const totalRecs = insight.total_recommendations || 0;
+        const recommendationsText = totalRecs > 0 
+            ? `${recs.strongBuy || 0} Strong Buy, ${recs.buy || 0} Buy, ${recs.hold || 0} Hold, ${recs.underperform || 0} Underperform, ${recs.sell || 0} Sell`
+            : 'Sin datos';
+        
+        // Format sentiment with color
+        const sentiment = insight.sentiment || { value: 'Sin datos', color: 'gray' };
+        const sentimentColors = {
+            'green': 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+            'lightgreen': 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300',
+            'yellow': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400',
+            'orange': 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+            'red': 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+            'gray': 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+        };
+        const sentimentClass = sentimentColors[sentiment.color] || sentimentColors.gray;
+        
+        // Format earnings
+        const formatEarnings = (value) => {
+            if (value === null || value === undefined) return 'N/A';
+            if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+            if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+            if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+            return `$${value.toFixed(2)}`;
+        };
+        
+        const lastQExpected = insight.earnings?.last_quarter?.expected;
+        const lastQActual = insight.earnings?.last_quarter?.actual;
+        const lastAnnualExpected = insight.earnings?.last_annual?.expected;
+        const lastAnnualActual = insight.earnings?.last_annual?.actual;
+        
+        return `
+            <tr class="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="py-4 px-4">
+                    <div class="font-semibold text-gray-900 dark:text-white">${insight.name || event.name}</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">${ticker}</div>
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs">
+                    ${insight.market_expectation || 'Sin datos disponibles'}
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+                    ${recommendationsText}
+                </td>
+                <td class="py-4 px-4">
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${sentimentClass}">
+                        ${sentiment.value}
+                    </span>
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+                    ${lastQExpected ? formatEarnings(lastQExpected) : 'N/A'}
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+                    ${lastQActual ? formatEarnings(lastQActual) : 'N/A'}
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+                    ${lastAnnualExpected ? formatEarnings(lastAnnualExpected) : 'N/A'}
+                </td>
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
+                    ${lastAnnualActual ? formatEarnings(lastAnnualActual) : 'N/A'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {

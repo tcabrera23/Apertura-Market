@@ -20,23 +20,6 @@ Agregarle la calculadora de interes compuesto si puedo con cosas mas complejas: 
 Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye la pagina
 
 
-antigravity: 
-
-publicar el saas y seuir trabajando en el resumen de noticias con IA y la integracion a brokers ----meter en el index el apartado de noticias releases
-claro seria la seccion de About Us
-tendria que editar los agentes de IA para agregarle tests, evals, safety, registro de tokens etc.
-
-agregar politica de privacidad y terminos de servicio
-sacarle un screenshot a la tabla y pedirle a alguna ia que me genere graficos con plotly y me los renderize con react a ver como anda
-agregar opcion de cerrar sesion, etc
-ahora el boton de "Actualizar Plan" no funciona
-solo falta arreglar el registro de un nuevo usuario, chequear mail de onboarding
-luego chequear email de alertas.
-por ultimo, verficiar los pagos de paypal
-analisis dashboards - safety de agents y tracker
-cambiar todos los dominios lpm
-**PUBLICAR**
-
 estamos seguros que funcionan las integraciones via email? las alertas
 
 - agregar a cada chat widget un mini footer con la leyenda "Powered by Apertura IA"
@@ -76,17 +59,11 @@ Me gustaria cambiar los headers ("Monitor de Activos Financieros no me convence"
 falta ajustar en mobile toda la plataforma y los chat widgets content
 y me falta armar el resumen generado por IA de las noticias como el analisis semanal de joveninversor
 o tambien meterle los 
-otro tema, como mi plataforma o mi agente puede conocer a su usuario si no persisto informacion de el en alguna bd?
+otro tema, como mi plataforma o mi agente puede conocer a su usuario si no persisto informacion de el en alguna bd?en el panel de account poder definir perfil y que sea editable opcional
 ahh y tengo que dar mi numero de wsp en el plan pro
 faltar agregar las alertas via telegram o eliminarlo por ahora
 modificar un poco lo de asistente de IA con la configuracion de Reglas
 se repite bastante el contenido en toda la web, tratar de reducirlo (Inteligencia que trabaja para ti)
-
-la seccion de blog se incorpora al header de todos los html y el boton en index debe cambiar su nombre de manual de usuario a novedades
-pedirle a la ia que me genere los tds y pdp
-
-el panel de reglas debe permitir el full CRUD al usuario ya que es totalmente personalizable. 
-cambiar la interfaz de ejemplos de reglas
 
 
 lo extraño es que al registrarme como nuevo usuario, no se activo la sub gratuita. tampoco recibi el mail de onboarding de brevo
@@ -99,11 +76,7 @@ antes aseguarme que la interfaz para cambiar de plan funcione
 chequear que los cupones aplican 
 que el mail de onboarding llega y de alerta tambien - abrir brevo
 
-creo
-
 agrega en todos los html el google translate y dale un estilo mas tradicional al borde derecho. aseguremos una buena UX permitiendo un switch comodo entre ES y EN
-
-
 
 @dashboard.html
 - analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
@@ -127,27 +100,34 @@ evaluar nuevos pricing ya que tenemos la app en desarrollo.
 7.5 y 10 usd por planes
 
 
-los datos historicos la api mantenerla en cache
-
+- los datos historicos la api mantenerla en cache
 a futuro, meter categoria en reglas asi las pueden clasificar mejor
-
-
-
 integra entre rules.html y el backend la posibiidad de crear reglas basadas en el calendar.html
 por ejemplo, calendar.html se encarga de obtener las fechas de los resultados de las activos (ejemplo de la imagen amd diciembre 27)
 
-
-en calendar estaria bueno achicar el tamanio del calendario, y aumentar la de eventos para poner una breve descripcion, como expectativas del mercado, opininones de analistas, sentimientos, etc
-o ultimos resultados (esperado vs real y vs el Quarter pasado y el año pasado)
 
 en blog.html: 
 agregar un calculadora.html que replique la pagina y comportamiento de javinilinares
 una pagina dedicada a el calculo de interes compuesto, 
 
+ofrecer la opcion de full screen para el grafico estilo trading view
+revisar politica y tds
+en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es una forma de publicitarlos. hola! puedo ponerte en mi web? estilo columnistas)
+
+
+rate limit api
+que medidas de seguridad implementar? captcha?
 
 cryptos: 
 agregar volumen diario, media movil de 50 y 200 dias (para todos los activos)
 https://gemini.google.com/app/15d1237b2190dff0?hl=es
+
+
+luego de publicar la app:
+- agregar soporte por telegram
+- 
+
+
 
                     <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="en">EN</button>
                     <button class="lang-btn px-3 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors" data-lang="pt">PT</button>

@@ -917,6 +917,263 @@ async def get_earnings_calendar(
         logger.error(f"Error fetching earnings calendar: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error fetching earnings calendar: {str(e)}")
 
+@app.get("/api/asset/{ticker}/analyst-insights")
+async def get_analyst_insights(ticker: str):
+    """
+    Get analyst insights for an asset using yfinance Analysis class.
+    Includes recommendations, price targets, sentiment, and earnings expectations.
+    """
+    try:
+        cache_key = f"analyst_insights_{ticker}_{int(datetime.now().timestamp() // 3600)}"
+        
+        if cache_key in cache:
+            return cache[cache_key]
+        
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        
+        # Use yfinance Analysis class for better data
+        analysis = stock.analysis
+        
+        # Get analyst recommendations from recommendations DataFrame
+        recommendations = {
+            'strongBuy': 0,
+            'buy': 0,
+            'hold': 0,
+            'underperform': 0,
+            'sell': 0,
+        }
+        
+        try:
+            # Try to get recommendations DataFrame
+            recs_df = stock.recommendations
+            if recs_df is not None and not recs_df.empty:
+                # Get last 4 months of recommendations
+                now = datetime.now()
+                four_months_ago = now - timedelta(days=120)
+                
+                # Filter by date if possible
+                if hasattr(recs_df.index, 'date'):
+                    recent_recs = recs_df[recs_df.index >= four_months_ago]
+                else:
+                    # Take last 4 months worth of data
+                    recent_recs = recs_df.tail(4) if len(recs_df) > 4 else recs_df
+                
+                # Count recommendations by type
+                for _, row in recent_recs.iterrows():
+                    # Yahoo Finance recommendations are usually in a 'To Grade' column
+                    if 'To Grade' in row:
+                        grade = str(row['To Grade']).upper()
+                        if 'STRONG BUY' in grade or 'STRONGBUY' in grade:
+                            recommendations['strongBuy'] += 1
+                        elif 'BUY' in grade:
+                            recommendations['buy'] += 1
+                        elif 'HOLD' in grade or 'NEUTRAL' in grade:
+                            recommendations['hold'] += 1
+                        elif 'UNDERPERFORM' in grade or 'UNDER PERFORM' in grade:
+                            recommendations['underperform'] += 1
+                        elif 'SELL' in grade:
+                            recommendations['sell'] += 1
+        except Exception as e:
+            logger.debug(f"Error getting recommendations DataFrame for {ticker}: {e}")
+        
+        # Fallback to info fields if DataFrame didn't work
+        if sum(recommendations.values()) == 0:
+            # Try recommendationMean field (sometimes it's a dict)
+            rec_mean = info.get('recommendationMean')
+            if isinstance(rec_mean, dict):
+                recommendations['strongBuy'] = rec_mean.get('strongBuy', 0)
+                recommendations['buy'] = rec_mean.get('buy', 0)
+                recommendations['hold'] = rec_mean.get('hold', 0)
+                recommendations['underperform'] = rec_mean.get('underperform', 0)
+                recommendations['sell'] = rec_mean.get('sell', 0)
+            elif isinstance(rec_mean, (int, float)):
+                # If it's a number, distribute it (this is less accurate)
+                total = int(rec_mean) if rec_mean else 0
+                if total > 0:
+                    recommendations['hold'] = total  # Default to hold if we only have a number
+            
+            # Try recommendationKey field as last resort
+            if sum(recommendations.values()) == 0:
+                rec_key = str(info.get('recommendationKey', '')).lower()
+                if 'strong buy' in rec_key or 'strongbuy' in rec_key:
+                    recommendations['strongBuy'] = 1
+                elif 'buy' in rec_key:
+                    recommendations['buy'] = 1
+                elif 'hold' in rec_key or 'neutral' in rec_key:
+                    recommendations['hold'] = 1
+                elif 'underperform' in rec_key or 'under perform' in rec_key:
+                    recommendations['underperform'] = 1
+                elif 'sell' in rec_key:
+                    recommendations['sell'] = 1
+        
+        # Get price targets using Analysis class
+        price_targets = {}
+        try:
+            price_targets = analysis.analyst_price_targets
+        except Exception as e:
+            logger.debug(f"Error getting price targets from Analysis for {ticker}: {e}")
+            # Fallback to info
+            price_targets = {
+                'low': info.get('targetLowPrice'),
+                'high': info.get('targetHighPrice'),
+                'mean': info.get('targetMeanPrice'),
+                'median': info.get('targetMedianPrice'),
+                'current': info.get('currentPrice') or info.get('regularMarketPrice')
+            }
+        
+        current_price = price_targets.get('current') or info.get('currentPrice') or info.get('regularMarketPrice')
+        
+        # Get earnings estimates using Analysis class
+        last_quarter_expected = None
+        last_annual_expected = None
+        last_quarter_earnings = None
+        last_annual_earnings = None
+        
+        try:
+            # Get earnings estimates
+            earnings_estimate = analysis.earnings_estimate
+            if earnings_estimate is not None and not earnings_estimate.empty:
+                # Get most recent quarter estimate
+                if 'currentQuarter' in earnings_estimate.index:
+                    last_quarter_expected = earnings_estimate.loc['currentQuarter', 'avgEstimate'] if 'avgEstimate' in earnings_estimate.columns else None
+                elif len(earnings_estimate) > 0:
+                    # Get first row (most recent)
+                    last_quarter_expected = earnings_estimate.iloc[0].get('avgEstimate') if 'avgEstimate' in earnings_estimate.columns else None
+                
+                # Get current year estimate
+                if 'currentYear' in earnings_estimate.index:
+                    last_annual_expected = earnings_estimate.loc['currentYear', 'avgEstimate'] if 'avgEstimate' in earnings_estimate.columns else None
+        except Exception as e:
+            logger.debug(f"Error getting earnings estimates for {ticker}: {e}")
+        
+        # Get earnings history (actual vs expected)
+        try:
+            earnings_history = analysis.earnings_history
+            if earnings_history is not None and not earnings_history.empty:
+                # Get most recent quarter
+                most_recent = earnings_history.iloc[-1] if len(earnings_history) > 0 else None
+                if most_recent is not None:
+                    # Get actual earnings
+                    if 'epsActual' in most_recent:
+                        last_quarter_earnings = float(most_recent['epsActual']) if most_recent['epsActual'] is not None else None
+                    elif 'epsEstimate' in most_recent:
+                        # Use estimate if actual not available
+                        last_quarter_expected = float(most_recent['epsEstimate']) if most_recent['epsEstimate'] is not None else None
+        except Exception as e:
+            logger.debug(f"Error getting earnings history for {ticker}: {e}")
+        
+        # Fallback: Get earnings from financials if Analysis didn't work
+        if last_quarter_earnings is None or last_annual_earnings is None:
+            try:
+                financials = stock.financials
+                quarterly_financials = stock.quarterly_financials
+                
+                if quarterly_financials is not None and not quarterly_financials.empty:
+                    if 'Net Income' in quarterly_financials.index:
+                        last_quarter_earnings = float(quarterly_financials.loc['Net Income'].iloc[-1]) if not quarterly_financials.loc['Net Income'].empty else None
+                    elif 'Total Revenue' in quarterly_financials.index:
+                        last_quarter_earnings = float(quarterly_financials.loc['Total Revenue'].iloc[-1]) if not quarterly_financials.loc['Total Revenue'].empty else None
+                
+                if financials is not None and not financials.empty:
+                    if 'Net Income' in financials.index:
+                        last_annual_earnings = float(financials.loc['Net Income'].iloc[-1]) if not financials.loc['Net Income'].empty else None
+                    elif 'Total Revenue' in financials.index:
+                        last_annual_earnings = float(financials.loc['Total Revenue'].iloc[-1]) if not financials.loc['Total Revenue'].empty else None
+            except Exception as e:
+                logger.debug(f"Error fetching earnings data from financials for {ticker}: {e}")
+        
+        # Get revenue estimates
+        try:
+            revenue_estimate = analysis.revenue_estimate
+            if revenue_estimate is not None and not revenue_estimate.empty:
+                # Use revenue estimates if earnings estimates not available
+                if last_quarter_expected is None and 'currentQuarter' in revenue_estimate.index:
+                    last_quarter_expected = revenue_estimate.loc['currentQuarter', 'avgEstimate'] if 'avgEstimate' in revenue_estimate.columns else None
+                if last_annual_expected is None and 'currentYear' in revenue_estimate.index:
+                    last_annual_expected = revenue_estimate.loc['currentYear', 'avgEstimate'] if 'avgEstimate' in revenue_estimate.columns else None
+        except Exception as e:
+            logger.debug(f"Error getting revenue estimates for {ticker}: {e}")
+        
+        # Get top analyst (simulated - Yahoo Finance doesn't provide this directly)
+        top_analyst = info.get('recommendationKey', 'N/A')
+        analyst_score = 45  # Default score
+        
+        # Calculate sentiment based on recommendations
+        total_recs = sum(recommendations.values())
+        if total_recs > 0:
+            sentiment_score = (
+                recommendations['strongBuy'] * 5 +
+                recommendations['buy'] * 4 +
+                recommendations['hold'] * 3 +
+                recommendations['underperform'] * 2 +
+                recommendations['sell'] * 1
+            ) / total_recs
+            
+            if sentiment_score >= 4.5:
+                sentiment = 'Muy Alcista'
+                sentiment_color = 'green'
+            elif sentiment_score >= 3.5:
+                sentiment = 'Alcista'
+                sentiment_color = 'lightgreen'
+            elif sentiment_score >= 2.5:
+                sentiment = 'Neutral'
+                sentiment_color = 'yellow'
+            elif sentiment_score >= 1.5:
+                sentiment = 'Bajista'
+                sentiment_color = 'orange'
+            else:
+                sentiment = 'Muy Bajista'
+                sentiment_color = 'red'
+        else:
+            sentiment = 'Sin Datos'
+            sentiment_color = 'gray'
+        
+        # Market expectation - use business summary from info
+        market_expectation = info.get('longBusinessSummary', '')[:200] if info.get('longBusinessSummary') else "Los analistas esperan resultados sólidos basados en el crecimiento de ingresos y la expansión del mercado."
+        
+        result = {
+            "ticker": ticker,
+            "name": info.get('longName') or info.get('shortName', ticker),
+            "current_price": float(current_price) if current_price else None,
+            "top_analyst": {
+                "name": "Goldman Sachs",  # Simulated
+                "score": analyst_score,
+                "latest_rating": top_analyst.upper() if top_analyst else "NEUTRAL"
+            },
+            "price_targets": {
+                "low": float(price_targets.get('low') or price_targets.get('Low')) if price_targets.get('low') or price_targets.get('Low') else None,
+                "high": float(price_targets.get('high') or price_targets.get('High')) if price_targets.get('high') or price_targets.get('High') else None,
+                "average": float(price_targets.get('mean') or price_targets.get('Mean') or price_targets.get('median') or price_targets.get('Median')) if (price_targets.get('mean') or price_targets.get('Mean') or price_targets.get('median') or price_targets.get('Median')) else None,
+                "current": float(current_price) if current_price else None
+            },
+            "recommendations": recommendations,
+            "total_recommendations": total_recs,
+            "sentiment": {
+                "value": sentiment,
+                "color": sentiment_color
+            },
+            "market_expectation": market_expectation,
+            "earnings": {
+                "last_quarter": {
+                    "actual": last_quarter_earnings,
+                    "expected": last_quarter_expected
+                },
+                "last_annual": {
+                    "actual": last_annual_earnings,
+                    "expected": last_annual_expected
+                }
+            }
+        }
+        
+        cache[cache_key] = result
+        logger.info(f"Successfully fetched analyst insights for {ticker}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching analyst insights for {ticker}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error fetching analyst insights: {str(e)}")
+
 # ============================================
 # RULES ENDPOINTS (Supabase Integration)
 # ============================================
@@ -2526,9 +2783,24 @@ async def validate_coupon(coupon: CouponValidate, user = Depends(get_current_use
             }
         
         # Verificar fechas de validez
-        now = datetime.now()
+        # Usar datetime con timezone para evitar errores de comparación
+        now = datetime.now(timezone.utc)
         if coupon_data.get("valid_from"):
-            valid_from = datetime.fromisoformat(coupon_data["valid_from"].replace("Z", "+00:00"))
+            valid_from_str = coupon_data["valid_from"]
+            if isinstance(valid_from_str, str):
+                # Si tiene Z, reemplazarlo con +00:00 para timezone UTC
+                if valid_from_str.endswith("Z"):
+                    valid_from_str = valid_from_str.replace("Z", "+00:00")
+                valid_from = datetime.fromisoformat(valid_from_str)
+                # Si no tiene timezone, asumir UTC
+                if valid_from.tzinfo is None:
+                    valid_from = valid_from.replace(tzinfo=timezone.utc)
+            else:
+                # Si es un datetime object, asegurar que tenga timezone
+                valid_from = valid_from_str
+                if valid_from.tzinfo is None:
+                    valid_from = valid_from.replace(tzinfo=timezone.utc)
+            
             if now < valid_from:
                 return {
                     "valid": False,
@@ -2536,7 +2808,21 @@ async def validate_coupon(coupon: CouponValidate, user = Depends(get_current_use
                 }
         
         if coupon_data.get("valid_until"):
-            valid_until = datetime.fromisoformat(coupon_data["valid_until"].replace("Z", "+00:00"))
+            valid_until_str = coupon_data["valid_until"]
+            if isinstance(valid_until_str, str):
+                # Si tiene Z, reemplazarlo con +00:00 para timezone UTC
+                if valid_until_str.endswith("Z"):
+                    valid_until_str = valid_until_str.replace("Z", "+00:00")
+                valid_until = datetime.fromisoformat(valid_until_str)
+                # Si no tiene timezone, asumir UTC
+                if valid_until.tzinfo is None:
+                    valid_until = valid_until.replace(tzinfo=timezone.utc)
+            else:
+                # Si es un datetime object, asegurar que tenga timezone
+                valid_until = valid_until_str
+                if valid_until.tzinfo is None:
+                    valid_until = valid_until.replace(tzinfo=timezone.utc)
+            
             if now > valid_until:
                 return {
                     "valid": False,
@@ -3073,9 +3359,24 @@ async def create_subscription(
                 )
             
             # Verificar fechas de validez
-            now = datetime.now()
+            # Usar datetime con timezone para evitar errores de comparación
+            now = datetime.now(timezone.utc)
             if coupon_data.get("valid_from"):
-                valid_from = datetime.fromisoformat(coupon_data["valid_from"].replace("Z", "+00:00"))
+                valid_from_str = coupon_data["valid_from"]
+                if isinstance(valid_from_str, str):
+                    # Si tiene Z, reemplazarlo con +00:00 para timezone UTC
+                    if valid_from_str.endswith("Z"):
+                        valid_from_str = valid_from_str.replace("Z", "+00:00")
+                    valid_from = datetime.fromisoformat(valid_from_str)
+                    # Si no tiene timezone, asumir UTC
+                    if valid_from.tzinfo is None:
+                        valid_from = valid_from.replace(tzinfo=timezone.utc)
+                else:
+                    # Si es un datetime object, asegurar que tenga timezone
+                    valid_from = valid_from_str
+                    if valid_from.tzinfo is None:
+                        valid_from = valid_from.replace(tzinfo=timezone.utc)
+                
                 if now < valid_from:
                     raise HTTPException(
                         status_code=400,
@@ -3083,7 +3384,21 @@ async def create_subscription(
                     )
             
             if coupon_data.get("valid_until"):
-                valid_until = datetime.fromisoformat(coupon_data["valid_until"].replace("Z", "+00:00"))
+                valid_until_str = coupon_data["valid_until"]
+                if isinstance(valid_until_str, str):
+                    # Si tiene Z, reemplazarlo con +00:00 para timezone UTC
+                    if valid_until_str.endswith("Z"):
+                        valid_until_str = valid_until_str.replace("Z", "+00:00")
+                    valid_until = datetime.fromisoformat(valid_until_str)
+                    # Si no tiene timezone, asumir UTC
+                    if valid_until.tzinfo is None:
+                        valid_until = valid_until.replace(tzinfo=timezone.utc)
+                else:
+                    # Si es un datetime object, asegurar que tenga timezone
+                    valid_until = valid_until_str
+                    if valid_until.tzinfo is None:
+                        valid_until = valid_until.replace(tzinfo=timezone.utc)
+                
                 if now > valid_until:
                     raise HTTPException(
                         status_code=400,

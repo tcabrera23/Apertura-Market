@@ -106,7 +106,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                 <div id="calendarContainer" class="grid grid-cols-7 gap-2">
                     <!-- Calendar will be rendered here -->
-                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <div class="text-center py-4 text-gray-500 dark:text-gray-400">
                         <p>Cargando calendario...</p>
                     </div>
                 </div>
@@ -119,6 +119,34 @@
                     <div class="text-center py-4 text-gray-500 dark:text-gray-400">
                         <p>Cargando eventos...</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Analyst Insights Table -->
+            <div id="analystInsightsSection" class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Análisis de Analistas</h3>
+                <div id="analystInsightsContainer" class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Activo</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Expectativa del Mercado</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Opinión Analistas</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Sentimiento</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Último Q Esperado</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Último Q Real</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Último Año Esperado</th>
+                                <th class="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">Último Año Real</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analystInsightsBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                    Cargando análisis de analistas...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -1,7 +1,4 @@
 // Subscription Management JavaScript
-
-const API_BASE_URL = 'http://localhost:8080/api';
-
 // Obtener token del localStorage
 function getAuthToken() {
     return localStorage.getItem('access_token');

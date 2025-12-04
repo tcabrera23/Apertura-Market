@@ -1,8 +1,15 @@
 // Account Page JavaScript
 // Carga dinámicamente la información del usuario y su suscripción
 
-const API_BASE_URL = 'http://localhost:8080/api';
-const AUTH_API_BASE_URL = 'http://localhost:8080/auth';
+// Si no está definida globalmente, defínela. Si ya existe, usa la existente.
+if (typeof API_BASE_URL === 'undefined') {
+    window.API_BASE_URL = 'http://localhost:8080/api';
+}
+
+// Lo mismo para AUTH
+if (typeof AUTH_API_BASE_URL === 'undefined') {
+    window.AUTH_API_BASE_URL = 'http://localhost:8080/auth';
+}
 
 // Exponer getAuthToken globalmente para account.html
 window.getAuthToken = getAuthToken;
