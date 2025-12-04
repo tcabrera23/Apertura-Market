@@ -736,7 +736,8 @@ function createPriceHistoryChart(container, ticker, assetData, period = '1y') {
     container.innerHTML = '';
     
     const theme = getTheme();
-    const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api';
+    // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+    const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
     
     // Create wrapper
     const wrapper = document.createElement('div');

@@ -5,14 +5,15 @@
 Este documento describe el proceso completo para migrar BullAnalytics de un entorno de desarrollo local (`http://localhost:8080`) a producción (`https://bullanalytics.io/`).
 
 **Fecha de Migración:** [FECHA A COMPLETAR]  
-**Dominio de Producción:** `https://bullanalytics.io/`  
+**Dominio de Producción Frontend:** `https://bullanalytics.io/` (Cloudflare Pages)  
+**Dominio de Producción Backend:** `https://api.bullanalytics.io/` (VPS Hostinger)  
 **Dominio de Desarrollo:** `http://localhost:8080` (mantener para desarrollo local)
 
 ---
 
 ## 🎯 Objetivos de la Migración
 
-1. ✅ Configurar todas las URLs para usar `https://bullanalytics.io/`
+1. ✅ Configurar todas las URLs: Frontend en `https://bullanalytics.io/`, Backend en `https://api.bullanalytics.io/`
 2. ✅ Actualizar configuraciones de servicios externos (Supabase, PayPal, n8n)
 3. ✅ Mantener compatibilidad con desarrollo local mediante variables de entorno
 4. ✅ Actualizar templates de email con URLs de producción
@@ -132,8 +133,9 @@ Crear un archivo `.env.production` con las siguientes variables:
 # DOMAIN CONFIGURATION
 # ============================================
 FRONTEND_URL=https://bullanalytics.io
-API_BASE_URL=https://bullanalytics.io/api
-AUTH_API_BASE_URL=https://bullanalytics.io/auth
+API_BASE_URL=https://api.bullanalytics.io/api
+AUTH_API_BASE_URL=https://api.bullanalytics.io/auth
+CORS_ORIGINS=https://bullanalytics.io,http://localhost:8080,http://localhost:8000
 
 # ============================================
 # SUPABASE CONFIGURATION
@@ -183,6 +185,15 @@ GROQ_API_KEY=YOUR_GROQ_API_KEY
 PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "https://bullanalytics.io/subscription-success.html")
 PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "https://bullanalytics.io/pricing.html")
 
+# Línea ~85-89: CORS Configuration
+# ANTES (comentar):
+# allow_origins=["*"],  # In production, replace with specific origins
+
+# DESPUÉS (agregar):
+allow_origins_env = os.getenv("CORS_ORIGINS", "https://bullanalytics.io,http://localhost:8080,http://localhost:8000")
+allow_origins = [origin.strip() for origin in allow_origins_env.split(",")]
+# Y usar allow_origins en lugar de ["*"]
+
 # Línea ~2022: Email redirect
 # ANTES (comentar):
 # "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/login.html"
@@ -209,7 +220,7 @@ PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "https://bullanalytics.io/pri
 # print("📡 Server: http://localhost:8080")
 
 # DESPUÉS (agregar):
-print("📡 Server: https://bullanalytics.io")
+print("📡 Server: https://api.bullanalytics.io")
 ```
 
 #### 2. `main_login.py` (si existe)
@@ -271,25 +282,24 @@ cors_origins: str = "https://bullanalytics.io,http://localhost:8080,http://local
 // window.API_BASE_URL = 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-window.API_BASE_URL = window.location.origin + '/api';
-// O para producción específicamente:
-// window.API_BASE_URL = 'https://bullanalytics.io/api';
+// window.API_BASE_URL = 'http://localhost:8080/api'; // Development
+window.API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 
 // Línea ~11: Auth API Base URL
 // ANTES (comentar):
 // window.AUTH_API_BASE_URL = 'http://localhost:8080/auth';
 
 // DESPUÉS (agregar):
-window.AUTH_API_BASE_URL = window.location.origin + '/auth';
-// O para producción específicamente:
-// window.AUTH_API_BASE_URL = 'https://bullanalytics.io/auth';
+// window.AUTH_API_BASE_URL = 'http://localhost:8080/auth'; // Development
+window.AUTH_API_BASE_URL = 'https://api.bullanalytics.io/auth'; // Production
 
 // Línea ~33: User endpoint
 // ANTES (comentar):
 // const userResponse = await fetch(`http://localhost:8080/api/v1/user/me`, {
 
 // DESPUÉS (agregar):
-const userResponse = await fetch(`${window.API_BASE_URL}/v1/user/me`, {
+// const userResponse = await fetch(`http://localhost:8080/api/v1/user/me`, { // Development
+const userResponse = await fetch(`${window.API_BASE_URL}/v1/user/me`, { // Production
 ```
 
 #### 2. `account.html`
@@ -303,9 +313,8 @@ const userResponse = await fetch(`${window.API_BASE_URL}/v1/user/me`, {
 <!-- const API_BASE_URL = 'http://localhost:8080/api'; -->
 
 <!-- DESPUÉS (agregar): -->
-const API_BASE_URL = window.location.origin + '/api';
-// O para producción específicamente:
-// const API_BASE_URL = 'https://bullanalytics.io/api';
+<!-- const API_BASE_URL = 'http://localhost:8080/api'; // Development -->
+const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 3. `js/login.js`
@@ -316,9 +325,8 @@ const API_BASE_URL = window.location.origin + '/api';
 // const AUTH_API_BASE_URL = 'http://localhost:8080/auth';
 
 // DESPUÉS (agregar):
-const AUTH_API_BASE_URL = window.location.origin + '/auth';
-// O para producción específicamente:
-// const AUTH_API_BASE_URL = 'https://bullanalytics.io/auth';
+// const AUTH_API_BASE_URL = 'http://localhost:8080/auth'; // Development
+const AUTH_API_BASE_URL = 'https://api.bullanalytics.io/auth'; // Production
 ```
 
 #### 4. `js/dashboard.js`
@@ -329,9 +337,8 @@ const AUTH_API_BASE_URL = window.location.origin + '/auth';
 // const API_BASE_URL = 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const API_BASE_URL = window.location.origin + '/api';
-// O para producción específicamente:
-// const API_BASE_URL = 'https://bullanalytics.io/api';
+// const API_BASE_URL = 'http://localhost:8080/api'; // Development
+const API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 5. `js/charts.js`
@@ -342,9 +349,8 @@ const API_BASE_URL = window.location.origin + '/api';
 // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const API_BASE_URL = window.API_BASE_URL || window.location.origin + '/api';
-// O para producción específicamente:
-// const API_BASE_URL = window.API_BASE_URL || 'https://bullanalytics.io/api';
+// const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 6. `js/rules.js`
@@ -355,7 +361,8 @@ const API_BASE_URL = window.API_BASE_URL || window.location.origin + '/api';
 // const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/api';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 7. `js/calendar.js`
@@ -366,7 +373,8 @@ const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/ap
 // const API_BASE_URL = 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const API_BASE_URL = window.location.origin + '/api';
+// const API_BASE_URL = 'http://localhost:8080/api'; // Development
+const API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 8. `js/news.js`
@@ -377,7 +385,8 @@ const API_BASE_URL = window.location.origin + '/api';
 // const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/api';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 9. `js/table-config.js`
@@ -388,7 +397,8 @@ const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/ap
 // const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
 
 // DESPUÉS (agregar):
-const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/api';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 ```
 
 #### 10. `js/google-translate.js`
@@ -399,7 +409,8 @@ const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin + '/ap
 // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
 
 // DESPUÉS (agregar):
-const API_BASE_URL = window.API_BASE_URL || window.location.origin;
+// const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080'; // Development
+const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io'; // Production
 ```
 
 #### 11. `js/reset-password.js`
@@ -410,7 +421,8 @@ const API_BASE_URL = window.API_BASE_URL || window.location.origin;
 // const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080';
 
 // DESPUÉS (agregar):
-const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin;
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io'; // Production
 ```
 
 #### 12. `js/forgot-password.js`
@@ -421,7 +433,8 @@ const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin;
 // const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080';
 
 // DESPUÉS (agregar):
-const getApiBaseUrl = () => window.API_BASE_URL || window.location.origin;
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io'; // Production
 ```
 
 ---

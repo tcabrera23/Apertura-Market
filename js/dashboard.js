@@ -1,7 +1,8 @@
 // BullAnalytics - Enhanced Dashboard JavaScript with Smart Caching
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+// const API_BASE_URL = 'http://localhost:8080/api'; // Development
+const API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 // Expose to window for other scripts
 window.API_BASE_URL = API_BASE_URL;
 

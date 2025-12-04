@@ -132,7 +132,8 @@ def get_onboarding_email_template(user_name: str, user_email: str) -> Dict[str, 
                 <p>Te recomendamos comenzar creando tu primera lista de seguimiento o configurando una alerta para estar al tanto de los movimientos del mercado.</p>
                 
                 <div style="text-align: center;">
-                    <a href="http://localhost:8080/dashboard.html" class="button">Ir al Dashboard</a>
+                    <!-- <a href="http://localhost:8080/dashboard.html" class="button">Ir al Dashboard</a> -->
+                    <a href="https://bullanalytics.io/dashboard.html" class="button">Ir al Dashboard</a>
                 </div>
                 
                 <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
@@ -318,8 +319,10 @@ def get_alert_email_template(
                 <p>Esta alerta se generó automáticamente cuando el precio {trend} por encima/debajo del umbral que configuraste.</p>
                 
                 <div style="text-align: center;">
-                    <a href="http://localhost:8080/dashboard.html" class="button">Ver Dashboard</a>
-                    <a href="http://localhost:8080/rules.html" class="button" style="background: #6c757d; margin-left: 10px;">Gestionar Alertas</a>
+                    <!-- <a href="http://localhost:8080/dashboard.html" class="button">Ver Dashboard</a> -->
+                    <!-- <a href="http://localhost:8080/rules.html" class="button" style="background: #6c757d; margin-left: 10px;">Gestionar Alertas</a> -->
+                    <a href="https://bullanalytics.io/dashboard.html" class="button">Ver Dashboard</a>
+                    <a href="https://bullanalytics.io/rules.html" class="button" style="background: #6c757d; margin-left: 10px;">Gestionar Alertas</a>
                 </div>
             </div>
             <div class="footer">

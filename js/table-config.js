@@ -2,7 +2,8 @@
 
 // Use window.API_BASE_URL if available, otherwise use default
 // Don't declare const to avoid conflicts
-const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 
 // Column definitions for different table types
 const COLUMN_DEFINITIONS = {

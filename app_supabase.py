@@ -69,8 +69,11 @@ PAYPAL_MODE = os.getenv("PAYPAL_MODE", "live")  # 'sandbox' o 'live'
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET")
 PAYPAL_BASE_URL = "https://api-m.sandbox.paypal.com" if PAYPAL_MODE == "sandbox" else "https://api-m.paypal.com"
-PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "http://localhost:8080/subscription-success.html")
-PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8080/pricing.html")
+# PayPal URLs - Production: https://bullanalytics.io, Development: http://localhost:8080
+# PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "http://localhost:8080/subscription-success.html")
+# PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8080/pricing.html")
+PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "https://bullanalytics.io/subscription-success.html")
+PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "https://bullanalytics.io/pricing.html")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -80,9 +83,14 @@ app = FastAPI(
 )
 
 # CORS configuration
+# In production, replace with specific origins
+# allow_origins=["*"],  # Development - allows all origins
+allow_origins_env = os.getenv("CORS_ORIGINS", "https://bullanalytics.io,http://localhost:8080,http://localhost:8000")
+allow_origins = [origin.strip() for origin in allow_origins_env.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=allow_origins,  # Production: specific origins, Development: includes localhost
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -2019,7 +2027,8 @@ async def signup(signup_data: SignUpRequest):
                 "email": signup_data.email,
                 "password": signup_data.password,
                 "options": {
-                    "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/login.html"
+                    # "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/login.html"
+                    "email_redirect_to": f"{os.getenv('FRONTEND_URL', 'https://bullanalytics.io')}/login.html"
                 }
             })
         except Exception as signup_error:
@@ -2243,7 +2252,8 @@ async def forgot_password(request: ForgotPasswordRequest):
             supabase.auth.reset_password_for_email(
                 request.email,
                 {
-                    "redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/reset-password.html"
+                    # "redirect_to": f"{os.getenv('FRONTEND_URL', 'http://localhost:8080')}/reset-password.html"
+                    "redirect_to": f"{os.getenv('FRONTEND_URL', 'https://bullanalytics.io')}/reset-password.html"
                 }
             )
             logger.info(f"Email de recuperación enviado a {request.email}")
@@ -3056,7 +3066,8 @@ async def test_email(email: str = Query(..., description="Email destino para pru
                 <li>✅ Estado: Enviado exitosamente</li>
             </ul>
             <p>Ahora puedes configurar alertas financieras que se enviarán automáticamente cuando se cumplan tus reglas.</p>
-            <a href="http://localhost:8080/rules.html" class="button">Gestionar Alertas</a>
+            <!-- <a href="http://localhost:8080/rules.html" class="button">Gestionar Alertas</a> -->
+            <a href="https://bullanalytics.io/rules.html" class="button">Gestionar Alertas</a>
         </div>
         <div class="footer">
             <p>Este es un correo automático de BullAnalytics.</p>
@@ -3707,5 +3718,6 @@ async def verify_subscription(
 if __name__ == "__main__":
     print("🚀 Starting BullAnalytics API Server with Supabase...")
     print(f"📊 Supabase URL: {SUPABASE_URL}")
-    print("📡 Server: http://localhost:8080")
+    # print("📡 Server: http://localhost:8080")
+    print("📡 Server: https://api.bullanalytics.io")
     uvicorn.run(app, host="0.0.0.0", port=8080)

@@ -3,12 +3,14 @@
 
 // Si no está definida globalmente, defínela. Si ya existe, usa la existente.
 if (typeof API_BASE_URL === 'undefined') {
-    window.API_BASE_URL = 'http://localhost:8080/api';
+    // window.API_BASE_URL = 'http://localhost:8080/api'; // Development
+    window.API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 }
 
 // Lo mismo para AUTH
 if (typeof AUTH_API_BASE_URL === 'undefined') {
-    window.AUTH_API_BASE_URL = 'http://localhost:8080/auth';
+    // window.AUTH_API_BASE_URL = 'http://localhost:8080/auth'; // Development
+    window.AUTH_API_BASE_URL = 'https://api.bullanalytics.io/auth'; // Production
 }
 
 // Exponer getAuthToken globalmente para account.html
@@ -30,7 +32,8 @@ async function loadUserInfo() {
 
     try {
         // Obtener perfil del usuario
-        const userResponse = await fetch(`http://localhost:8080/api/v1/user/me`, {
+        // const userResponse = await fetch(`http://localhost:8080/api/v1/user/me`, { // Development
+        const userResponse = await fetch(`${window.API_BASE_URL}/v1/user/me`, { // Production
             headers: {
                 'Authorization': `Bearer ${token}`
             }

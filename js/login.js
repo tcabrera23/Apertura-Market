@@ -1,7 +1,8 @@
 // Login Page JavaScript
 // Conecta con app_supabase.py (puerto 8080)
 
-const AUTH_API_BASE_URL = 'http://localhost:8080/auth';
+// const AUTH_API_BASE_URL = 'http://localhost:8080/auth'; // Development
+const AUTH_API_BASE_URL = 'https://api.bullanalytics.io/auth'; // Production
 
 // Estado de autenticación
 let currentMode = 'signin'; // 'signin' o 'signup'

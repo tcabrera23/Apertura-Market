@@ -1,6 +1,7 @@
 // Calendar Page JavaScript
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// const API_BASE_URL = 'http://localhost:8080/api'; // Development
+const API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 
 console.log('calendar.js loaded');
 

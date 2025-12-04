@@ -1,7 +1,8 @@
 // News Page JavaScript
 
 // Use window.API_BASE_URL if available, otherwise use default
-const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
 let currentNews = [];
 
 document.addEventListener('DOMContentLoaded', () => {

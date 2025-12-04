@@ -92,7 +92,8 @@
         try {
             // Use a free translation service or backend endpoint
             // For now, we'll use a simple approach
-            const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080';
+            // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080'; // Development
+            const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io'; // Production
             const response = await fetch(`${API_BASE_URL}/api/translate`, {
                 method: 'POST',
                 headers: {

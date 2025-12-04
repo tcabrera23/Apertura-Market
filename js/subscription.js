@@ -39,6 +39,8 @@ async function createSubscription(planName, buttonElement = null) {
     }
 
     try {
+        // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+        const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
         const response = await fetch(`${API_BASE_URL}/subscriptions/create`, {
             method: 'POST',
             headers: {
@@ -113,6 +115,8 @@ async function verifySubscription() {
     }
 
     try {
+        // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
+        const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
         const response = await fetch(
             `${API_BASE_URL}/subscriptions/verify?subscription_id=${subscriptionId}`,
             {

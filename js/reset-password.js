@@ -1,5 +1,6 @@
 // Reset Password Page JavaScript
-const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080';
+// const getApiBaseUrl = () => window.API_BASE_URL || 'http://localhost:8080'; // Development
+const getApiBaseUrl = () => window.API_BASE_URL || 'https://api.bullanalytics.io'; // Production
 const AUTH_API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
 document.addEventListener('DOMContentLoaded', () => {
