@@ -125,7 +125,8 @@ https://gemini.google.com/app/15d1237b2190dff0?hl=es
 
 luego de publicar la app:
 - agregar soporte por telegram
-- 
+- agregar que si el usuario es de argentina, mostrar la cotizacion del dolar
+- agregar variaciones diarias, no solo del max
 
 
 

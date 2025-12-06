@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  bullanalytics-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bullanalytics-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      # Montar archivos estáticos si es necesario
+      - ./css:/app/css:ro
+      - ./js:/app/js:ro
+      - ./assets:/app/assets:ro
+      - ./images:/app/images:ro
+      # Montar HTML files
+      - ./*.html:/app/:ro
+    networks:
+      - bullanalytics-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  bullanalytics-network:
+    driver: bridge
+
