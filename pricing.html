@@ -80,7 +80,7 @@
                     <li><a href="rules.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Reglas</a></li>
                     <li><a href="account.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Account</a></li>
                 </ul>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                     <!-- Dark Mode Toggle -->
                     <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                         <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
@@ -90,8 +90,8 @@
                             <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                         </svg>
                     </button>
-                    <!-- Google Translate -->
-                    <div id="google_translate_element"></div>
+                    <!-- Language Selector (custom component) -->
+                    <div id="google_translate_element" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -184,25 +184,45 @@
         </div>
     </footer>
 
-    <!-- Google Translate -->
-    <div id="google_translate_element" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
-    
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
     <script src="js/mobile-nav.js"></script>
-    <script src="js/google-translate.js"></script>
     <script src="js/subscription.js"></script>
-        <script type="text/javascript">
+    <script src="js/language-selector.js"></script>
+    
+    <!-- Google Translate (hidden, used by language-selector.js) -->
+    <script type="text/javascript">
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
                 pageLanguage: 'es',
-                includedLanguages: 'es,en,pt,fr,de,it,zh-CN,ja,ko,ru,ar',
+                includedLanguages: 'es,en,pt',
                 layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
                 autoDisplay: false
             }, 'google_translate_element');
         }
     </script>
     <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <style>
+        /* Hide Google Translate UI completely */
+        .goog-te-banner-frame.skiptranslate,
+        .goog-te-gadget,
+        #google_translate_element {
+            display: none !important;
+        }
+        body {
+            top: 0 !important;
+        }
+        .goog-logo-link {
+            display: none !important;
+        }
+        .skiptranslate {
+            display: none !important;
+        }
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+            display: none !important;
+        }
+    </style>
 </body>
 
 </html>

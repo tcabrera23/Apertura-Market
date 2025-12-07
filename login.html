@@ -93,7 +93,7 @@
                         </span>
                     </a>
                 </div>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
                     <a href="index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">
                         Volver al inicio
                     </a>
@@ -109,6 +109,8 @@
                             <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
                         </svg>
                     </button>
+                    <!-- Language Selector (custom component) -->
+                    <div id="google_translate_element" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -308,6 +310,41 @@
     <script src="js/dark-mode.js"></script>
     <script src="js/legal-modal.js"></script>
     <script src="js/login.js"></script>
+    <script src="js/language-selector.js"></script>
+    
+    <!-- Google Translate (hidden, used by language-selector.js) -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,pt',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <style>
+        /* Hide Google Translate UI completely */
+        .goog-te-banner-frame.skiptranslate,
+        .goog-te-gadget,
+        #google_translate_element {
+            display: none !important;
+        }
+        body {
+            top: 0 !important;
+        }
+        .goog-logo-link {
+            display: none !important;
+        }
+        .skiptranslate {
+            display: none !important;
+        }
+        .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+            display: none !important;
+        }
+    </style>
 </body>
 </html>
 

@@ -3,6 +3,7 @@
 
 // const AUTH_API_BASE_URL = 'http://localhost:8080/auth'; // Development
 const AUTH_API_BASE_URL = 'https://api.bullanalytics.io/auth'; // Production
+const API_BASE_URL = AUTH_API_BASE_URL.replace('/auth', ''); // For API calls
 
 // Estado de autenticación
 let currentMode = 'signin'; // 'signin' o 'signup'
@@ -203,7 +204,25 @@ async function handleSignUp() {
         localStorage.setItem('access_token', accessToken);
         localStorage.setItem('user_data', JSON.stringify(data.user));
 
-        showMessage('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+        // Check if user selected a trial plan from index.html
+        const selectedTrialPlan = localStorage.getItem('selected_trial_plan');
+        
+        if (selectedTrialPlan) {
+            showMessage('¡Cuenta creada! Activando tu prueba gratuita...', 'success');
+            
+            // Activate free trial
+            try {
+                await activateFreeTrial(accessToken, selectedTrialPlan);
+                localStorage.removeItem('selected_trial_plan');
+                showMessage(`¡Trial de ${selectedTrialPlan.toUpperCase()} activado! Redirigiendo...`, 'success');
+            } catch (trialError) {
+                console.error('Error activating trial:', trialError);
+                // Continue anyway, user can activate later
+                localStorage.removeItem('selected_trial_plan');
+            }
+        } else {
+            showMessage('¡Cuenta creada exitosamente! Redirigiendo...', 'success');
+        }
         
         // Redirigir a la URL guardada o al dashboard
         const redirectUrl = localStorage.getItem('redirect_after_login') || 'dashboard.html';
@@ -220,6 +239,25 @@ async function handleSignUp() {
         signUpBtn.disabled = false;
         signUpBtn.textContent = originalText;
     }
+}
+
+// Activate free trial for a plan
+async function activateFreeTrial(token, planName) {
+    const response = await fetch(`${API_BASE_URL}/api/subscriptions/start-trial`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ plan_name: planName })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al activar trial');
+    }
+
+    return await response.json();
 }
 
 // OAuth removed - using traditional email/password registration only
