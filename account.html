@@ -165,6 +165,18 @@
                         </div>
                     </div>
 
+                    <!-- Logout -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Sesión</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Cierra sesión de tu cuenta de BullAnalytics.</p>
+                        <button class="w-full px-4 py-2 bg-gray-600 dark:bg-gray-700 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors font-semibold flex items-center justify-center gap-2" onclick="logout()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Cerrar Sesión
+                        </button>
+                    </div>
+
                     <!-- Cancel Subscription -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-red-200 dark:border-red-800 p-6">
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Zona de Peligro</h3>
@@ -292,6 +304,89 @@
         }
     </script>
     <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <style>
+        /* Hide Google Translate top bar that covers the header - AGGRESSIVE */
+        .goog-te-banner-frame.skiptranslate {
+            display: none !important;
+        }
+        .goog-te-banner-frame {
+            display: none !important;
+        }
+        body {
+            top: 0 !important;
+            position: static !important;
+        }
+        html {
+            margin-top: 0 !important;
+        }
+        /* Force hide iframe that creates the banner */
+        iframe.skiptranslate {
+            display: none !important;
+        }
+        iframe.goog-te-banner-frame {
+            display: none !important;
+        }
+        /* Style the translate dropdown */
+        .goog-te-combo {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        .dark .goog-te-combo {
+            background: #374151;
+            border-color: #4b5563;
+            color: #d1d5db;
+        }
+        /* Style the translate widget container */
+        #google_translate_element {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+        }
+        #google_translate_element .goog-te-gadget-simple {
+            background-color: transparent;
+            border: none;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            padding: 0;
+            vertical-align: middle;
+            line-height: normal;
+        }
+        #google_translate_element .goog-te-gadget-simple span {
+            color: #6b7280;
+            vertical-align: middle;
+        }
+        .dark #google_translate_element .goog-te-gadget-simple span {
+            color: #d1d5db;
+        }
+        #google_translate_element .goog-te-gadget-icon {
+            display: none;
+        }
+        #google_translate_element .goog-te-menu-value {
+            vertical-align: middle;
+        }
+        #google_translate_element .goog-te-menu-value span {
+            vertical-align: middle;
+        }
+        /* Remove Google branding */
+        .goog-te-gadget-simple .goog-te-menu-value span:first-child {
+            display: none;
+        }
+        .goog-logo-link {
+            display: none !important;
+        }
+        .goog-te-gadget {
+            color: transparent !important;
+        }
+        /* Additional banner hiding */
+        body > .skiptranslate {
+            display: none !important;
+        }
+    </style>
     <script>
     console.log('Account page script loading...');
     // Definir API_BASE_URL globalmente si no está definida
@@ -400,6 +495,19 @@
         if (confirm('¿Estás seguro de que deseas cancelar tu suscripción?')) {
             alert('Suscripción cancelada. Lamentamos verte partir.');
             window.closeCancelModal();
+        }
+    };
+    
+    window.logout = function() {
+        if (confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+            // Clear all auth-related data
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_email');
+            sessionStorage.clear();
+            
+            // Redirect to login page
+            window.location.href = 'login.html';
         }
     };
     

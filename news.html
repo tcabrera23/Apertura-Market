@@ -165,13 +165,27 @@
         }
     </script>
     <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-        <style>
-        /* Hide Google Translate top bar that covers the header */
+            <style>
+        /* Hide Google Translate top bar that covers the header - AGGRESSIVE */
         .goog-te-banner-frame.skiptranslate {
+            display: none !important;
+        }
+        .goog-te-banner-frame {
             display: none !important;
         }
         body {
             top: 0 !important;
+            position: static !important;
+        }
+        html {
+            margin-top: 0 !important;
+        }
+        /* Force hide iframe that creates the banner */
+        iframe.skiptranslate {
+            display: none !important;
+        }
+        iframe.goog-te-banner-frame {
+            display: none !important;
         }
         /* Style the translate dropdown */
         .goog-te-combo {
@@ -189,23 +203,35 @@
         }
         /* Style the translate widget container */
         #google_translate_element {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
         }
         #google_translate_element .goog-te-gadget-simple {
             background-color: transparent;
             border: none;
             font-size: 0.875rem;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             padding: 0;
+            vertical-align: middle;
+            line-height: normal;
         }
         #google_translate_element .goog-te-gadget-simple span {
             color: #6b7280;
+            vertical-align: middle;
         }
         .dark #google_translate_element .goog-te-gadget-simple span {
             color: #d1d5db;
         }
         #google_translate_element .goog-te-gadget-icon {
             display: none;
+        }
+        #google_translate_element .goog-te-menu-value {
+            vertical-align: middle;
+        }
+        #google_translate_element .goog-te-menu-value span {
+            vertical-align: middle;
         }
         /* Remove Google branding */
         .goog-te-gadget-simple .goog-te-menu-value span:first-child {
@@ -216,6 +242,10 @@
         }
         .goog-te-gadget {
             color: transparent !important;
+        }
+        /* Additional banner hiding */
+        body > .skiptranslate {
+            display: none !important;
         }
     </style>
 </body>
