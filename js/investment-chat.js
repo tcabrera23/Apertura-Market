@@ -13,65 +13,7 @@ function getSessionId() {
     return sessionId;
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Check if user has a paid plan before showing chat widget
-    const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api';
-    const chatWidget = document.getElementById('investmentChatWidget');
-    
-    // Function to get auth token
-    function getAuthToken() {
-        return localStorage.getItem('access_token');
-    }
-    
-    // Check user plan
-    async function checkUserPlan() {
-        const token = getAuthToken();
-        if (!token) {
-            // User not logged in, hide chat
-            if (chatWidget) chatWidget.style.display = 'none';
-            return false;
-        }
-        
-        try {
-            const response = await fetch(`${API_BASE_URL}/subscriptions/current`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) {
-                // If error fetching subscription, hide chat
-                if (chatWidget) chatWidget.style.display = 'none';
-                return false;
-            }
-            
-            const subscription = await response.json();
-            const planName = subscription?.plan_name;
-            
-            // Only show chat for paid plans (plus or pro)
-            // Check if user HAS plus or pro plan
-            if (planName === 'plus' || planName === 'pro') {
-                // User has paid plan, show chat
-                if (chatWidget) chatWidget.style.display = 'block';
-                return true;
-            }
-            
-            // Hide chat for any other plan (free, gratis, gratuito, null, etc.)
-            if (chatWidget) chatWidget.style.display = 'none';
-            return false;
-        } catch (error) {
-            console.error('Error checking user plan:', error);
-            // On error, hide chat as precaution
-            if (chatWidget) chatWidget.style.display = 'none';
-            return false;
-        }
-    }
-    
-    // Check plan first
-    const hasPaidPlan = await checkUserPlan();
-    if (!hasPaidPlan) {
-        console.log('Chat widget hidden: User does not have a paid plan');
-        return; // Don't initialize chat if user doesn't have paid plan
-    }
-    
+document.addEventListener('DOMContentLoaded', () => {
     // Chat widget toggle
     const chatToggle = document.getElementById('investmentChatToggle');
     const chatWindow = document.getElementById('investmentChatWindow');

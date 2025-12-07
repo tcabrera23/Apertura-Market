@@ -10,6 +10,21 @@ luego de publicar la app:
 - agregar soporte por telegram
 
 
+CAMBIOS V2: 
+- En la version mobile de toda la web, falta agregar los headers a los otros html y ademas la opcion de fullscreen para cada grafico de dashboard.html
+- agregar columna de variacion diaria de cada activo por tab
+- agregar columnas de media movil a 50 dias y otra a 200 dias
+- en la seccion de blog, agregar un calculadora.html que replique la pagina y comportamiento de "https://javilinares.com/calculadora-interes-compuesto/" al estilo bullanalytics
+- agregar que si el usuario es de argentina, mostrar la cotizacion del dolar en la esquina derecha del header @dashboard.html con un get de "https://www.lanacion.com.ar/economia/"
+- para toda la web, incorpora la funcionalidad de google translate que por ahora solo estaba en la seccion de noticias.
+
+
+commit -m "V1.1 con mobile headers, nuevas metricas, dolararg y calculadora"
+
+opcion de cerrar sesion
+faltan los google translate
+- revisar politica y tds
+el div de usd ars va abajo en el header de monitor
 ver como resolver la pagina duplicada en api (eliminando todo del vps obvio)
 
 docs: 
@@ -17,12 +32,10 @@ https://github.com/ranaroussi/yfinance/tree/main/yfinance
 
 
 ver como presentar la app al usuario, el breve tutorial interactivo estaria bueno! Sino la info en el eliminarlo
-- falta anexar la calculadora al blog y terminar los articulos
-- con todo eso ya terminado, puedo testear paypal y tener mi primer version LISTA
-- agregar los activos de notasfuturas
-- no queda listo, el asistente de IA no debe estar disponible para los usuarios free. lo mas facil es eliminar el widget de la pagina y ya
+falta anexar la calculadora al blog y terminar los articulos
+con todo eso ya terminado, puedo testear paypal y tener mi primer version LISTA
+
+no queda listo, el asistente de IA no debe estar disponible para los usuarios free. lo mas facil es eliminar el widget de la pagina y ya
 arreglar los articulos de tds
 
-manualmente: 
-revisar lo de la tabla
-bajar el div de usd.ars
+

@@ -60,6 +60,351 @@
             }
         }
     </script>
+    <style>
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .animate-slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-gradient-to-br from-white via-green-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <img src="images/logo.png" alt="BullAnalytics Logo" class="h-10 w-10 rounded-lg object-contain">
+                    <span class="text-xl font-bold text-gray-900 dark:text-white">
+                        Bull<span class="text-green-500">Analytics</span>
+                    </span>
+                </div>
+                <ul class="hidden md:flex items-center gap-6">
+                    <li><a href="index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Inicio</a></li>
+                    <li><a href="dashboard.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Dashboard</a></li>
+                    <li><a href="news.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Noticias</a></li>
+                    <li><a href="rules.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Reglas</a></li>
+                    <li><a href="calendar.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Calendario</a></li>
+                    <li><a href="account.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Account</a></li>
+                </ul>
+                <div class="flex items-center gap-4">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <svg id="moonIcon" class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                    </button>
+                    <!-- Google Translate -->
+                    <div id="google_translate_element"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Rules Header -->
+    <header class="pt-20 pb-8 bg-gradient-to-r from-white via-green-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
+                        🔔 Reglas de Notificación
+                    </h1>
+                    <p class="text-gray-600 dark:text-gray-400">Configura alertas personalizadas para tus inversiones</p>
+                </div>
+                <button class="hidden md:flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/30 hover:shadow-xl transition-all font-semibold" id="createRuleBtn">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                    </svg>
+                    Nueva Regla
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Rules Content -->
+    <main class="min-h-screen pb-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Examples Section -->
+            <section class="mb-12 animate-fade-in-up">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Ejemplos de Reglas</h2>
+                        <p class="text-gray-600 dark:text-gray-300">Inspírate con estos casos de uso comunes</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Alerta de Compra</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">NVIDIA 25% debajo de su máximo histórico</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">P/E Ratio Bajo</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Apple en un P/E ratio debajo de 25</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Alerta de Venta</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Acción 'x' en un P/E de 30 o más</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-xl hover:scale-[1.02] transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Calendario de Resultados</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Notificación cuando una acción presenta resultados del Q</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Rules -->
+            <section class="animate-fade-in-up" style="animation-delay: 0.2s">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Tus Reglas Activas</h2>
+                    <button class="md:hidden flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg shadow-lg font-semibold" id="createRuleBtnMobile">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 5V15M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                        </svg>
+                        Nueva Regla
+                    </button>
+                </div>
+
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700" id="rulesLoading">
+                    <div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando reglas...</p>
+                </div>
+
+                <div id="rulesContainer" class="hidden">
+                    <div class="space-y-4" id="rulesList">
+                        <!-- Rules will be inserted here -->
+                    </div>
+
+                    <div class="hidden text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-dashed border-gray-300 dark:border-gray-600" id="emptyState">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                            <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M32 20V44M20 32H44" stroke="#28a745" stroke-width="4" stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">No hay reglas definidas</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6">Crea tu primera regla para recibir alertas personalizadas</p>
+                        <button class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg transition-all font-semibold" onclick="document.getElementById('createRuleBtn').click()">
+                            Crear Primera Regla
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Create Rule Modal -->
+    <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="ruleModal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto animate-slide-in">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" fill="currentColor"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" fill="currentColor"/>
+                    </svg>
+                    Crear Nueva Regla
+                </h3>
+                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" id="closeModal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="ruleForm" class="space-y-6">
+                    <div>
+                        <label for="ruleName" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Nombre de la Regla</label>
+                        <input type="text" id="ruleName" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Ej: Alerta NVIDIA bajo máximo" required>
+                    </div>
+
+                    <div>
+                        <label for="ruleType" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tipo de Regla</label>
+                        <select id="ruleType" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" required>
+                            <option value="">Selecciona un tipo</option>
+                            <option value="price_below">Precio debajo de umbral</option>
+                            <option value="price_above">Precio encima de umbral</option>
+                            <option value="pe_below">P/E Ratio debajo de umbral</option>
+                            <option value="pe_above">P/E Ratio encima de umbral</option>
+                            <option value="max_distance">Distancia del máximo histórico</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="ruleTicker" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Ticker del Activo</label>
+                        <input type="text" id="ruleTicker" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Ej: NVDA, AAPL, BTC-USD" required>
+                    </div>
+
+                    <div>
+                        <label for="ruleValue" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Valor de Referencia</label>
+                        <input type="number" id="ruleValue" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Ej: 25, 500, 0.25" step="0.01" required>
+                    </div>
+
+                    <div class="flex justify-end gap-4 pt-4">
+                        <button type="button" class="px-6 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-all font-semibold" onclick="document.getElementById('closeModal').click()">
+                            Cancelar
+                        </button>
+                        <button type="submit" class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/30 hover:shadow-xl transition-all font-semibold" id="ruleSubmitBtn">
+                            Crear Regla
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <div id="chatWidget" class="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
+        <!-- Chat Button -->
+        <button id="chatToggle" class="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all flex items-center justify-center overflow-hidden">
+            <img id="chatIcon" src="images/agent.png" alt="Chat" class="w-full h-full rounded-full object-cover">
+            <svg id="closeIcon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chatWindow" class="hidden fixed md:bottom-24 md:right-6 md:w-96 md:h-[600px] bottom-0 right-0 left-0 top-0 w-full h-full md:rounded-2xl rounded-none bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col transition-all duration-300">
+            <!-- Chat Header -->
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-green-50 to-green-100/50 dark:from-gray-700 dark:to-gray-800">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img src="images/agent.png" alt="Asistente AI" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="font-bold text-gray-900 dark:text-white truncate">Asistente AI</h3>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 truncate">Crea reglas con lenguaje natural</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+                    <!-- Full Window Toggle -->
+                    <button id="fullWindowToggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors" title="Pantalla completa">
+                        <svg id="maximizeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        <svg id="minimizeIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                        </svg>
+                    </button>
+                    <!-- Close Button -->
+                    <button id="chatCloseBtn" class="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors" title="Cerrar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <img src="images/bull-agent (2).png" alt="Asistente AI" class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-3">
+                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                            👋 ¡Hola! Soy tu asistente AI. Puedes crear reglas de alertas usando lenguaje natural.
+                            <br><br>
+                            <strong>Ejemplos:</strong><br>
+                            • "Cuando NVIDIA esté un 25% debajo de su máximo histórico"<br>
+                            • "Notifícame cuando Apple tenga un P/E ratio debajo de 25"<br>
+                            • "Alerta cuando Bitcoin esté por encima de $50,000"
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="mb-3">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="chatInput" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm" placeholder="Escribe tu regla aquí..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" class="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-semibold text-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-8 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-left">
+                    © 2025 BullAnalytics. Todos los derechos reservados.
+                </p>
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-right">
+                    Powered by <span class="font-semibold text-green-500">Apertura IA</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Google Translate -->
+    <div id="google_translate_element" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+    
+    <!-- Scripts -->
+    <script src="js/dark-mode.js"></script>
+    <script src="js/mobile-nav.js"></script>
+    <script src="js/google-translate.js"></script>
+    <script src="js/rules.js"></script>
+        <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,pt,fr,de,it,zh-CN,ja,ko,ru,ar',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
     <script>
         // Mobile button handler
         document.getElementById('createRuleBtnMobile')?.addEventListener('click', () => {
