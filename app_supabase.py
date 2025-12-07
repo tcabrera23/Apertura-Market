@@ -225,6 +225,7 @@ class AssetData(BaseModel):
     sma_200: Optional[float] = None
     daily_change: Optional[float] = None  # Change in price from previous day
     daily_change_percent: Optional[float] = None  # Percentage change from previous day
+    dividends: Optional[float] = None
     revenue: Optional[float] = None
     revenue_growth: Optional[float] = None
     revenue_quarterly_growth: Optional[float] = None

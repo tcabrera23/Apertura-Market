@@ -699,7 +699,8 @@ async function loadCustomWatchlists() {
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="price">Precio <span class="sort-icon"></span></th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="daily_change">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="daily_change_percent">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="dividend_yield">Dividendos <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="sma_50">SMA 50 <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="sma_200">SMA 200 <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="pe">P/E <span class="sort-icon"></span></th>
@@ -1081,6 +1082,7 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price || 0);
     row.setAttribute('data-daily_change_percent', asset.daily_change_percent || 0);
+    row.setAttribute('data-dividend_yield', asset.dividend_yield || 0);
     row.setAttribute('data-sma_50', asset.sma_50 || 0);
     row.setAttribute('data-sma_200', asset.sma_200 || 0);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
@@ -1245,6 +1247,19 @@ function createTableRow(asset, isCrypto = false) {
     row.appendChild(dailyChangeCell);
 
     if (!isCrypto) {
+        // Dividendos (Dividend Yield)
+        const dividendCell = document.createElement('td');
+        dividendCell.className = 'px-4 py-3 text-sm';
+        dividendCell.setAttribute('data-column', 'dividend_yield');
+        if (asset.dividend_yield !== null && asset.dividend_yield !== undefined && asset.dividend_yield > 0) {
+            dividendCell.className += ' text-gray-700 dark:text-gray-300 font-medium';
+            dividendCell.textContent = `${(asset.dividend_yield * 100).toFixed(2)}%`;
+        } else {
+            dividendCell.className += ' text-gray-400';
+            dividendCell.textContent = '-';
+        }
+        row.appendChild(dividendCell);
+
         // SMA 50
         row.appendChild(createCell(asset.sma_50, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_50'));
 
