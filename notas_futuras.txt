@@ -5,11 +5,11 @@
 
 
 
+la siguiente version va necesitar integracion con brokers y compra automatica de activos
 
 
 ahh y tengo que dar mi numero de wsp en el plan pro
 faltar agregar las alertas via telegram o eliminarlo por ahora
-agrega en todos los html el google translate y dale un estilo mas tradicional al borde derecho. aseguremos una buena UX permitiendo un switch comodo entre ES y EN
 en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es una forma de publicitarlos. hola! puedo ponerte en mi web? estilo columnistas)
 
 
@@ -19,3 +19,12 @@ en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es un
 - mas metricas en crypto y activos - editar la tab de portafolio - media movil
 - revisar dividendos de activos
 - agregar la opcion de cerrar sesion 
+
+
+QUE SE DEJE DE RECARGAR LA PAGINA!!!!!!!!!!!!!!!!!!!!!
+
+Argentina: agregar (IRSA, PAMPA, TGN, TGS, CRESUD, BYMA, BBVA)
+
+General: 
+
+Portafolio: (SPY500, QQQ, GLD, DOW JONES, FXI, ALIBABA, MC DONALDS, NETFLIX, DESPEGAR, VISA, UBER, DISNEY, SPOTIFY, PFIZER, BANKOFAMERICA, AIRBNB, KO, PALANTIR, AMD, INTEL, BROADCOM, WALMART, UNH, JPM, BAYER, FORD )

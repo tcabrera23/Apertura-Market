@@ -337,7 +337,7 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         if len(hist) >= 2:
             previous_close = hist['Close'].iloc[-2]
             daily_change = float(current_price - previous_close)
-            daily_change_percent = float((daily_change / previous_close) * 100) if previous_close != 0 else None
+            daily_change_percent = float(daily_change / previous_close) if previous_close != 0 else None
         
         # MACD
         macd = None

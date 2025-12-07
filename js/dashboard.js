@@ -1230,13 +1230,13 @@ function createTableRow(asset, isCrypto = false) {
     dailyChangeCell.className = 'px-4 py-3 text-sm font-semibold';
     dailyChangeCell.setAttribute('data-column', 'daily_change_percent');
     if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
-        const dailyChange = asset.daily_change_percent * 100; // Convert to percentage
+        const dailyChange = asset.daily_change_percent; // Decimal form (0.05 = 5%)
         if (dailyChange >= 0) {
             dailyChangeCell.className += ' text-green-600 dark:text-green-400';
-            dailyChangeCell.innerHTML = `▲ ${dailyChange.toFixed(2)}%`;
+            dailyChangeCell.innerHTML = `▲ ${(dailyChange * 100).toFixed(2)}%`;
         } else {
             dailyChangeCell.className += ' text-red-600 dark:text-red-400';
-            dailyChangeCell.innerHTML = `▼ ${Math.abs(dailyChange).toFixed(2)}%`;
+            dailyChangeCell.innerHTML = `▼ ${(Math.abs(dailyChange) * 100).toFixed(2)}%`;
         }
     } else {
         dailyChangeCell.className += ' text-gray-400';

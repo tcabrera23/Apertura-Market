@@ -29,3 +29,13 @@ ver como resolver la pagina duplicada en api (eliminando todo del vps obvio)
 
 docs: 
 https://github.com/ranaroussi/yfinance/tree/main/yfinance
+
+
+ver como presentar la app al usuario, el breve tutorial interactivo estaria bueno! Sino la info en el eliminarlo
+falta anexar la calculadora al blog y terminar los articulos
+con todo eso ya terminado, puedo testear paypal y tener mi primer version LISTA
+
+no queda listo, el asistente de IA no debe estar disponible para los usuarios free. lo mas facil es eliminar el widget de la pagina y ya
+arreglar los articulos de tds
+
+
