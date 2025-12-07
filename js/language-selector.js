@@ -9,12 +9,25 @@ const LANGUAGES = [
 
 let languageSelectorInitialized = false;
 
-document.addEventListener('DOMContentLoaded', () => {
-    initLanguageSelector();
-});
+// Initialize immediately and also on DOMContentLoaded for safety
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLanguageSelector);
+} else {
+    // DOM is already ready
+    setTimeout(initLanguageSelector, 100);
+}
 
 function initLanguageSelector() {
     if (languageSelectorInitialized) return;
+    
+    // Wait for dark mode toggle to exist
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (!darkModeToggle) {
+        // Try again after a short delay
+        setTimeout(initLanguageSelector, 200);
+        return;
+    }
+    
     languageSelectorInitialized = true;
     
     // Find Google Translate element and hide it
@@ -42,27 +55,32 @@ function createLanguageSelector() {
     const container = document.createElement('div');
     container.id = 'languageSelectorContainer';
     container.className = 'relative';
+    
+    // Get saved language or default to 'es'
+    const savedLang = localStorage.getItem('selectedLanguage') || 'es';
+    const currentLang = LANGUAGES.find(l => l.code === savedLang) || LANGUAGES[0];
+    
     container.innerHTML = `
         <button id="languageSelectorBtn" 
-            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
+            class="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
             aria-expanded="false"
             aria-haspopup="true">
-            <span id="selectedLangFlag" class="text-base">🇪🇸</span>
-            <span id="selectedLangCode" class="uppercase font-semibold">ES</span>
-            <svg class="w-4 h-4 transition-transform duration-200" id="langDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span id="selectedLangFlag" class="text-base leading-none" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;">${currentLang.flag}</span>
+            <span id="selectedLangCode" class="uppercase font-semibold text-xs">${currentLang.code.toUpperCase()}</span>
+            <svg class="w-3 h-3 transition-transform duration-200 ml-0.5" id="langDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </button>
         <div id="languageDropdown" 
-            class="hidden absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 overflow-hidden"
+            class="hidden absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 overflow-hidden"
             role="menu">
             ${LANGUAGES.map(lang => `
                 <button type="button" 
-                    class="lang-option w-full flex items-center gap-3 px-4 py-2.5 text-left text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+                    class="lang-option w-full flex items-center gap-2.5 px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 transition-colors text-sm"
                     data-lang="${lang.code}"
                     data-google-code="${lang.googleCode}"
                     role="menuitem">
-                    <span class="text-lg">${lang.flag}</span>
+                    <span class="text-base leading-none" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;">${lang.flag}</span>
                     <span class="font-medium">${lang.name}</span>
                 </button>
             `).join('')}

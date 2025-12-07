@@ -75,11 +75,20 @@ async function createSubscription(planName, buttonElement = null) {
 
         const result = await response.json();
         
-        if (result.success && result.approval_url) {
-            // Redirigir a PayPal checkout
-            window.location.href = result.approval_url;
+        if (result.success) {
+            if (result.skip_paypal) {
+                // Cupón free_access - suscripción creada directamente sin PayPal
+                alert(`¡Éxito! ${result.message}`);
+                // Redirigir a account para ver la suscripción activa
+                window.location.href = 'account.html';
+            } else if (result.approval_url) {
+                // Redirigir a PayPal checkout
+                window.location.href = result.approval_url;
+            } else {
+                throw new Error('Respuesta inesperada del servidor');
+            }
         } else {
-            throw new Error('No se recibió approval_url de PayPal');
+            throw new Error('Error al procesar la suscripción');
         }
 
     } catch (error) {

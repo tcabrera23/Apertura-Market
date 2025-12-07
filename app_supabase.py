@@ -419,7 +419,7 @@ def decode_jwt(token: str) -> Dict[str, Any]:
         )
 
 async def ensure_user_persisted(user_id: str, email: str, auth_source: str, country: Optional[str] = None, date_of_birth: Optional[str] = None) -> Dict[str, Any]:
-    """Garantiza que el usuario existe en user_profiles"""
+    """Garantiza que el usuario existe en user_profiles y actualiza country/date_of_birth si se proporcionan"""
     try:
         # Verificar si el usuario ya existe (user_profiles usa 'id' como PK)
         response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
@@ -427,6 +427,27 @@ async def ensure_user_persisted(user_id: str, email: str, auth_source: str, coun
         if response.data and len(response.data) > 0:
             logger.info(f"Usuario {user_id} ya existe en {USER_TABLE_NAME}")
             user_data = response.data[0]
+            
+            # IMPORTANTE: Siempre actualizar country y date_of_birth si se proporcionan
+            # (el trigger crea el registro sin estos campos)
+            update_data = {}
+            if country and (not user_data.get("country") or user_data.get("country") == ""):
+                update_data["country"] = country
+            if date_of_birth and not user_data.get("date_of_birth"):
+                update_data["date_of_birth"] = date_of_birth
+            
+            if update_data:
+                logger.info(f"Actualizando campos adicionales para usuario existente {user_id}: {update_data}")
+                try:
+                    supabase.table(USER_TABLE_NAME).update(update_data).eq("id", user_id).execute()
+                    # Re-fetch para obtener datos actualizados
+                    response = supabase.table(USER_TABLE_NAME).select("*").eq("id", user_id).execute()
+                    if response.data and len(response.data) > 0:
+                        user_data = response.data[0]
+                        logger.info(f"Usuario {user_id} actualizado exitosamente con country/date_of_birth")
+                except Exception as update_error:
+                    logger.warning(f"Error actualizando usuario existente: {str(update_error)}")
+            
             # Agregar auth_source al response para compatibilidad
             user_data["auth_source"] = auth_source
             return user_data
@@ -3522,10 +3543,64 @@ async def create_subscription(
         
         user_email = user_profile.data.get("email") if user_profile.data else user.id
         
-        # 5. Crear suscripción en PayPal
-        # Nota: PayPal no soporta cupones directamente en suscripciones
-        # Para cupones de tipo "free_access" (como *PREMIUM*), manejaremos el período gratis en Supabase
-        # Para cupones de tipo "percentage", el descuento se aplicará manualmente después
+        # 5. Verificar si es un cupón de tipo "free_access" - en ese caso, NO usar PayPal
+        if coupon_data and coupon_data.get("coupon_type") == "free_access":
+            logger.info(f"Cupón de tipo free_access detectado. Creando suscripción directamente sin PayPal...")
+            
+            # Calcular período de suscripción basado en duration_months del cupón
+            now = datetime.now(timezone.utc)
+            duration_months = coupon_data.get("duration_months", 12)
+            period_end = now + timedelta(days=duration_months * 30)
+            
+            # Crear suscripción directamente en Supabase (sin PayPal)
+            subscription_record = {
+                "user_id": user.id,
+                "plan_id": plan["id"],
+                "status": "active",  # Activa inmediatamente
+                "paypal_subscription_id": None,  # Sin PayPal
+                "current_period_start": now.isoformat(),
+                "current_period_end": period_end.isoformat(),
+                "coupon_id": coupon_id,
+                "trial_start": now.isoformat(),
+                "trial_end": period_end.isoformat()
+            }
+            
+            supabase_response = supabase.table("subscriptions").insert(subscription_record).execute()
+            
+            if not supabase_response.data:
+                logger.error("No se pudo guardar la suscripción gratuita en Supabase")
+                raise HTTPException(status_code=500, detail="Error guardando suscripción en base de datos")
+            
+            subscription_db_id = supabase_response.data[0]["id"]
+            
+            # Registrar el uso del cupón
+            supabase.table("coupons") \
+                .update({"times_redeemed": coupon_data.get("times_redeemed", 0) + 1}) \
+                .eq("id", coupon_id) \
+                .execute()
+            
+            supabase.table("coupon_redemptions") \
+                .insert({
+                    "coupon_id": coupon_id,
+                    "user_id": user.id,
+                    "subscription_id": subscription_db_id
+                }) \
+                .execute()
+            
+            logger.info(f"✅ Suscripción gratuita creada exitosamente para usuario {user.id} con cupón {request.coupon_code}")
+            
+            # Retornar éxito sin approval_url (no hay PayPal)
+            return {
+                "success": True,
+                "subscription_id": subscription_db_id,
+                "skip_paypal": True,  # Indicador para el frontend
+                "message": f"¡Suscripción activada! Tu plan {request.plan_name.upper()} está activo por {duration_months} meses gracias al cupón.",
+                "plan_name": request.plan_name,
+                "duration_months": duration_months,
+                "period_end": period_end.isoformat()
+            }
+        
+        # 5b. Para otros tipos de cupón o sin cupón, continuar con PayPal
         access_token = get_paypal_access_token()
         
         headers = {
@@ -3577,18 +3652,12 @@ async def create_subscription(
         # 6. Guardar referencia en Supabase (status='pending_approval' hasta aprobación)
         # Calcular fechas por defecto (se actualizarán con webhook cuando se active)
         now = datetime.now(timezone.utc)
-        # Para cupones de tipo free_access, calcular período gratis
-        period_end = now
-        if coupon_data and coupon_data.get("coupon_type") == "free_access":
-            duration_months = coupon_data.get("duration_months", 12)
-            period_end = now + timedelta(days=duration_months * 30)
+        # Período normal según el plan (mensual o anual)
+        billing_interval = plan.get("billing_interval", "month")
+        if billing_interval == "year":
+            period_end = now + timedelta(days=365)
         else:
-            # Período normal según el plan (mensual o anual)
-            billing_interval = plan.get("billing_interval", "month")
-            if billing_interval == "year":
-                period_end = now + timedelta(days=365)
-            else:
-                period_end = now + timedelta(days=30)
+            period_end = now + timedelta(days=30)
         
         subscription_record = {
             "user_id": user.id,
@@ -3597,7 +3666,7 @@ async def create_subscription(
             "paypal_subscription_id": paypal_subscription_id,
             "current_period_start": now.isoformat(),  # Fecha actual como valor temporal
             "current_period_end": period_end.isoformat(),  # Se actualizará con webhook cuando se active
-            "coupon_id": coupon_id  # Guardar referencia al cupón
+            "coupon_id": coupon_id  # Guardar referencia al cupón si existe
         }
         
         supabase_response = supabase.table("subscriptions").insert(subscription_record).execute()
@@ -3608,8 +3677,8 @@ async def create_subscription(
         
         subscription_db_id = supabase_response.data[0]["id"]
         
-        # 7. Registrar el uso del cupón si se aplicó
-        if coupon_id:
+        # 7. Registrar el uso del cupón si se aplicó (para cupones no-free_access)
+        if coupon_id and coupon_data:
             # Incrementar times_redeemed
             supabase.table("coupons") \
                 .update({"times_redeemed": coupon_data.get("times_redeemed", 0) + 1}) \
