@@ -92,21 +92,40 @@ logs() {
 
 # Actualizar aplicación
 update() {
-    print_info "Actualizando aplicación..."
+    print_info "Actualizando aplicación desde GitHub..."
     
     # Si hay Git, hacer pull
     if [ -d ".git" ]; then
         print_info "Actualizando código desde Git..."
-        git pull origin main || git pull origin master
+        if ! git pull origin main 2>/dev/null && ! git pull origin master 2>/dev/null; then
+            print_warning "No se pudo hacer git pull. Verifica tu conexión y rama."
+            read -p "¿Continuar con la reconstrucción de todas formas? (y/n) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                print_info "Actualización cancelada."
+                exit 1
+            fi
+        else
+            print_info "✅ Código actualizado desde Git."
+        fi
+    else
+        print_warning "No se encontró repositorio Git. Solo se reconstruirá la imagen."
     fi
     
-    # Reconstruir y reiniciar
-    print_info "Reconstruyendo imagen..."
-    docker compose build
-    print_info "Reiniciando contenedores..."
+    # Reconstruir imagen con el nuevo código
+    print_info "Reconstruyendo imagen Docker (esto puede tardar unos minutos)..."
+    if ! docker compose build; then
+        print_error "Error al reconstruir la imagen."
+        exit 1
+    fi
+    
+    # Recrear contenedor con la nueva imagen
+    print_info "Recreando contenedor con la nueva imagen..."
     docker compose up -d
-    print_info "Actualización completada."
-    sleep 2
+    
+    print_info "✅ Actualización completada."
+    print_info "Esperando a que el contenedor inicie..."
+    sleep 5
     status
 }
 
@@ -160,12 +179,15 @@ show_help() {
     echo "  build      - Construir la imagen Docker"
     echo "  start      - Iniciar los contenedores"
     echo "  stop       - Detener los contenedores"
-    echo "  restart    - Reiniciar los contenedores"
+    echo "  restart    - Reiniciar los contenedores (sin actualizar código)"
     echo "  logs       - Ver logs en tiempo real"
-    echo "  update     - Actualizar código y reiniciar"
+    echo "  update     - Actualizar desde GitHub y reconstruir (RECOMENDADO)"
     echo "  status     - Ver estado de los contenedores"
     echo "  check      - Verificar sistema y configuración"
     echo "  help       - Mostrar esta ayuda"
+    echo ""
+    echo "Nota: 'restart' solo reinicia el contenedor. Para actualizar código"
+    echo "      desde GitHub, usa 'update' que reconstruye la imagen."
     echo ""
 }
 

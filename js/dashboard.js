@@ -667,7 +667,7 @@ async function loadCustomWatchlists() {
             tabContent.setAttribute('data-category', watchlistName);
             tabContent.setAttribute('data-watchlist-id', watchlistId);
 
-            tabContent.innerHTML = `
+                            tabContent.innerHTML = `
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold text-gray-900 dark:text-white">${watchlistName}</h2>
                     <div class="flex items-center gap-2">
@@ -699,6 +699,9 @@ async function loadCustomWatchlists() {
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="daily_change">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="sma_50">SMA 50 <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="sma_200">SMA 200 <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="pe">P/E <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="revenue">Revenue <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="revenue_growth">Rev. Growth <span class="sort-icon"></span></th>
@@ -1077,6 +1080,9 @@ function createTableRow(asset, isCrypto = false) {
     row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price || 0);
+    row.setAttribute('data-daily_change', asset.daily_change_percent || 0);
+    row.setAttribute('data-sma_50', asset.sma_50 || 0);
+    row.setAttribute('data-sma_200', asset.sma_200 || 0);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
     row.setAttribute('data-revenue', asset.revenue || 0);
     row.setAttribute('data-revenue_growth', asset.revenue_growth || 0);
@@ -1218,6 +1224,32 @@ function createTableRow(asset, isCrypto = false) {
 
     // Current price
     row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300', 'price'));
+
+    // Daily variation (for both stocks and crypto)
+    if (!isCrypto) {
+        const dailyChangeCell = document.createElement('td');
+        dailyChangeCell.className = 'px-4 py-3 font-semibold';
+        dailyChangeCell.setAttribute('data-column', 'daily_change');
+        if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
+            const dailyChange = asset.daily_change_percent;
+            if (dailyChange >= 0) {
+                dailyChangeCell.className += ' text-green-500 dark:text-green-400';
+                dailyChangeCell.innerHTML = `▲ ${dailyChange.toFixed(2)}%`;
+            } else {
+                dailyChangeCell.className += ' text-red-500 dark:text-red-400';
+                dailyChangeCell.innerHTML = `▼ ${Math.abs(dailyChange).toFixed(2)}%`;
+            }
+        } else {
+            dailyChangeCell.textContent = 'N/A';
+        }
+        row.appendChild(dailyChangeCell);
+
+        // SMA 50
+        row.appendChild(createCell(asset.sma_50, formatCurrency, null, 'sma_50'));
+
+        // SMA 200
+        row.appendChild(createCell(asset.sma_200, formatCurrency, null, 'sma_200'));
+    }
 
     if (isCrypto) {
         // Crypto columns: Market Cap, Volume, Max, Diff

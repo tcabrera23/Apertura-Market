@@ -344,15 +344,30 @@ docker compose down -v
 
 ### 8.2 Actualizar la aplicación
 
+**⚠️ IMPORTANTE:** No es suficiente solo reiniciar. Necesitas reconstruir la imagen.
+
+**Opción 1: Usando el script (Recomendado)**
+```bash
+cd /opt/bullanalytics
+./deploy.sh update
+```
+
+**Opción 2: Manualmente**
 ```bash
 cd /opt/bullanalytics
 
-# Si usas Git
+# 1. Actualizar código desde GitHub
 git pull origin main
 
-# Reconstruir y reiniciar
+# 2. Reconstruir imagen y recrear contenedor
 docker compose up -d --build
 ```
+
+**¿Por qué `--build`?**
+- `docker compose restart` solo reinicia el contenedor (no carga nuevo código)
+- `docker compose up -d --build` reconstruye la imagen con el nuevo código y recrea el contenedor
+
+**Ver guía completa de actualizaciones:** `docs/DOCKER_UPDATE_GUIDE.md`
 
 ---
 

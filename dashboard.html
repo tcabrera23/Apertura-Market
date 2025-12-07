@@ -4,9 +4,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Dashboard de BullAnalytics - Monitor de Activos Financieros">
-    <title>Dashboard - BullAnalytics</title>
-
+    
+    <!-- Primary Meta Tags -->
+    <title>Dashboard - Monitor de Activos Financieros | BullAnalytics</title>
+    <meta name="title" content="Dashboard - Monitor de Activos Financieros | BullAnalytics">
+    <meta name="description" content="Dashboard completo de BullAnalytics. Monitorea tus activos financieros en tiempo real, analiza métricas clave, visualiza gráficos interactivos y gestiona tu portafolio de inversión con herramientas profesionales.">
+    <meta name="keywords" content="dashboard financiero, monitor de activos, análisis de inversiones, portafolio, métricas financieras, gráficos de mercado, seguimiento de acciones, dashboard trading">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="apple-touch-icon" href="images/logo.png">
+    <link rel="shortcut icon" href="images/logo.png">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bullanalytics.io/dashboard.html">
+    <meta property="og:title" content="Dashboard - Monitor de Activos Financieros | BullAnalytics">
+    <meta property="og:description" content="Monitorea tus activos financieros en tiempo real con el dashboard profesional de BullAnalytics.">
+    <meta property="og:image" content="https://bullanalytics.io/images/logo.png">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://bullanalytics.io/dashboard.html">
+    <meta name="twitter:title" content="Dashboard - Monitor de Activos Financieros | BullAnalytics">
+    <meta name="twitter:description" content="Monitorea tus activos financieros en tiempo real con el dashboard profesional de BullAnalytics.">
+    <meta name="twitter:image" content="https://bullanalytics.io/images/logo.png">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://bullanalytics.io/dashboard.html">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -201,6 +228,12 @@
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="price">Precio <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="daily_change">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_50">SMA 50 <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_200">SMA 200 <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="pe">P/E <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="revenue">Revenue <span class="sort-icon"></span></th>
@@ -267,6 +300,12 @@
                                         data-sort="name">Activo <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="daily_change">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_50">SMA 50 <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_200">SMA 200 <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="pe">P/E <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
@@ -383,6 +422,12 @@
                                         data-sort="name">Activo <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="price">Precio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="daily_change">Var. Diaria <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_50">SMA 50 <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
+                                        data-sort="sma_200">SMA 200 <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
                                         data-sort="pe">P/E <span class="sort-icon"></span></th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable"
@@ -689,9 +734,12 @@
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
     <script src="js/google-translate.js"></script>
+    <script src="js/mobile-nav.js"></script>
+    <script src="js/dollar-rates.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/table-config.js"></script>
     <script src="js/charts.js"></script>
+    <script src="js/fullscreen-charts.js"></script>
     <script src="js/investment-chat.js"></script>
     <script type="text/javascript">
         function googleTranslateElementInit() {

@@ -1,0 +1,21 @@
+
+
+
+
+
+
+
+
+
+ahh y tengo que dar mi numero de wsp en el plan pro
+faltar agregar las alertas via telegram o eliminarlo por ahora
+agrega en todos los html el google translate y dale un estilo mas tradicional al borde derecho. aseguremos una buena UX permitiendo un switch comodo entre ES y EN
+en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es una forma de publicitarlos. hola! puedo ponerte en mi web? estilo columnistas)
+
+
+@dashboard.html
+- analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
+- creo que el debt vs equity hay que dividirlo por 100
+- mas metricas en crypto y activos - editar la tab de portafolio - media movil
+- revisar dividendos de activos
+- agregar la opcion de cerrar sesion 

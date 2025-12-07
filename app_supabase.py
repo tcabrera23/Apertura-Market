@@ -223,6 +223,8 @@ class AssetData(BaseModel):
     macd: Optional[float] = None
     sma_50: Optional[float] = None
     sma_200: Optional[float] = None
+    daily_change: Optional[float] = None  # Change in price from previous day
+    daily_change_percent: Optional[float] = None  # Percentage change from previous day
     revenue: Optional[float] = None
     revenue_growth: Optional[float] = None
     revenue_quarterly_growth: Optional[float] = None
@@ -329,6 +331,14 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         sma_50 = float(hist['Close'].tail(50).mean()) if len(hist) >= 50 else None
         sma_200 = float(hist['Close'].tail(200).mean()) if len(hist) >= 200 else None
         
+        # Daily change (today vs yesterday)
+        daily_change = None
+        daily_change_percent = None
+        if len(hist) >= 2:
+            previous_close = hist['Close'].iloc[-2]
+            daily_change = float(current_price - previous_close)
+            daily_change_percent = float((daily_change / previous_close) * 100) if previous_close != 0 else None
+        
         # MACD
         macd = None
         if len(hist) >= 26:
@@ -359,6 +369,8 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
             macd=macd,
             sma_50=sma_50,
             sma_200=sma_200,
+            daily_change=daily_change,
+            daily_change_percent=daily_change_percent,
             revenue=float(revenue) if revenue else None,
             revenue_growth=float(revenue_growth) if revenue_growth else None,
             profit_margin=float(info.get('profitMargins')) if info.get('profitMargins') else None,
@@ -2908,6 +2920,18 @@ async def reset_password_page():
 @app.get("/blog.html")
 async def blog():
     return FileResponse("blog.html")
+
+@app.get("/calculadora.html")
+async def calculadora():
+    return FileResponse("calculadora.html")
+
+@app.get("/robots.txt")
+async def robots_txt():
+    return FileResponse("robots.txt", media_type="text/plain")
+
+@app.get("/sitemap.xml")
+async def sitemap_xml():
+    return FileResponse("sitemap.xml", media_type="application/xml")
 
 @app.get("/docs/LEGAL.md")
 async def serve_legal_md():

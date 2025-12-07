@@ -1,0 +1,14 @@
+# robots.txt for BullAnalytics
+# https://bullanalytics.io/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /account.html
+Disallow: /login.html
+Disallow: /forgot-password.html
+Disallow: /reset-password.html
+Disallow: /subscription-success.html
+
+# Sitemap location
+Sitemap: https://bullanalytics.io/sitemap.xml
+
