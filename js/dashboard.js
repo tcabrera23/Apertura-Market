@@ -1082,6 +1082,7 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price || 0);
     row.setAttribute('data-daily_change_percent', asset.daily_change_percent || 0);
+    row.setAttribute('data-daily_change', asset.daily_change || 0);
     row.setAttribute('data-dividend_yield', asset.dividend_yield || 0);
     row.setAttribute('data-sma_50', asset.sma_50 || 0);
     row.setAttribute('data-sma_200', asset.sma_200 || 0);
@@ -1096,6 +1097,8 @@ function createTableRow(asset, isCrypto = false) {
     row.setAttribute('data-volume', asset.volume || 0);
     row.setAttribute('data-rsi', asset.rsi || 0);
     row.setAttribute('data-diff', asset.diff_from_max || 0);
+    row.setAttribute('data-market_cap', asset.market_cap || 0);
+    row.setAttribute('data-max', asset.all_time_high || 0);
 
     // Helper function to create a cell
     const createCell = (value, formatter = null, colorClass = null, columnKey = null) => {
@@ -1227,65 +1230,45 @@ function createTableRow(asset, isCrypto = false) {
     // Current price
     row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300', 'price'));
 
-    // Daily variation (for both stocks and crypto)
-    const dailyChangeCell = document.createElement('td');
-    dailyChangeCell.className = 'px-4 py-3 text-sm font-semibold';
-    dailyChangeCell.setAttribute('data-column', 'daily_change_percent');
-    if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
-        const dailyChange = asset.daily_change_percent; // Decimal form (0.05 = 5%)
-        if (dailyChange >= 0) {
-            dailyChangeCell.className += ' text-green-600 dark:text-green-400';
-            dailyChangeCell.innerHTML = `▲ ${(dailyChange * 100).toFixed(2)}%`;
-        } else {
-            dailyChangeCell.className += ' text-red-600 dark:text-red-400';
-            dailyChangeCell.innerHTML = `▼ ${(Math.abs(dailyChange) * 100).toFixed(2)}%`;
-        }
-    } else {
-        dailyChangeCell.className += ' text-gray-400';
-        dailyChangeCell.textContent = 'N/A';
-    }
-    row.appendChild(dailyChangeCell);
-
-    if (!isCrypto) {
-        // Dividendos (Dividend Yield)
-        const dividendCell = document.createElement('td');
-        dividendCell.className = 'px-4 py-3 text-sm';
-        dividendCell.setAttribute('data-column', 'dividend_yield');
-        if (asset.dividend_yield !== null && asset.dividend_yield !== undefined && asset.dividend_yield > 0) {
-            dividendCell.className += ' text-gray-700 dark:text-gray-300 font-medium';
-            dividendCell.textContent = `${(asset.dividend_yield * 100).toFixed(2)}%`;
-        } else {
-            dividendCell.className += ' text-gray-400';
-            dividendCell.textContent = '-';
-        }
-        row.appendChild(dividendCell);
-
-        // SMA 50
-        row.appendChild(createCell(asset.sma_50, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_50'));
-
-        // SMA 200
-        row.appendChild(createCell(asset.sma_200, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_200'));
-    }
-
     if (isCrypto) {
-        // Crypto columns: Market Cap, Volume, Max, Diff
+        // Crypto columns: Market Cap, Volume, Max, Diff, Daily Change %
         row.appendChild(createCell(asset.market_cap, formatLargeNumber, null, 'market_cap'));
         row.appendChild(createCell(asset.volume, formatNumber, null, 'volume'));
         row.appendChild(createCell(asset.all_time_high, formatCurrency, null, 'max'));
 
-        const diffCell = document.createElement('td');
-        diffCell.className = 'px-4 py-3 font-semibold';
-        diffCell.setAttribute('data-column', 'diff');
+        // Difference from max for crypto
+        const diffCellCrypto = document.createElement('td');
+        diffCellCrypto.className = 'px-4 py-3 font-semibold';
+        diffCellCrypto.setAttribute('data-column', 'diff');
         if (asset.diff_from_max >= -0.001) {
-            diffCell.className += ' text-green-500 dark:text-green-400';
-            diffCell.innerHTML = '✅ En Máx';
+            diffCellCrypto.className += ' text-green-500 dark:text-green-400';
+            diffCellCrypto.innerHTML = '✅ En Máx';
         } else {
-            diffCell.className += ' text-red-500 dark:text-red-400';
-            diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
+            diffCellCrypto.className += ' text-red-500 dark:text-red-400';
+            diffCellCrypto.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
         }
-        row.appendChild(diffCell);
+        row.appendChild(diffCellCrypto);
+
+        // Daily variation % for crypto
+        const dailyChangeCellCrypto = document.createElement('td');
+        dailyChangeCellCrypto.className = 'px-4 py-3 text-sm font-semibold';
+        dailyChangeCellCrypto.setAttribute('data-column', 'daily_change_percent');
+        if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
+            const dailyChange = asset.daily_change_percent;
+            if (dailyChange >= 0) {
+                dailyChangeCellCrypto.className += ' text-green-600 dark:text-green-400';
+                dailyChangeCellCrypto.innerHTML = `▲ ${(dailyChange * 100).toFixed(2)}%`;
+            } else {
+                dailyChangeCellCrypto.className += ' text-red-600 dark:text-red-400';
+                dailyChangeCellCrypto.innerHTML = `▼ ${(Math.abs(dailyChange) * 100).toFixed(2)}%`;
+            }
+        } else {
+            dailyChangeCellCrypto.className += ' text-gray-400';
+            dailyChangeCellCrypto.textContent = 'N/A';
+        }
+        row.appendChild(dailyChangeCellCrypto);
     } else {
-        // Stock columns: P/E, Revenue, Revenue Growth, Profit Margin, ROE, Debt/Equity, P/B, Beta, Volume, RSI
+        // Stock columns: P/E, Revenue, Revenue Growth, Profit Margin, ROE, Debt/Equity, P/B, Beta, Volume, RSI, Diff
         row.appendChild(createCell(asset.pe_ratio, (v) => v.toFixed(2), null, 'pe'));
         row.appendChild(createCell(asset.revenue, formatLargeNumber, null, 'revenue'));
 
@@ -1359,6 +1342,63 @@ function createTableRow(asset, isCrypto = false) {
             diffCell.innerHTML = `📉 ${formatPercentage(asset.diff_from_max)}`;
         }
         row.appendChild(diffCell);
+
+        // Daily variation % (percentage)
+        const dailyChangePercentCell = document.createElement('td');
+        dailyChangePercentCell.className = 'px-4 py-3 text-sm font-semibold';
+        dailyChangePercentCell.setAttribute('data-column', 'daily_change_percent');
+        if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
+            const dailyChangePercent = asset.daily_change_percent;
+            if (dailyChangePercent >= 0) {
+                dailyChangePercentCell.className += ' text-green-600 dark:text-green-400';
+                dailyChangePercentCell.innerHTML = `▲ ${(dailyChangePercent * 100).toFixed(2)}%`;
+            } else {
+                dailyChangePercentCell.className += ' text-red-600 dark:text-red-400';
+                dailyChangePercentCell.innerHTML = `▼ ${(Math.abs(dailyChangePercent) * 100).toFixed(2)}%`;
+            }
+        } else {
+            dailyChangePercentCell.className += ' text-gray-400';
+            dailyChangePercentCell.textContent = 'N/A';
+        }
+        row.appendChild(dailyChangePercentCell);
+
+        // Daily variation $ (absolute value)
+        const dailyChangeAbsCell = document.createElement('td');
+        dailyChangeAbsCell.className = 'px-4 py-3 text-sm font-semibold';
+        dailyChangeAbsCell.setAttribute('data-column', 'daily_change');
+        if (asset.daily_change !== null && asset.daily_change !== undefined) {
+            const dailyChangeAbs = asset.daily_change;
+            if (dailyChangeAbs >= 0) {
+                dailyChangeAbsCell.className += ' text-green-600 dark:text-green-400';
+                dailyChangeAbsCell.innerHTML = `▲ $${dailyChangeAbs.toFixed(2)}`;
+            } else {
+                dailyChangeAbsCell.className += ' text-red-600 dark:text-red-400';
+                dailyChangeAbsCell.innerHTML = `▼ $${Math.abs(dailyChangeAbs).toFixed(2)}`;
+            }
+        } else {
+            dailyChangeAbsCell.className += ' text-gray-400';
+            dailyChangeAbsCell.textContent = 'N/A';
+        }
+        row.appendChild(dailyChangeAbsCell);
+
+        // Dividendos (Dividend Yield)
+        const dividendCell = document.createElement('td');
+        dividendCell.className = 'px-4 py-3 text-sm';
+        dividendCell.setAttribute('data-column', 'dividend_yield');
+        if (asset.dividend_yield !== null && asset.dividend_yield !== undefined && asset.dividend_yield > 0) {
+            dividendCell.className += ' text-gray-700 dark:text-gray-300 font-medium';
+            dividendCell.textContent = `${(asset.dividend_yield * 100).toFixed(2)}%`;
+        } else {
+            dividendCell.className += ' text-gray-400';
+            dividendCell.textContent = '-';
+        }
+        row.appendChild(dividendCell);
+
+        // SMA 50
+        row.appendChild(createCell(asset.sma_50, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_50'));
+
+        // SMA 200
+        row.appendChild(createCell(asset.sma_200, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_200'));
     }
 
     return row;

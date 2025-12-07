@@ -20,7 +20,12 @@ const COLUMN_DEFINITIONS = {
         { key: 'beta', label: 'Beta' },
         { key: 'volume', label: 'Volumen' },
         { key: 'rsi', label: 'RSI' },
-        { key: 'diff', label: 'Diferencia vs. Máx' }
+        { key: 'diff', label: 'Diferencia vs. Máx' },
+        { key: 'daily_change_percent', label: 'Var. Diaria %' },
+        { key: 'daily_change', label: 'Var. Diaria $' },
+        { key: 'dividend_yield', label: 'Dividendos' },
+        { key: 'sma_50', label: 'SMA 50' },
+        { key: 'sma_200', label: 'SMA 200' }
     ],
     portfolio: [
         { key: 'name', label: 'Activo' },
@@ -35,7 +40,12 @@ const COLUMN_DEFINITIONS = {
         { key: 'beta', label: 'Beta' },
         { key: 'volume', label: 'Volumen' },
         { key: 'rsi', label: 'RSI' },
-        { key: 'diff', label: 'Diferencia vs. Máx' }
+        { key: 'diff', label: 'Diferencia vs. Máx' },
+        { key: 'daily_change_percent', label: 'Var. Diaria %' },
+        { key: 'daily_change', label: 'Var. Diaria $' },
+        { key: 'dividend_yield', label: 'Dividendos' },
+        { key: 'sma_50', label: 'SMA 50' },
+        { key: 'sma_200', label: 'SMA 200' }
     ],
     argentina: [
         { key: 'name', label: 'Activo' },
@@ -50,7 +60,12 @@ const COLUMN_DEFINITIONS = {
         { key: 'beta', label: 'Beta' },
         { key: 'volume', label: 'Volumen' },
         { key: 'rsi', label: 'RSI' },
-        { key: 'diff', label: 'Diferencia vs. Máx' }
+        { key: 'diff', label: 'Diferencia vs. Máx' },
+        { key: 'daily_change_percent', label: 'Var. Diaria %' },
+        { key: 'daily_change', label: 'Var. Diaria $' },
+        { key: 'dividend_yield', label: 'Dividendos' },
+        { key: 'sma_50', label: 'SMA 50' },
+        { key: 'sma_200', label: 'SMA 200' }
     ],
     crypto: [
         { key: 'name', label: 'Activo' },
@@ -58,7 +73,8 @@ const COLUMN_DEFINITIONS = {
         { key: 'market_cap', label: 'Market Cap' },
         { key: 'volume', label: 'Volumen' },
         { key: 'max', label: 'Máximo Histórico' },
-        { key: 'diff', label: 'Diferencia vs. Máx' }
+        { key: 'diff', label: 'Diferencia vs. Máx' },
+        { key: 'daily_change_percent', label: 'Var. Diaria %' }
     ]
 };
 
