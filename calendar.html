@@ -193,10 +193,25 @@
         </div>
     </footer>
 
+    <!-- Google Translate -->
+    <div id="google_translate_element" style="position: fixed; top: 80px; right: 20px; z-index: 1000; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+    
     <!-- Scripts -->
     <script src="js/dark-mode.js"></script>
     <script src="js/mobile-nav.js"></script>
+    <script src="js/google-translate.js"></script>
     <script src="js/calendar.js"></script>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'es',
+                includedLanguages: 'es,en,pt,fr,de,it',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 
 </html>

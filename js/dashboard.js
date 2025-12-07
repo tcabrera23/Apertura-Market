@@ -1080,7 +1080,7 @@ function createTableRow(asset, isCrypto = false) {
     row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
     row.setAttribute('data-name', asset.name);
     row.setAttribute('data-price', asset.price || 0);
-    row.setAttribute('data-daily_change', asset.daily_change_percent || 0);
+    row.setAttribute('data-daily_change_percent', asset.daily_change_percent || 0);
     row.setAttribute('data-sma_50', asset.sma_50 || 0);
     row.setAttribute('data-sma_200', asset.sma_200 || 0);
     row.setAttribute('data-pe', asset.pe_ratio || 0);
@@ -1226,29 +1226,30 @@ function createTableRow(asset, isCrypto = false) {
     row.appendChild(createCell(asset.price, formatCurrency, 'font-semibold text-gray-700 dark:text-gray-300', 'price'));
 
     // Daily variation (for both stocks and crypto)
-    if (!isCrypto) {
-        const dailyChangeCell = document.createElement('td');
-        dailyChangeCell.className = 'px-4 py-3 font-semibold';
-        dailyChangeCell.setAttribute('data-column', 'daily_change');
-        if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
-            const dailyChange = asset.daily_change_percent;
-            if (dailyChange >= 0) {
-                dailyChangeCell.className += ' text-green-500 dark:text-green-400';
-                dailyChangeCell.innerHTML = `▲ ${dailyChange.toFixed(2)}%`;
-            } else {
-                dailyChangeCell.className += ' text-red-500 dark:text-red-400';
-                dailyChangeCell.innerHTML = `▼ ${Math.abs(dailyChange).toFixed(2)}%`;
-            }
+    const dailyChangeCell = document.createElement('td');
+    dailyChangeCell.className = 'px-4 py-3 text-sm font-semibold';
+    dailyChangeCell.setAttribute('data-column', 'daily_change_percent');
+    if (asset.daily_change_percent !== null && asset.daily_change_percent !== undefined) {
+        const dailyChange = asset.daily_change_percent * 100; // Convert to percentage
+        if (dailyChange >= 0) {
+            dailyChangeCell.className += ' text-green-600 dark:text-green-400';
+            dailyChangeCell.innerHTML = `▲ ${dailyChange.toFixed(2)}%`;
         } else {
-            dailyChangeCell.textContent = 'N/A';
+            dailyChangeCell.className += ' text-red-600 dark:text-red-400';
+            dailyChangeCell.innerHTML = `▼ ${Math.abs(dailyChange).toFixed(2)}%`;
         }
-        row.appendChild(dailyChangeCell);
+    } else {
+        dailyChangeCell.className += ' text-gray-400';
+        dailyChangeCell.textContent = 'N/A';
+    }
+    row.appendChild(dailyChangeCell);
 
+    if (!isCrypto) {
         // SMA 50
-        row.appendChild(createCell(asset.sma_50, formatCurrency, null, 'sma_50'));
+        row.appendChild(createCell(asset.sma_50, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_50'));
 
         // SMA 200
-        row.appendChild(createCell(asset.sma_200, formatCurrency, null, 'sma_200'));
+        row.appendChild(createCell(asset.sma_200, (v) => v ? `$${v.toFixed(2)}` : 'N/A', null, 'sma_200'));
     }
 
     if (isCrypto) {

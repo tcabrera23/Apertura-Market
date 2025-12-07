@@ -8,7 +8,7 @@ Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye 
 que medidas de seguridad implementar? captcha?
 luego de publicar la app:
 - agregar soporte por telegram
-- revisar politica y tds
+
 
 CAMBIOS V2: 
 - En la version mobile de toda la web, falta agregar los headers a los otros html y ademas la opcion de fullscreen para cada grafico de dashboard.html
@@ -21,6 +21,11 @@ CAMBIOS V2:
 
 commit -m "V1.1 con mobile headers, nuevas metricas, dolararg y calculadora"
 
+opcion de cerrar sesion
+faltan los google translate
+- revisar politica y tds
+el div de usd ars va abajo en el header de monitor
+ver como resolver la pagina duplicada en api (eliminando todo del vps obvio)
 
 docs: 
 https://github.com/ranaroussi/yfinance/tree/main/yfinance
