@@ -44,17 +44,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             
             const subscription = await response.json();
-            const planName = subscription?.plan_name || 'free';
+            const planName = subscription?.plan_name;
             
             // Only show chat for paid plans (plus or pro)
-            if (planName === 'free') {
-                if (chatWidget) chatWidget.style.display = 'none';
-                return false;
+            // Check if user HAS plus or pro plan
+            if (planName === 'plus' || planName === 'pro') {
+                // User has paid plan, show chat
+                if (chatWidget) chatWidget.style.display = 'block';
+                return true;
             }
             
-            // User has paid plan, show chat
-            if (chatWidget) chatWidget.style.display = 'block';
-            return true;
+            // Hide chat for any other plan (free, gratis, gratuito, null, etc.)
+            if (chatWidget) chatWidget.style.display = 'none';
+            return false;
         } catch (error) {
             console.error('Error checking user plan:', error);
             // On error, hide chat as precaution
