@@ -1,22 +1,14 @@
 
 - Para toda la web, agrega gradientes entre el verde y el blanco/negro segun modo o tema
 agregar algun background de stock market? 
-Podria meterle algo de filtro por mercado o dividendos que es lo que no incluye la pagina
-
-dividir por 100 los valores de diviendos y debt equity
 
 que medidas de seguridad implementar? captcha?
 luego de publicar la app:
 - agregar soporte por telegram
 
-
 el div de usd ars va abajo en el header de monitor
 ver como resolver la pagina duplicada en api (eliminando todo del vps obvio)
-
-
-
 ver como presentar la app al usuario, el breve tutorial interactivo estaria bueno! Sino la info en el eliminarlo
-
 no queda listo, el asistente de IA no debe estar disponible para los usuarios free. lo mas facil es eliminar el widget de la pagina y ya
 
 

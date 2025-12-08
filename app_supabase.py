@@ -27,6 +27,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from sib_api_v3_sdk import ApiClient, Configuration, TransactionalEmailsApi
 from sib_api_v3_sdk.rest import ApiException
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from email_templates import (
     get_onboarding_email_template,
     get_alert_email_template,
@@ -132,16 +133,13 @@ ARGENTINA_ASSETS = {
     "SUPV": "Supervielle",
     "TEO": "Telecom Argentina",
     "LOMA": "Loma Negra",
-    "IRSA.BA": "IRSA Inversiones y Representaciones",
-    "TGN.BA": "Transportadora de Gas del Norte",
-    "TGS.BA": "Transportadora de Gas del Sur",
-    "CRESY": "Cresud (ADR)",
+    "CRESY": "Cresud",
     "BBAR": "BBVA Argentina"
+    # Note: IRS, TGN, TGS removed - tickers not found or delisted in Yahoo Finance
 }
 
 PORTFOLIO_ASSETS = {
     "PFE": "Pfizer",
-    "VIST": "Vista&Gas",
     "AMD": "AMD",
     "BABA": "Alibaba",
     "SPY": "SPDR S&P 500 ETF",
@@ -151,7 +149,6 @@ PORTFOLIO_ASSETS = {
     "FXI": "iShares China Large-Cap ETF",
     "MCD": "McDonald's",
     "NFLX": "Netflix",
-    "DESP": "Despegar.com",
     "V": "Visa",
     "UBER": "Uber Technologies",
     "DIS": "Walt Disney",
@@ -310,10 +307,33 @@ class CouponValidate(BaseModel):
 # HELPER FUNCTIONS
 # ============================================
 
+# Thread pool for timeout operations
+executor = ThreadPoolExecutor(max_workers=10)
+
+def fetch_with_timeout(func, timeout=10):
+    """Execute a function with timeout using thread pool"""
+    try:
+        future = executor.submit(func)
+        return future.result(timeout=timeout)
+    except FuturesTimeoutError:
+        logger.warning(f"Timeout exceeded for operation")
+        return None
+    except Exception as e:
+        logger.error(f"Error in timeout wrapper: {e}")
+        return None
+
+def _fetch_ticker_data(ticker: str):
+    """Internal function to fetch ticker data with timeout"""
+    stock = yf.Ticker(ticker)
+    info = stock.info
+    hist = stock.history(period="max")
+    hist_1y = stock.history(period="1y")
+    return stock, info, hist, hist_1y
+
 def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
     """
     Fetch asset data from Yahoo Finance with caching.
-    Improved error handling to prevent worker crashes.
+    Improved error handling with timeout to prevent worker crashes.
     """
     cache_window = int(datetime.now().timestamp() // 120)
     cache_key = f"{ticker}_{cache_window}"
@@ -322,47 +342,32 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         return cache[cache_key]
     
     try:
-        stock = yf.Ticker(ticker)
+        # Fetch data with 15 second timeout
+        result = fetch_with_timeout(lambda: _fetch_ticker_data(ticker), timeout=15)
         
-        # Try to get info with timeout protection
-        try:
-            info = stock.info
-            # Check if ticker is valid (info should have basic data)
-            if not info or len(info) == 0:
-                logger.warning(f"Ticker {ticker} returned empty info, possibly delisted")
-                return None
-        except Exception as info_error:
-            error_msg = str(info_error).lower()
-            if "404" in error_msg or "not found" in error_msg or "delisted" in error_msg or "timezone" in error_msg:
-                logger.warning(f"Ticker {ticker} not found or delisted: {info_error}")
-                return None
-            # Re-raise if it's a different error
-            raise
+        if result is None:
+            logger.warning(f"Timeout or error fetching data for {ticker}")
+            return None
         
-        # Try to get history with error handling
-        try:
-            hist = stock.history(period="max")
-        except Exception as hist_error:
-            error_msg = str(hist_error).lower()
-            if "404" in error_msg or "not found" in error_msg or "delisted" in error_msg:
-                logger.warning(f"Ticker {ticker} has no history data: {hist_error}")
-                return None
-            raise
+        stock, info, hist, hist_1y = result
         
-        logo_url = None
-        if 'logo_url' in info and info.get('logo_url'):
-            logo_url = info.get('logo_url')
+        # Validate data
+        if not info or len(info) == 0:
+            logger.warning(f"Ticker {ticker} returned empty info, possibly delisted")
+            return None
         
         if hist.empty:
             logger.warning(f"Ticker {ticker} has empty history")
             return None
+        
+        logo_url = info.get('logo_url') if 'logo_url' in info else None
         
         all_time_high = hist['High'].max()
         current_price = hist['Close'].iloc[-1]
         diff_from_max = (current_price - all_time_high) / all_time_high
         pe_ratio = info.get('trailingPE')
         
-        hist_1y = stock.history(period="1y")
+        # hist_1y already fetched in _fetch_ticker_data
         year_high = float(hist_1y['High'].max()) if not hist_1y.empty else None
         year_low = float(hist_1y['Low'].min()) if not hist_1y.empty else None
         

@@ -1300,7 +1300,7 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(roeCell);
 
         // Debt/Equity
-        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2) / 100, null, 'debt_to_equity'));
+        row.appendChild(createCell(asset.debt_to_equity, (v) => (v/100).toFixed(2), null, 'debt_to_equity'));
 
         // P/B
         row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2), null, 'price_to_book'));
@@ -1387,7 +1387,7 @@ function createTableRow(asset, isCrypto = false) {
         dividendCell.setAttribute('data-column', 'dividend_yield');
         if (asset.dividend_yield !== null && asset.dividend_yield !== undefined && asset.dividend_yield > 0) {
             dividendCell.className += ' text-gray-700 dark:text-gray-300 font-medium';
-            dividendCell.textContent = `${(asset.dividend_yield * 100).toFixed(2)}%`;
+            dividendCell.textContent = `${(asset.dividend_yield).toFixed(2)}%`;
         } else {
             dividendCell.className += ' text-gray-400';
             dividendCell.textContent = '-';
