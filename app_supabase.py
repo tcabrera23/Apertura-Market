@@ -131,14 +131,44 @@ ARGENTINA_ASSETS = {
     "BMA": "Banco Macro",
     "SUPV": "Supervielle",
     "TEO": "Telecom Argentina",
-    "LOMA": "Loma Negra"
+    "LOMA": "Loma Negra",
+    "IRSA": "IRSA Inversiones y Representaciones",
+    "PAMPA": "Pampa Energia",
+    "TGN": "Transportadora de Gas del Norte",
+    "TGS": "Transportadora de Gas del Sur",
+    "CRESUD": "Cresud",
+    "BYMA": "Bolsa y Mercados Argentinos",
+    "BBAR": "BBVA Argentina"
 }
 
 PORTFOLIO_ASSETS = {
     "PFE": "Pfizer",
     "VIST": "Vista&Gas",
     "AMD": "AMD",
-    "BABA": "Alibaba"
+    "BABA": "Alibaba",
+    "SPY": "SPDR S&P 500 ETF",
+    "QQQ": "Invesco QQQ Trust",
+    "GLD": "SPDR Gold Trust",
+    "DIA": "SPDR Dow Jones Industrial Average ETF",
+    "FXI": "iShares China Large-Cap ETF",
+    "MCD": "McDonald's",
+    "NFLX": "Netflix",
+    "DESP": "Despegar.com",
+    "V": "Visa",
+    "UBER": "Uber Technologies",
+    "DIS": "Walt Disney",
+    "SPOT": "Spotify Technology",
+    "BAC": "Bank of America",
+    "ABNB": "Airbnb",
+    "KO": "Coca-Cola",
+    "PLTR": "Palantir Technologies",
+    "INTC": "Intel",
+    "AVGO": "Broadcom",
+    "WMT": "Walmart",
+    "UNH": "UnitedHealth Group",
+    "JPM": "JPMorgan Chase",
+    "BAYRY": "Bayer",
+    "F": "Ford Motor"
 }
 
 # ============================================

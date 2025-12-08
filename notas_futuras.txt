@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 la siguiente version va necesitar integracion con brokers y compra automatica de activos
 
 
@@ -14,11 +7,7 @@ en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es un
 
 
 @dashboard.html
-- analizar como el bullagent puede tener contexto de nuestra plataforma e interactuar con nuestros datos. quizas el mismo se puede encargar de generar las instrucciones para el grafico!!!!
 - creo que el debt vs equity hay que dividirlo por 100
-- mas metricas en crypto y activos - editar la tab de portafolio - media movil
-- revisar dividendos de activos
-- agregar la opcion de cerrar sesion 
 
 
 QUE SE DEJE DE RECARGAR LA PAGINA!!!!!!!!!!!!!!!!!!!!!
@@ -27,4 +16,4 @@ Argentina: agregar (IRSA, PAMPA, TGN, TGS, CRESUD, BYMA, BBVA)
 
 General: 
 
-Portafolio: (SPY500, QQQ, GLD, DOW JONES, FXI, ALIBABA, MC DONALDS, NETFLIX, DESPEGAR, VISA, UBER, DISNEY, SPOTIFY, PFIZER, BANKOFAMERICA, AIRBNB, KO, PALANTIR, AMD, INTEL, BROADCOM, WALMART, UNH, JPM, BAYER, FORD )
+Portafolio: (SPY500, QQQ, GLD, DOW JONES, FXI, ALIBABA, MC DONALDS, NETFLIX, DESPEGAR, VISA, UBER, DISNEY, SPOTIFY, PFIZER, BANKOFAMERICA, AIRBNB, KO, PALANTIR, AMD, INTEL, BROADCOM, WALMART, UNH, JPM, BAYER, FORD 

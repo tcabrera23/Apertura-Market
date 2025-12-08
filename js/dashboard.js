@@ -1300,7 +1300,7 @@ function createTableRow(asset, isCrypto = false) {
         row.appendChild(roeCell);
 
         // Debt/Equity
-        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2), null, 'debt_to_equity'));
+        row.appendChild(createCell(asset.debt_to_equity, (v) => v.toFixed(2) / 100, null, 'debt_to_equity'));
 
         // P/B
         row.appendChild(createCell(asset.price_to_book, (v) => v.toFixed(2), null, 'price_to_book'));

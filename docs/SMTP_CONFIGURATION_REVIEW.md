@@ -118,3 +118,5 @@ Para mejorar la entregabilidad, asegúrate de que el dominio `aperturaia.com` te
 - [Configuración SMTP en Supabase](https://supabase.com/docs/guides/auth/auth-smtp)
 
 
+
+
