@@ -360,6 +360,51 @@
         </div>
     </section>
 
+    <!-- Legal Modal -->
+    <div id="legalModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div id="legalModalContent" class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col transition-all duration-300">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <h2 id="legalModalTitle" class="text-2xl font-bold text-gray-900 dark:text-white">
+                    Términos de Servicio
+                </h2>
+                <div class="flex items-center gap-2">
+                    <button id="fullScreenToggle" 
+                        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        title="Pantalla completa">
+                        <svg id="maximizeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        <svg id="minimizeIcon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                        </svg>
+                    </button>
+                    <button id="closeLegalModal" 
+                        class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Modal Content -->
+            <div id="legalModalBody" class="flex-1 overflow-y-auto p-6 prose dark:prose-invert max-w-none">
+                <div class="flex items-center justify-center py-8">
+                    <div class="w-8 h-8 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin"></div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-4 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <button id="acceptLegalBtn" 
+                    class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 shadow-lg transition-all font-semibold">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer id="contact" class="py-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -436,14 +481,14 @@
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Legal</h3>
                     <ul class="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
                         <li>
-                            <a href="#" class="hover:text-green-500 dark:hover:text-green-400 transition-colors">
+                            <button type="button" onclick="openLegalModal('privacy')" class="hover:text-green-500 dark:hover:text-green-400 transition-colors text-left">
                                 Política de Privacidad
-                            </a>
+                            </button>
                         </li>
                         <li>
-                            <a href="#" class="hover:text-green-500 dark:hover:text-green-400 transition-colors">
+                            <button type="button" onclick="openLegalModal('terms')" class="hover:text-green-500 dark:hover:text-green-400 transition-colors text-left">
                                 Términos de Servicio
-                            </a>
+                            </button>
                         </li>
                     </ul>
                 </div>
@@ -468,6 +513,7 @@
     <script src="js/mobile-nav.js"></script>
     <script src="js/dollar-rates.js"></script>
     <script src="js/language-selector.js"></script>
+    <script src="js/legal-modal.js"></script>
     <script src="js/main.js"></script>
     <script src="js/subscription.js"></script>
     

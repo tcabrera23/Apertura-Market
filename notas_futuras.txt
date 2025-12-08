@@ -1,19 +1,10 @@
-la siguiente version va necesitar integracion con brokers y compra automatica de activos
 
 
-ahh y tengo que dar mi numero de wsp en el plan pro
-faltar agregar las alertas via telegram o eliminarlo por ahora
-en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es una forma de publicitarlos. hola! puedo ponerte en mi web? estilo columnistas)
 
 
-@dashboard.html
-- creo que el debt vs equity hay que dividirlo por 100
-
-
-QUE SE DEJE DE RECARGAR LA PAGINA!!!!!!!!!!!!!!!!!!!!!
-
-Argentina: agregar (IRSA, PAMPA, TGN, TGS, CRESUD, BYMA, BBVA)
-
-General: 
-
-Portafolio: (SPY500, QQQ, GLD, DOW JONES, FXI, ALIBABA, MC DONALDS, NETFLIX, DESPEGAR, VISA, UBER, DISNEY, SPOTIFY, PFIZER, BANKOFAMERICA, AIRBNB, KO, PALANTIR, AMD, INTEL, BROADCOM, WALMART, UNH, JPM, BAYER, FORD 
+- Resumen de noticias en el mercado bursatil con un avatar IA
+- Integracion con IOL para compra automatica de activos
+- QUE SE DEJE DE RECARGAR LA PAGINA!!!!!!!!!!!!!!!!!!!!!
+- en noticias de IA y mercado bursatil, puedo poner a joveninversor y demas (es una forma de publicitarlos. hola! puedo ponerte en mi web? estilo columnistas)
+- faltar agregar las alertas via telegram o eliminarlo por ahora
+- ahh y tengo que dar mi numero de wsp en el plan pro

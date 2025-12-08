@@ -132,12 +132,10 @@ ARGENTINA_ASSETS = {
     "SUPV": "Supervielle",
     "TEO": "Telecom Argentina",
     "LOMA": "Loma Negra",
-    "IRSA": "IRSA Inversiones y Representaciones",
-    "PAMPA": "Pampa Energia",
-    "TGN": "Transportadora de Gas del Norte",
-    "TGS": "Transportadora de Gas del Sur",
-    "CRESUD": "Cresud",
-    "BYMA": "Bolsa y Mercados Argentinos",
+    "IRSA.BA": "IRSA Inversiones y Representaciones",
+    "TGN.BA": "Transportadora de Gas del Norte",
+    "TGS.BA": "Transportadora de Gas del Sur",
+    "CRESY": "Cresud (ADR)",
     "BBAR": "BBVA Argentina"
 }
 
@@ -315,6 +313,7 @@ class CouponValidate(BaseModel):
 def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
     """
     Fetch asset data from Yahoo Finance with caching.
+    Improved error handling to prevent worker crashes.
     """
     cache_window = int(datetime.now().timestamp() // 120)
     cache_key = f"{ticker}_{cache_window}"
@@ -324,14 +323,38 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
     
     try:
         stock = yf.Ticker(ticker)
-        info = stock.info
-        hist = stock.history(period="max")
+        
+        # Try to get info with timeout protection
+        try:
+            info = stock.info
+            # Check if ticker is valid (info should have basic data)
+            if not info or len(info) == 0:
+                logger.warning(f"Ticker {ticker} returned empty info, possibly delisted")
+                return None
+        except Exception as info_error:
+            error_msg = str(info_error).lower()
+            if "404" in error_msg or "not found" in error_msg or "delisted" in error_msg or "timezone" in error_msg:
+                logger.warning(f"Ticker {ticker} not found or delisted: {info_error}")
+                return None
+            # Re-raise if it's a different error
+            raise
+        
+        # Try to get history with error handling
+        try:
+            hist = stock.history(period="max")
+        except Exception as hist_error:
+            error_msg = str(hist_error).lower()
+            if "404" in error_msg or "not found" in error_msg or "delisted" in error_msg:
+                logger.warning(f"Ticker {ticker} has no history data: {hist_error}")
+                return None
+            raise
         
         logo_url = None
         if 'logo_url' in info and info.get('logo_url'):
             logo_url = info.get('logo_url')
         
         if hist.empty:
+            logger.warning(f"Ticker {ticker} has empty history")
             return None
         
         all_time_high = hist['High'].max()
@@ -415,8 +438,21 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         cache[cache_key] = asset_data
         return asset_data
         
+    except KeyError as e:
+        # Missing key in info dict - ticker might be invalid
+        logger.warning(f"Missing data key for {ticker}: {e}")
+        return None
+    except (ValueError, TypeError) as e:
+        # Data type errors - skip this ticker
+        logger.warning(f"Data type error for {ticker}: {e}")
+        return None
     except Exception as e:
-        print(f"Error fetching data for {ticker}: {e}")
+        error_msg = str(e).lower()
+        # Check for common yfinance errors
+        if "404" in error_msg or "not found" in error_msg or "delisted" in error_msg or "timezone" in error_msg:
+            logger.warning(f"Ticker {ticker} not available: {e}")
+        else:
+            logger.error(f"Unexpected error fetching data for {ticker}: {e}", exc_info=True)
         return None
 
 # ============================================
@@ -693,13 +729,15 @@ async def get_tracking_assets():
     """Get tracking assets data"""
     results = []
     for ticker, name in TRACKING_ASSETS.items():
-        asset_data = get_asset_data(ticker, name)
-        if asset_data:
-            results.append(asset_data)
+        try:
+            asset_data = get_asset_data(ticker, name)
+            if asset_data:
+                results.append(asset_data)
+        except Exception as e:
+            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
+            continue
     
-    if not results:
-        raise HTTPException(status_code=500, detail="No se pudieron cargar los datos")
-    
+    # Return results even if empty - frontend can handle empty list
     return results
 
 @app.get("/api/portfolio-assets", response_model=List[AssetData])
@@ -707,13 +745,15 @@ async def get_portfolio_assets():
     """Get portfolio assets data"""
     results = []
     for ticker, name in PORTFOLIO_ASSETS.items():
-        asset_data = get_asset_data(ticker, name)
-        if asset_data:
-            results.append(asset_data)
+        try:
+            asset_data = get_asset_data(ticker, name)
+            if asset_data:
+                results.append(asset_data)
+        except Exception as e:
+            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
+            continue
     
-    if not results:
-        raise HTTPException(status_code=500, detail="No se pudieron cargar los datos")
-    
+    # Return results even if empty - frontend can handle empty list
     return results
 
 @app.get("/api/crypto-assets", response_model=List[AssetData])
@@ -721,13 +761,15 @@ async def get_crypto_assets():
     """Get crypto assets data"""
     results = []
     for ticker, name in CRYPTO_ASSETS.items():
-        asset_data = get_asset_data(ticker, name)
-        if asset_data:
-            results.append(asset_data)
+        try:
+            asset_data = get_asset_data(ticker, name)
+            if asset_data:
+                results.append(asset_data)
+        except Exception as e:
+            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
+            continue
     
-    if not results:
-        raise HTTPException(status_code=500, detail="No se pudieron cargar los datos")
-    
+    # Return results even if empty - frontend can handle empty list
     return results
 
 @app.get("/api/argentina-assets", response_model=List[AssetData])
@@ -735,13 +777,15 @@ async def get_argentina_assets():
     """Get Argentina assets data"""
     results = []
     for ticker, name in ARGENTINA_ASSETS.items():
-        asset_data = get_asset_data(ticker, name)
-        if asset_data:
-            results.append(asset_data)
+        try:
+            asset_data = get_asset_data(ticker, name)
+            if asset_data:
+                results.append(asset_data)
+        except Exception as e:
+            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
+            continue
     
-    if not results:
-        raise HTTPException(status_code=500, detail="No se pudieron cargar los datos")
-    
+    # Return results even if empty - frontend can handle empty list
     return results
 
 @app.get("/api/asset/{ticker}/history")
