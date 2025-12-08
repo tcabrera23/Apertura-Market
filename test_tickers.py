@@ -31,15 +31,7 @@ print("ARGENTINA ASSETS")
 print("=" * 60)
 argentina_tickers = {
     "YPF": "YPF",
-    "GGAL": "Grupo Financiero Galicia",
-    "PAM": "Pampa Energia",
-    "MELI": "MercadoLibre",
-    "BMA": "Banco Macro",
-    "SUPV": "Supervielle",
-    "TEO": "Telecom Argentina",
-    "LOMA": "Loma Negra",
-    "CRESY": "Cresud",
-    "BBAR": "BBVA Argentina"
+    "GGAL": "Grupo Financiero Galicia"
 }
 
 for ticker, name in argentina_tickers.items():
@@ -51,12 +43,32 @@ print("\n" + "=" * 60)
 print("PORTFOLIO ASSETS (Verificando problemáticos)")
 print("=" * 60)
 portfolio_problematic = {
-    "VISTA": "Vista Energy",
-    "VIST": "Vista&Gas (antiguo)",
-    "DESP": "Despegar.com",
-    "BAYRY": "Bayer"
+    "PFE": "Pfizer",
+    "AMD": "AMD",
+    "BABA": "Alibaba",
+    "SPY": "SPDR S&P 500 ETF",
+    "QQQ": "Invesco QQQ Trust",
+    "GLD": "SPDR Gold Trust",
+    "DIA": "SPDR Dow Jones Industrial Average ETF",
+    "FXI": "iShares China Large-Cap ETF",
+    "MCD": "McDonald's",
+    "NFLX": "Netflix",
+    "V": "Visa",
+    "UBER": "Uber Technologies",
+    "DIS": "Walt Disney",
+    "SPOT": "Spotify Technology",
+    "BAC": "Bank of America",
+    "ABNB": "Airbnb",
+    "KO": "Coca-Cola",
+    "PLTR": "Palantir Technologies",
+    "INTC": "Intel",
+    "AVGO": "Broadcom",
+    "WMT": "Walmart",
+    "UNH": "UnitedHealth Group",
+    "JPM": "JPMorgan Chase",
+    "BAYRY": "Bayer",
+    "F": "Ford Motor"
 }
-
 for ticker, name in portfolio_problematic.items():
     result = test_ticker(ticker)
     print(f"{ticker:8} | {name:35} | {result}")

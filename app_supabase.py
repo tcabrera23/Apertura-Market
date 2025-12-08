@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, EmailStr
 from cachetools import TTLCache
 import uvicorn
+import asyncio
 import io
 import base64
 import json
@@ -307,10 +308,10 @@ class CouponValidate(BaseModel):
 # HELPER FUNCTIONS
 # ============================================
 
-# Thread pool for timeout operations
-executor = ThreadPoolExecutor(max_workers=10)
+# Thread pool for timeout operations - aumentado para manejar muchos activos
+executor = ThreadPoolExecutor(max_workers=30)
 
-def fetch_with_timeout(func, timeout=10):
+def fetch_with_timeout(func, timeout=20):
     """Execute a function with timeout using thread pool"""
     try:
         future = executor.submit(func)
@@ -342,8 +343,8 @@ def get_asset_data(ticker: str, name: str) -> Optional[AssetData]:
         return cache[cache_key]
     
     try:
-        # Fetch data with 15 second timeout
-        result = fetch_with_timeout(lambda: _fetch_ticker_data(ticker), timeout=15)
+        # Fetch data with 20 second timeout
+        result = fetch_with_timeout(lambda: _fetch_ticker_data(ticker), timeout=20)
         
         if result is None:
             logger.warning(f"Timeout or error fetching data for {ticker}")
@@ -729,69 +730,55 @@ async def root():
     """Serve the landing page"""
     return FileResponse("index.html")
 
+async def fetch_asset_async(ticker: str, name: str):
+    """Fetch asset data asynchronously"""
+    loop = asyncio.get_event_loop()
+    try:
+        asset_data = await loop.run_in_executor(executor, get_asset_data, ticker, name)
+        return asset_data
+    except Exception as e:
+        logger.warning(f"Error fetching {ticker}: {e}")
+        return None
+
 @app.get("/api/tracking-assets", response_model=List[AssetData])
 async def get_tracking_assets():
-    """Get tracking assets data"""
-    results = []
-    for ticker, name in TRACKING_ASSETS.items():
-        try:
-            asset_data = get_asset_data(ticker, name)
-            if asset_data:
-                results.append(asset_data)
-        except Exception as e:
-            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
-            continue
+    """Get tracking assets data - parallel processing"""
+    tasks = [fetch_asset_async(ticker, name) for ticker, name in TRACKING_ASSETS.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     
-    # Return results even if empty - frontend can handle empty list
-    return results
+    # Filter out None values and exceptions
+    valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
+    return valid_results
 
 @app.get("/api/portfolio-assets", response_model=List[AssetData])
 async def get_portfolio_assets():
-    """Get portfolio assets data"""
-    results = []
-    for ticker, name in PORTFOLIO_ASSETS.items():
-        try:
-            asset_data = get_asset_data(ticker, name)
-            if asset_data:
-                results.append(asset_data)
-        except Exception as e:
-            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
-            continue
+    """Get portfolio assets data - parallel processing"""
+    tasks = [fetch_asset_async(ticker, name) for ticker, name in PORTFOLIO_ASSETS.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     
-    # Return results even if empty - frontend can handle empty list
-    return results
+    # Filter out None values and exceptions
+    valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
+    return valid_results
 
 @app.get("/api/crypto-assets", response_model=List[AssetData])
 async def get_crypto_assets():
-    """Get crypto assets data"""
-    results = []
-    for ticker, name in CRYPTO_ASSETS.items():
-        try:
-            asset_data = get_asset_data(ticker, name)
-            if asset_data:
-                results.append(asset_data)
-        except Exception as e:
-            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
-            continue
+    """Get crypto assets data - parallel processing"""
+    tasks = [fetch_asset_async(ticker, name) for ticker, name in CRYPTO_ASSETS.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     
-    # Return results even if empty - frontend can handle empty list
-    return results
+    # Filter out None values and exceptions
+    valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
+    return valid_results
 
 @app.get("/api/argentina-assets", response_model=List[AssetData])
 async def get_argentina_assets():
-    """Get Argentina assets data"""
-    results = []
-    for ticker, name in ARGENTINA_ASSETS.items():
-        try:
-            asset_data = get_asset_data(ticker, name)
-            if asset_data:
-                results.append(asset_data)
-        except Exception as e:
-            logger.warning(f"Skipping ticker {ticker} due to error: {e}")
-            continue
+    """Get Argentina assets data - parallel processing"""
+    tasks = [fetch_asset_async(ticker, name) for ticker, name in ARGENTINA_ASSETS.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
     
-    # Return results even if empty - frontend can handle empty list
-    return results
+    # Filter out None values and exceptions
+    valid_results = [r for r in results if r is not None and not isinstance(r, Exception)]
+    return valid_results
 
 @app.get("/api/asset/{ticker}/history")
 async def get_asset_history(ticker: str, period: str = "1y", interval: str = "1d"):
@@ -3893,4 +3880,12 @@ if __name__ == "__main__":
     print(f"📊 Supabase URL: {SUPABASE_URL}")
     # print("📡 Server: http://localhost:8080")
     print("📡 Server: https://api.bullanalytics.io")
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    print("⚙️  Workers: 4 | Timeout: 120s")
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8080,
+        workers=4,  # Múltiples workers para manejar concurrencia
+        timeout_keep_alive=120,  # Timeout más largo
+        limit_concurrency=100  # Límite de conexiones concurrentes
+    )

@@ -1,0 +1,39 @@
+[Unit]
+Description=BullAnalytics FastAPI Application (Optimized)
+After=network.target
+
+[Service]
+Type=notify
+User=root
+Group=root
+WorkingDirectory=/root/bullanalytics/Apertura-Market#
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+# Comando optimizado con gunicorn + uvicorn workers
+ExecStart=/usr/local/bin/gunicorn app_supabase:app \
+    --workers 9 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:8080 \
+    --timeout 120 \
+    --keep-alive 60 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info
+
+# Restart automático si falla
+Restart=always
+RestartSec=5
+
+# Límites de recursos
+LimitNOFILE=65536
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+# Notificación de systemd
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
+
