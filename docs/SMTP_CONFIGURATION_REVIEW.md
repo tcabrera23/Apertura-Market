@@ -117,3 +117,4 @@ Para mejorar la entregabilidad, asegúrate de que el dominio `aperturaia.com` te
 - [Documentación de Brevo SMTP](https://help.brevo.com/hc/en-us/articles/209467485)
 - [Configuración SMTP en Supabase](https://supabase.com/docs/guides/auth/auth-smtp)
 
+
