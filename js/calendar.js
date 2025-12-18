@@ -8,6 +8,13 @@ const CACHE_DURATION = 120000; // 2 minutes
 const CACHE_KEY = 'bullanalytics_calendar_cache';
 let calendarCache = { data: {}, timestamp: 0, year: null, month: null, insights: {} };
 
+// Chart instances
+let epsChart = null;
+let revChart = null;
+
+// Current Tab
+let currentTab = 'all'; // all, good, neutral, bad
+
 // Load cache
 try {
     const saved = localStorage.getItem(CACHE_KEY);
@@ -47,6 +54,9 @@ console.log('calendar.js loaded');
 let currentDate = new Date();
 let currentYear = currentDate.getFullYear();
 let currentMonth = currentDate.getMonth() + 1; // 1-12
+
+// Current tab for analyst insights
+let currentTab = 'all';
 
 // Month names in Spanish
 const monthNames = [
@@ -486,7 +496,41 @@ function renderAnalystInsights(insightsMap, events) {
         });
     });
     
-    const rows = Array.from(tickerEvents.entries()).map(([ticker, event]) => {
+    // Filter based on tab
+    let filteredTickers = Array.from(tickerEvents.keys());
+    
+    if (currentTab !== 'all') {
+        filteredTickers = filteredTickers.filter(ticker => {
+            const insight = insightsMap.get(ticker);
+            if (!insight) return false;
+            
+            const sentiment = insight.sentiment?.value || '';
+            const score = insight.sentiment?.score || 3;
+            
+            if (currentTab === 'good') {
+                return sentiment === 'Strong Buy' || sentiment === 'Buy' || score <= 2.5;
+            } else if (currentTab === 'neutral') {
+                return sentiment === 'Hold' || sentiment === 'Neutral' || (score > 2.5 && score <= 3.5);
+            } else if (currentTab === 'bad') {
+                return sentiment === 'Sell' || sentiment === 'Strong Sell' || score > 3.5;
+            }
+            return true;
+        });
+    }
+    
+    if (filteredTickers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    No hay activos en esta categoría
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = filteredTickers.map(ticker => {
+        const event = tickerEvents.get(ticker);
         const insight = insightsMap.get(ticker);
         
         if (!insight) {
@@ -507,7 +551,7 @@ function renderAnalystInsights(insightsMap, events) {
         const recs = insight.recommendations;
         const totalRecs = insight.total_recommendations || 0;
         const recommendationsText = totalRecs > 0 
-            ? `${recs.strongBuy || 0} Strong Buy, ${recs.buy || 0} Buy, ${recs.hold || 0} Hold, ${recs.underperform || 0} Underperform, ${recs.sell || 0} Sell`
+            ? `${recs.strongBuy || 0} Strong Buy, ${recs.buy || 0} Buy, ${recs.hold || 0} Hold`
             : 'Sin datos';
         
         // Format sentiment with color
@@ -541,8 +585,11 @@ function renderAnalystInsights(insightsMap, events) {
                 <td class="py-4 px-4">
                     <div class="font-semibold text-gray-900 dark:text-white">${insight.name || event.name}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400">${ticker}</div>
+                    <button onclick='openAnalysisModal("${ticker}", ${JSON.stringify(insight).replace(/'/g, "\\'")})' class="mt-2 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded-lg transition-colors">
+                        Ver Análisis
+                    </button>
                 </td>
-                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs">
+                <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs truncate">
                     ${insight.market_expectation || 'Sin datos disponibles'}
                 </td>
                 <td class="py-4 px-4 text-sm text-gray-700 dark:text-gray-300">
@@ -575,5 +622,246 @@ function renderAnalystInsights(insightsMap, events) {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     loadCalendar();
+    setupTabs();
 });
+
+function setupTabs() {
+    const tabs = document.querySelectorAll('.insight-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update UI
+            tabs.forEach(t => {
+                t.classList.remove('text-green-600', 'border-b-2', 'border-green-500');
+                t.classList.add('text-gray-500', 'hover:text-gray-700', 'dark:text-gray-400', 'dark:hover:text-gray-300');
+            });
+            tab.classList.add('text-green-600', 'border-b-2', 'border-green-500');
+            tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'dark:text-gray-400', 'dark:hover:text-gray-300');
+            
+            // Update Filter
+            currentTab = tab.getAttribute('data-tab');
+            
+            // Re-render
+            const events = calendarCache.data.events || {};
+            const insightsMap = new Map();
+            Object.keys(calendarCache.insights).forEach(ticker => {
+                insightsMap.set(ticker, calendarCache.insights[ticker]);
+            });
+            
+            renderAnalystInsights(insightsMap, events);
+        });
+    });
+}
+
+// Open analysis modal with charts
+function openAnalysisModal(ticker, insight) {
+    const modal = document.getElementById('analysisModal');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    modalTitle.textContent = `Análisis: ${insight.name || ticker}`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+    
+    // Render charts
+    renderEPSTrendChart(insight.earnings?.trend || []);
+    renderRevenueEarningsChart(insight.earnings?.financials_chart || []);
+    renderRecommendationsBar(insight.recommendations || {});
+}
+
+// Close analysis modal
+function closeAnalysisModal() {
+    const modal = document.getElementById('analysisModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.style.overflow = '';
+    
+    // Destroy charts to prevent memory leaks
+    if (window.epsTrendChart) {
+        window.epsTrendChart.destroy();
+        window.epsTrendChart = null;
+    }
+    if (window.revenueEarningsChart) {
+        window.revenueEarningsChart.destroy();
+        window.revenueEarningsChart = null;
+    }
+}
+
+// Make functions global
+window.openAnalysisModal = openAnalysisModal;
+window.closeAnalysisModal = closeAnalysisModal;
+
+// Render EPS Trend Chart
+function renderEPSTrendChart(trendData) {
+    const ctx = document.getElementById('epsTrendChart');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (window.epsTrendChart) {
+        window.epsTrendChart.destroy();
+    }
+    
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#D1D4DC' : '#191919';
+    const gridColor = isDark ? '#2B2B43' : '#E0E3EB';
+    
+    window.epsTrendChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: trendData.map(d => d.period),
+            datasets: [
+                {
+                    label: 'Estimate',
+                    data: trendData.map(d => d.estimate),
+                    backgroundColor: 'rgba(41, 98, 255, 0.6)',
+                    borderColor: 'rgba(41, 98, 255, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Actual',
+                    data: trendData.map(d => d.actual),
+                    backgroundColor: 'rgba(38, 166, 154, 0.6)',
+                    borderColor: 'rgba(38, 166, 154, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+// Render Revenue vs Earnings Chart
+function renderRevenueEarningsChart(financialsData) {
+    const ctx = document.getElementById('revenueEarningsChart');
+    if (!ctx) return;
+    
+    // Destroy existing chart
+    if (window.revenueEarningsChart) {
+        window.revenueEarningsChart.destroy();
+    }
+    
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#D1D4DC' : '#191919';
+    const gridColor = isDark ? '#2B2B43' : '#E0E3EB';
+    
+    window.revenueEarningsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: financialsData.map(d => d.period),
+            datasets: [
+                {
+                    label: 'Revenue',
+                    data: financialsData.map(d => d.revenue / 1e9), // Convert to billions
+                    backgroundColor: 'rgba(66, 165, 245, 0.6)',
+                    borderColor: 'rgba(66, 165, 245, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Earnings',
+                    data: financialsData.map(d => d.earnings / 1e9), // Convert to billions
+                    backgroundColor: 'rgba(255, 167, 38, 0.6)',
+                    borderColor: 'rgba(255, 167, 38, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: textColor }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': $' + context.parsed.y.toFixed(2) + 'B';
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        color: textColor,
+                        callback: function(value) {
+                            return '$' + value.toFixed(1) + 'B';
+                        }
+                    },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+// Render Recommendations Bar
+function renderRecommendationsBar(recommendations) {
+    const container = document.getElementById('recommendationsBarContainer');
+    const legend = document.getElementById('recommendationsLegend');
+    if (!container || !legend) return;
+    
+    const total = recommendations.strongBuy + recommendations.buy + recommendations.hold + 
+                  recommendations.underperform + recommendations.sell;
+    
+    if (total === 0) {
+        container.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-sm">No hay recomendaciones disponibles</p>';
+        legend.innerHTML = '';
+        return;
+    }
+    
+    const strongBuyPct = (recommendations.strongBuy / total) * 100;
+    const buyPct = (recommendations.buy / total) * 100;
+    const holdPct = (recommendations.hold / total) * 100;
+    const underperformPct = (recommendations.underperform / total) * 100;
+    const sellPct = (recommendations.sell / total) * 100;
+    
+    container.innerHTML = `
+        <div class="w-full h-8 flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
+            ${strongBuyPct > 0 ? `<div class="bg-green-600" style="width: ${strongBuyPct}%" title="Strong Buy: ${recommendations.strongBuy}"></div>` : ''}
+            ${buyPct > 0 ? `<div class="bg-green-400" style="width: ${buyPct}%" title="Buy: ${recommendations.buy}"></div>` : ''}
+            ${holdPct > 0 ? `<div class="bg-yellow-400" style="width: ${holdPct}%" title="Hold: ${recommendations.hold}"></div>` : ''}
+            ${underperformPct > 0 ? `<div class="bg-orange-400" style="width: ${underperformPct}%" title="Underperform: ${recommendations.underperform}"></div>` : ''}
+            ${sellPct > 0 ? `<div class="bg-red-500" style="width: ${sellPct}%" title="Sell: ${recommendations.sell}"></div>` : ''}
+        </div>
+    `;
+    
+    legend.innerHTML = `
+        <span><span class="inline-block w-3 h-3 bg-green-600 rounded mr-1"></span>Strong Buy: ${recommendations.strongBuy}</span>
+        <span><span class="inline-block w-3 h-3 bg-green-400 rounded mr-1"></span>Buy: ${recommendations.buy}</span>
+        <span><span class="inline-block w-3 h-3 bg-yellow-400 rounded mr-1"></span>Hold: ${recommendations.hold}</span>
+        <span><span class="inline-block w-3 h-3 bg-orange-400 rounded mr-1"></span>Underperform: ${recommendations.underperform}</span>
+        <span><span class="inline-block w-3 h-3 bg-red-500 rounded mr-1"></span>Sell: ${recommendations.sell}</span>
+    `;
+}
 

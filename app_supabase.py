@@ -1148,6 +1148,10 @@ async def get_analyst_insights(ticker: str):
         last_quarter_earnings = None
         last_annual_earnings = None
         
+        # New data structures for graphs
+        earnings_trend = []
+        financials_chart = []
+        
         try:
             # Get earnings estimates
             earnings_estimate = analysis.earnings_estimate
@@ -1165,11 +1169,33 @@ async def get_analyst_insights(ticker: str):
         except Exception as e:
             logger.debug(f"Error getting earnings estimates for {ticker}: {e}")
         
-        # Get earnings history (actual vs expected)
+        # Get earnings history (actual vs expected) for Trend Graph
         try:
             earnings_history = analysis.earnings_history
             if earnings_history is not None and not earnings_history.empty:
-                # Get most recent quarter
+                # Sort by index or date if available to ensure chronological order
+                # Usually it's indexed by date, but let's check
+                history_df = earnings_history.copy()
+                # Take last 4 quarters
+                recent_history = history_df.tail(4)
+                
+                for index, row in recent_history.iterrows():
+                    period_name = str(index).split(' ')[0] if hasattr(index, 'strftime') else str(index)
+                    # Try to format date nicely if it's a date
+                    try:
+                        if hasattr(index, 'strftime'):
+                            period_name = index.strftime('%b %y')
+                    except:
+                        pass
+                        
+                    earnings_trend.append({
+                        "period": period_name,
+                        "estimate": float(row['epsEstimate']) if row.get('epsEstimate') is not None else 0,
+                        "actual": float(row['epsActual']) if row.get('epsActual') is not None else 0,
+                        "difference": float(row['epsDifference']) if row.get('epsDifference') is not None else 0
+                    })
+                
+                # Get most recent quarter for summary
                 most_recent = earnings_history.iloc[-1] if len(earnings_history) > 0 else None
                 if most_recent is not None:
                     # Get actual earnings
@@ -1192,7 +1218,34 @@ async def get_analyst_insights(ticker: str):
                         last_quarter_earnings = float(quarterly_financials.loc['Net Income'].iloc[-1]) if not quarterly_financials.loc['Net Income'].empty else None
                     elif 'Total Revenue' in quarterly_financials.index:
                         last_quarter_earnings = float(quarterly_financials.loc['Total Revenue'].iloc[-1]) if not quarterly_financials.loc['Total Revenue'].empty else None
-                
+                    
+                    # Prepare Financials Chart (Revenue vs Earnings)
+                    # Get last 4 quarters
+                    quarters = quarterly_financials.columns[:4] # Usually columns are dates descending
+                    for date in reversed(quarters): # Process in chronological order
+                        revenue = 0
+                        earnings = 0
+                        if 'Total Revenue' in quarterly_financials.index:
+                            revenue = float(quarterly_financials.loc['Total Revenue'][date])
+                        if 'Net Income' in quarterly_financials.index:
+                            earnings = float(quarterly_financials.loc['Net Income'][date])
+                        
+                        period_name = date.strftime('%Q %Y') if hasattr(date, 'strftime') else str(date)
+                        try:
+                            # Try to convert to Q{q} FY{yy} format approximation
+                            # Just use Month Year for simplicity or Quarter Year
+                            if hasattr(date, 'month') and hasattr(date, 'year'):
+                                q = (date.month - 1) // 3 + 1
+                                period_name = f"Q{q} {str(date.year)[2:]}"
+                        except:
+                            pass
+
+                        financials_chart.append({
+                            "period": period_name,
+                            "revenue": revenue,
+                            "earnings": earnings
+                        })
+
                 if financials is not None and not financials.empty:
                     if 'Net Income' in financials.index:
                         last_annual_earnings = float(financials.loc['Net Income'].iloc[-1]) if not financials.loc['Net Income'].empty else None
@@ -1269,7 +1322,8 @@ async def get_analyst_insights(ticker: str):
             "total_recommendations": total_recs,
             "sentiment": {
                 "value": sentiment,
-                "color": sentiment_color
+                "color": sentiment_color,
+                "score": sentiment_score if total_recs > 0 else 3
             },
             "market_expectation": market_expectation,
             "earnings": {
@@ -1280,7 +1334,9 @@ async def get_analyst_insights(ticker: str):
                 "last_annual": {
                     "actual": last_annual_earnings,
                     "expected": last_annual_expected
-                }
+                },
+                "trend": earnings_trend,
+                "financials_chart": financials_chart
             }
         }
         

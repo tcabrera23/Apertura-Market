@@ -41,6 +41,8 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -154,6 +156,15 @@
             <!-- Analyst Insights Table -->
             <div id="analystInsightsSection" class="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Análisis de Analistas</h3>
+                
+                <!-- Tabs -->
+                <div class="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                    <button class="insight-tab px-4 py-2 font-medium text-sm text-green-600 border-b-2 border-green-500 focus:outline-none" data-tab="all">Todos</button>
+                    <button class="insight-tab px-4 py-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none" data-tab="good">Expectativa Buena</button>
+                    <button class="insight-tab px-4 py-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none" data-tab="neutral">Expectativa Neutra</button>
+                    <button class="insight-tab px-4 py-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none" data-tab="bad">Expectativa Mala</button>
+                </div>
+
                 <div id="analystInsightsContainer" class="overflow-x-auto">
                     <table class="w-full border-collapse">
                         <thead>
@@ -180,6 +191,62 @@
             </div>
         </div>
     </main>
+
+    <!-- Analysis Modal -->
+    <div id="analysisModal" class="fixed inset-0 z-[60] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!-- Background overlay -->
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeAnalysisModal()"></div>
+
+            <!-- Modal panel -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start w-full">
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-2xl font-bold leading-6 text-gray-900 dark:text-white mb-4 flex justify-between items-center">
+                                <span id="modalTitle">Análisis: TICKER</span>
+                                <button onclick="closeAnalysisModal()" class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                <!-- Earnings Trends Chart -->
+                                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Earnings Per Share Trend</h4>
+                                    <div class="relative h-64 w-full">
+                                        <canvas id="epsTrendChart"></canvas>
+                                    </div>
+                                </div>
+                                
+                                <!-- Revenue vs Earnings Chart -->
+                                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue vs. Earnings</h4>
+                                    <div class="relative h-64 w-full">
+                                        <canvas id="revenueEarningsChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Detailed Recommendations -->
+                            <div class="mt-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recomendaciones de Analistas</h4>
+                                <div class="relative h-16 w-full flex items-center" id="recommendationsBarContainer">
+                                    <!-- Bar will be injected here via JS -->
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-2" id="recommendationsLegend">
+                                    <!-- Legend here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="py-8 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700">
