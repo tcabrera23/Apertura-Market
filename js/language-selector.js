@@ -66,7 +66,6 @@ function createLanguageSelector() {
             aria-expanded="false"
             aria-haspopup="true">
             <span id="selectedLangFlag" class="text-base leading-none" style="font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;">${currentLang.flag}</span>
-            <span id="selectedLangCode" class="uppercase font-semibold text-xs">${currentLang.code.toUpperCase()}</span>
             <svg class="w-3 h-3 transition-transform duration-200 ml-0.5" id="langDropdownArrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
             </svg>

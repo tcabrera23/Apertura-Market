@@ -143,11 +143,11 @@ PORTFOLIO_ASSETS = {
     "PFE": "Pfizer",
     "AMD": "AMD",
     "BABA": "Alibaba",
-    "SPY": "SPDR S&P 500 ETF",
-    "QQQ": "Invesco QQQ Trust",
-    "GLD": "SPDR Gold Trust",
-    "DIA": "SPDR Dow Jones Industrial Average ETF",
-    "FXI": "iShares China Large-Cap ETF",
+    #"SPY": "SPDR S&P 500 ETF",
+    #"QQQ": "Invesco QQQ Trust",
+    #"GLD": "SPDR Gold Trust",
+    #"DIA": "SPDR Dow Jones Industrial Average ETF",
+    #"FXI": "iShares China Large-Cap ETF",
     "MCD": "McDonald's",
     "NFLX": "Netflix",
     "V": "Visa",
@@ -155,16 +155,26 @@ PORTFOLIO_ASSETS = {
     "DIS": "Walt Disney",
     "SPOT": "Spotify Technology",
     "BAC": "Bank of America",
-    "ABNB": "Airbnb",
+    #"ABNB": "Airbnb",
     "KO": "Coca-Cola",
     "PLTR": "Palantir Technologies",
     "INTC": "Intel",
     "AVGO": "Broadcom",
-    "WMT": "Walmart",
+    #"WMT": "Walmart",
     "UNH": "UnitedHealth Group",
     "JPM": "JPMorgan Chase",
     "BAYRY": "Bayer",
     "F": "Ford Motor"
+}
+
+INDICES_ASSET = {
+    "SPY": "SPDR S&P 500 ETF",
+    "IWM": "iShares Russell 2000 ETF",
+    "QQQ": "Invesco QQQ Trust",
+    "GLD": "SPDR Gold Trust",
+    "DIA": "SPDR Dow Jones Industrial Average ETF",
+    "FXI": "iShares China Large-Cap ETF",
+    "NDX": "NASDAQ 100 Index",
 }
 
 # ============================================

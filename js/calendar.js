@@ -3,6 +3,44 @@
 // const API_BASE_URL = 'http://localhost:8080/api'; // Development
 const API_BASE_URL = 'https://api.bullanalytics.io/api'; // Production
 
+// Cache System for Calendar
+const CACHE_DURATION = 120000; // 2 minutes
+const CACHE_KEY = 'bullanalytics_calendar_cache';
+let calendarCache = { data: {}, timestamp: 0, year: null, month: null, insights: {} };
+
+// Load cache
+try {
+    const saved = localStorage.getItem(CACHE_KEY);
+    if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.insights) parsed.insights = {};
+        calendarCache = parsed;
+    }
+} catch (e) { console.error('Error loading calendar cache:', e); }
+
+function persistCache() {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(calendarCache));
+    } catch (e) { console.warn('Error saving calendar cache:', e); }
+}
+
+function saveCache(data, year, month) {
+    if (calendarCache.year !== year || calendarCache.month !== month) {
+        calendarCache.insights = {};
+    }
+    calendarCache.data = data;
+    calendarCache.timestamp = Date.now();
+    calendarCache.year = year;
+    calendarCache.month = month;
+    persistCache();
+}
+
+function isCacheValid(year, month) {
+    if (calendarCache.year !== year || calendarCache.month !== month) return false;
+    if (!calendarCache.data) return false;
+    return (Date.now() - calendarCache.timestamp) < CACHE_DURATION;
+}
+
 console.log('calendar.js loaded');
 
 // Current date tracking
@@ -26,6 +64,20 @@ function isMobile() {
 // Load calendar data
 async function loadCalendar() {
     try {
+        // Check cache first
+        if (isCacheValid(currentYear, currentMonth)) {
+            console.log('Using cached calendar data');
+            const data = calendarCache.data;
+            renderCalendar(data);
+            renderEventsList(data);
+            // We also need to handle analyst insights caching if needed, 
+            // but for now let's just re-fetch insights or cache them inside the main object if possible.
+            // The original code calls loadAnalystInsights(data).
+            // Let's call it here too.
+            loadAnalystInsights(data); 
+            return;
+        }
+
         const response = await fetch(`${API_BASE_URL}/earnings-calendar?year=${currentYear}&month=${currentMonth}`);
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -35,6 +87,10 @@ async function loadCalendar() {
         
         const data = await response.json();
         console.log('Calendar data loaded:', data);
+        
+        // Save to cache
+        saveCache(data, currentYear, currentMonth);
+
         renderCalendar(data);
         renderEventsList(data);
         
@@ -47,6 +103,17 @@ async function loadCalendar() {
         }
     } catch (error) {
         console.error('Error loading calendar:', error);
+        
+        // If fetch fails but we have some cache (even if expired or different month? no, only if same month), use it
+        if (calendarCache.year === currentYear && calendarCache.month === currentMonth && calendarCache.data) {
+             console.log('Using expired/cached calendar data due to error');
+             const data = calendarCache.data;
+             renderCalendar(data);
+             renderEventsList(data);
+             loadAnalystInsights(data);
+             return;
+        }
+
         document.getElementById('calendarContainer').innerHTML = `
             <div class="col-span-7 text-center py-8 text-red-500">
                 <p>Error al cargar el calendario. Por favor, intenta de nuevo.</p>
@@ -323,49 +390,57 @@ async function loadAnalystInsights(calendarData) {
             `;
             return;
         }
-        
-        console.log('Fetching insights for', allTickers.size, 'tickers');
-        
-        // Fetch analyst insights for each ticker
-        const insightsPromises = Array.from(allTickers).map(async (ticker) => {
-            try {
-                const url = `${API_BASE_URL}/asset/${ticker}/analyst-insights`;
-                console.log(`Fetching insights for ${ticker} from ${url}`);
-                const response = await fetch(url);
-                console.log(`Response for ${ticker}:`, response.status, response.statusText);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`Data received for ${ticker}:`, data);
-                    return { ticker, data };
-                } else {
-                    const errorText = await response.text();
-                    console.error(`Error response for ${ticker}:`, response.status, errorText);
+
+        // Filter tickers that need fetching (not in cache)
+        const tickersToFetch = Array.from(allTickers).filter(ticker => !calendarCache.insights[ticker]);
+        console.log(`Tickers to fetch: ${tickersToFetch.length} (Cached: ${allTickers.size - tickersToFetch.length})`);
+
+        if (tickersToFetch.length > 0) {
+            console.log('Fetching insights for', tickersToFetch.length, 'tickers');
+            
+            // Fetch analyst insights for missing tickers
+            const insightsPromises = tickersToFetch.map(async (ticker) => {
+                try {
+                    const url = `${API_BASE_URL}/asset/${ticker}/analyst-insights`;
+                    console.log(`Fetching insights for ${ticker} from ${url}`);
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const data = await response.json();
+                        return { ticker, data };
+                    } else {
+                        return { ticker, data: null };
+                    }
+                } catch (error) {
+                    console.error(`Error fetching insights for ${ticker}:`, error);
                     return { ticker, data: null };
                 }
-            } catch (error) {
-                console.error(`Error fetching insights for ${ticker}:`, error);
-                return { ticker, data: null };
-            }
-        });
+            });
+            
+            const insightsResults = await Promise.all(insightsPromises);
+            
+            // Update cache with new results
+            insightsResults.forEach(({ ticker, data }) => {
+                if (data) {
+                    calendarCache.insights[ticker] = data;
+                }
+            });
+            
+            // Persist updated cache
+            persistCache();
+        }
         
-        const insightsResults = await Promise.all(insightsPromises);
-        console.log('All insights results:', insightsResults);
+        // Build insights map from cache for rendering
         const insightsMap = new Map();
-        
-        insightsResults.forEach(({ ticker, data }) => {
-            if (data) {
-                console.log(`Adding insights for ${ticker}:`, data);
-                insightsMap.set(ticker, data);
-            } else {
-                console.warn(`No data received for ${ticker}`);
+        Array.from(allTickers).forEach(ticker => {
+            if (calendarCache.insights[ticker]) {
+                insightsMap.set(ticker, calendarCache.insights[ticker]);
             }
         });
         
-        console.log('Insights map size:', insightsMap.size);
-        console.log('Insights map contents:', Array.from(insightsMap.entries()));
         renderAnalystInsights(insightsMap, events);
     } catch (error) {
         console.error('Error loading analyst insights:', error);
+        // ... (error handling remains same)
         const tbody = document.getElementById('analystInsightsBody');
         if (tbody) {
             tbody.innerHTML = `

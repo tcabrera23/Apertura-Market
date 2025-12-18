@@ -13,10 +13,33 @@ function getAuthToken() {
 
 // Smart Cache System
 const CACHE_DURATION = 120000; // 2 minutes in milliseconds
-const localCache = {
+const CACHE_KEY = 'bullanalytics_dashboard_cache';
+
+let localCache = {
     data: {},
     timestamps: {}
 };
+
+// Initialize cache from localStorage
+try {
+    const savedCache = localStorage.getItem(CACHE_KEY);
+    if (savedCache) {
+        localCache = JSON.parse(savedCache);
+        console.log('Cache loaded from localStorage');
+    }
+} catch (e) {
+    console.error('Error loading cache from localStorage:', e);
+    // Reset cache on error
+    localCache = { data: {}, timestamps: {} };
+}
+
+function saveCache() {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(localCache));
+    } catch (e) {
+        console.warn('Error saving cache to localStorage (quota exceeded?):', e);
+    }
+}
 
 // State management
 let currentData = {};
@@ -866,6 +889,8 @@ async function forceRefreshAssets(category) {
     // Clear cache for this category
     delete localCache.data[category];
     delete localCache.timestamps[category];
+    saveCache(); // Update localStorage
+
 
     // Reload with visual feedback
     const btn = document.querySelector(`[data-refresh="${category}"]`);
@@ -961,6 +986,7 @@ async function loadAssets(category, silent = false) {
 
     // Check cache first
     if (localCache.data[category] && !isCacheExpired(category)) {
+        console.log(`Using cached data for ${category}`);
         // Use cached data immediately
         renderTable(category, localCache.data[category], tableBody, tableEl, loadingEl);
         return;
@@ -1008,6 +1034,7 @@ async function loadAssets(category, silent = false) {
         // Update cache
         localCache.data[category] = data;
         localCache.timestamps[category] = Date.now();
+        saveCache(); // Persist to localStorage
         currentData[category] = data;
 
         // Render table
