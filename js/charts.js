@@ -147,12 +147,14 @@ function calculateAverage(data, metricKey) {
 
 // Create Pie Chart with TradingView styling
 function createPieChart(container, data, metric, category) {
+    // Clean up previous chart if it exists to prevent memory leaks or overlaps
     container.innerHTML = '';
     
     const theme = getTheme();
     const wrapper = document.createElement('div');
     wrapper.className = 'relative w-full overflow-hidden';
-    wrapper.style.height = '450px';
+    // Use dynamic height based on content
+    wrapper.style.minHeight = '450px'; 
     wrapper.style.backgroundColor = theme.panel;
     wrapper.style.borderRadius = '8px';
     wrapper.style.border = `1px solid ${theme.border}`;
@@ -161,157 +163,240 @@ function createPieChart(container, data, metric, category) {
     const canvas = document.createElement('canvas');
     canvas.style.width = '100%';
     canvas.style.height = '100%';
+    canvas.style.display = 'block'; // Remove extra space below canvas
     wrapper.appendChild(canvas);
     
-    const ctx = canvas.getContext('2d');
-    const rect = wrapper.getBoundingClientRect();
-    const width = rect.width || container.clientWidth || 800;
-    const height = 450;
-    
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-    
-    // Filter and prepare data
-    const validData = data
-        .map(asset => ({
-            name: asset.name || asset.ticker,
-            ticker: asset.ticker,
-            value: asset[metric.key]
-        }))
-        .filter(item => item.value !== null && item.value !== undefined && !isNaN(item.value) && item.value > 0)
-        .sort((a, b) => b.value - a.value);
-    
-    if (validData.length === 0) {
-        ctx.fillStyle = theme.text;
-        ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No hay datos disponibles', width / 2, height / 2);
-        return;
-    }
-    
-    const avg = calculateAverage(data, metric.key);
-    const total = validData.reduce((sum, item) => sum + item.value, 0);
-    
-    const padding = 16;
-    const headerHeight = 60;
-    const centerX = width / 2;
-    const centerY = (height + headerHeight) / 2;
-    const radius = Math.min(width, height - headerHeight - padding * 2) / 2 - 20;
-    
-    // Draw header
-    ctx.fillStyle = theme.background;
-    ctx.fillRect(0, 0, width, headerHeight);
-    
-    ctx.fillStyle = theme.text;
-    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`Gráfico de Torta - ${metric.label}`, padding, 28);
-    
-    ctx.strokeStyle = theme.grid;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.moveTo(padding, 42);
-    ctx.lineTo(width - padding, 42);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    
-    ctx.fillStyle = theme.text;
-    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(`Promedio: ${metric.format(avg)}`, padding, 56);
-    
-    // Draw pie chart
-    let currentAngle = -Math.PI / 2; // Start from top
-    
-    // Color palette
-    const colors = [
-        '#26A69A', '#EF5350', '#42A5F5', '#AB47BC', '#FFA726',
-        '#66BB6A', '#EC407A', '#26C6DA', '#FFCA28', '#78909C'
-    ];
-    
-    // Adjust centerX to make room for legend on the right
-    const legendWidth = 220;
-    const adjustedCenterX = (width - legendWidth) / 2;
-    const adjustedRadius = Math.min((width - legendWidth) / 2 - 40, (height - headerHeight - padding * 2) / 2 - 20);
-    
-    validData.forEach((item, index) => {
-        const sliceAngle = (item.value / total) * 2 * Math.PI;
-        const color = colors[index % colors.length];
+    // Function to render the chart
+    const render = () => {
+        const rect = wrapper.getBoundingClientRect();
+        const width = Math.floor(rect.width || container.clientWidth || 800);
+        // Determine if mobile layout is needed
+        const isMobile = width < 600;
         
-        // Draw slice
-        ctx.beginPath();
-        ctx.moveTo(adjustedCenterX, centerY);
-        ctx.arc(adjustedCenterX, centerY, adjustedRadius, currentAngle, currentAngle + sliceAngle);
-        ctx.closePath();
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.strokeStyle = theme.background;
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        // Adjust height based on layout
+        const headerHeight = 60;
+        const legendItemHeight = 24; // Compact legend items
         
-        // Draw percentage inside the slice (only if slice is large enough)
-        const percentage = ((item.value / total) * 100).toFixed(1);
-        if (sliceAngle > 0.15) { // Only show percentage if slice is > ~27 degrees
-            const labelAngle = currentAngle + sliceAngle / 2;
-            const labelX = adjustedCenterX + Math.cos(labelAngle) * (adjustedRadius * 0.6);
-            const labelY = centerY + Math.sin(labelAngle) * (adjustedRadius * 0.6);
-            
-            // White text with shadow for better visibility
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            ctx.shadowBlur = 4;
-            ctx.shadowOffsetX = 1;
-            ctx.shadowOffsetY = 1;
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${percentage}%`, labelX, labelY);
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
+        // Calculate required height
+        let height = 450;
+        let legendHeight = 0;
+        
+        // Filter and prepare data first to know how many items
+        const validData = data
+            .map(asset => ({
+                name: asset.name || asset.ticker,
+                ticker: asset.ticker,
+                value: asset[metric.key]
+            }))
+            .filter(item => item.value !== null && item.value !== undefined && !isNaN(item.value) && item.value > 0)
+            .sort((a, b) => b.value - a.value);
+
+        if (isMobile) {
+            // Calculate legend height for mobile (stacked at bottom)
+            // 2 columns on mobile
+            const columns = 2;
+            const rows = Math.ceil(validData.length / columns);
+            legendHeight = rows * legendItemHeight + 40; // Add padding
+            height = Math.max(450, 300 + legendHeight + headerHeight);
         }
         
-        currentAngle += sliceAngle;
-    });
-    
-    // Draw legend on the right (outside the pie chart)
-    const legendX = width - legendWidth + 10;
-    const legendY = headerHeight + 30;
-    let legendIndex = 0;
-    
-    validData.forEach((item, index) => {
-        const y = legendY + legendIndex * 28;
-        const color = colors[index % colors.length];
-        const percentage = ((item.value / total) * 100).toFixed(1);
+        // Update wrapper height if needed
+        wrapper.style.height = `${height}px`;
         
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Set canvas size accounting for DPR
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        
+        // Scale for HiDPI
+        ctx.scale(dpr, dpr);
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        if (validData.length === 0) {
+            ctx.fillStyle = theme.text;
+            ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('No hay datos disponibles', width / 2, height / 2);
+            return;
+        }
+        
+        const avg = calculateAverage(data, metric.key);
+        const total = validData.reduce((sum, item) => sum + item.value, 0);
+        
+        const padding = 16;
+        
+        // Draw header
+        ctx.fillStyle = theme.background;
+        ctx.fillRect(0, 0, width, headerHeight);
+        
+        ctx.fillStyle = theme.text;
+        ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`Gráfico de Torta - ${metric.label}`, padding, 24);
+        
+        ctx.strokeStyle = theme.grid;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padding, 42);
+        ctx.lineTo(width - padding, 42);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        ctx.fillStyle = theme.text;
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.fillText(`Promedio: ${metric.format(avg)}`, padding, 56);
+        ctx.textBaseline = 'alphabetic'; // Reset text baseline
+        
+        // Draw pie chart
+        let currentAngle = -Math.PI / 2; // Start from top
+        
+        // Color palette
+        const colors = [
+            '#26A69A', '#EF5350', '#42A5F5', '#AB47BC', '#FFA726',
+            '#66BB6A', '#EC407A', '#26C6DA', '#FFCA28', '#78909C'
+        ];
+        
+        let centerX, centerY, radius;
+        
+        if (isMobile) {
+            // Mobile: Chart on top, Legend on bottom
+            centerX = width / 2;
+            const chartAreaHeight = height - legendHeight - headerHeight;
+            centerY = headerHeight + chartAreaHeight / 2;
+            radius = Math.min(width - padding * 2, chartAreaHeight - padding) / 2 - 10;
+        } else {
+            // Desktop: Chart on left, Legend on right
+            const legendWidth = 220;
+            centerX = (width - legendWidth) / 2;
+            centerY = (height + headerHeight) / 2;
+            radius = Math.min((width - legendWidth) / 2 - 40, (height - headerHeight - padding * 2) / 2 - 20);
+        }
+        
+        // Ensure radius is positive
+        radius = Math.max(10, radius);
+        
+        validData.forEach((item, index) => {
+            const sliceAngle = (item.value / total) * 2 * Math.PI;
+            const color = colors[index % colors.length];
+            
+            // Draw slice
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = theme.background;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw percentage inside the slice (only if slice is large enough)
+            // Increased threshold for visibility (approx 17 degrees)
+            const percentage = ((item.value / total) * 100).toFixed(1);
+            if (sliceAngle > 0.3) { 
+                const labelAngle = currentAngle + sliceAngle / 2;
+                // Move label slightly further out for better visibility
+                const labelRadius = radius * 0.65;
+                const labelX = centerX + Math.cos(labelAngle) * labelRadius;
+                const labelY = centerY + Math.sin(labelAngle) * labelRadius;
+                
+                // White text with shadow for better visibility
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${percentage}%`, labelX, labelY);
+                ctx.restore();
+            }
+            
+            currentAngle += sliceAngle;
+        });
+        
+        // Draw Legend
+        if (isMobile) {
+            // Mobile Legend (Grid 2 columns)
+            const legendStartY = height - legendHeight + 20;
+            const colWidth = width / 2 - padding;
+            
+            validData.forEach((item, index) => {
+                const col = index % 2;
+                const row = Math.floor(index / 2);
+                const x = padding + col * colWidth;
+                const y = legendStartY + row * legendItemHeight;
+                const color = colors[index % colors.length];
+                const percentage = ((item.value / total) * 100).toFixed(1);
+                
+                drawLegendItem(ctx, x, y, color, item.ticker, percentage, metric.format(item.value), theme);
+            });
+        } else {
+            // Desktop Legend (List on right)
+            const legendWidth = 220;
+            const legendX = width - legendWidth + 10;
+            const legendY = headerHeight + 30;
+            
+            validData.forEach((item, index) => {
+                const y = legendY + index * 28;
+                const color = colors[index % colors.length];
+                const percentage = ((item.value / total) * 100).toFixed(1);
+                
+                drawLegendItem(ctx, legendX, y, color, item.ticker, percentage, metric.format(item.value), theme, true);
+            });
+        }
+    };
+    
+    // Helper to draw legend item
+    function drawLegendItem(ctx, x, y, color, label, percentage, value, theme, isDesktop = false) {
         // Color box
         ctx.fillStyle = color;
-        ctx.fillRect(legendX, y - 8, 14, 14);
+        ctx.fillRect(x, y - 6, 12, 12);
         ctx.strokeStyle = theme.border;
         ctx.lineWidth = 1;
-        ctx.strokeRect(legendX, y - 8, 14, 14);
+        ctx.strokeRect(x, y - 6, 12, 12);
         
-        // Ticker/Name
+        // Ticker
         ctx.fillStyle = theme.text;
         ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'left';
-        const displayName = item.ticker.length > 15 ? item.ticker.substring(0, 15) + '...' : item.ticker;
-        ctx.fillText(displayName, legendX + 20, y + 2);
+        ctx.textBaseline = 'middle';
         
-        // Percentage
+        const labelText = isDesktop ? 
+            (label.length > 15 ? label.substring(0, 15) + '...' : label) : 
+            label;
+            
+        ctx.fillText(labelText, x + 18, y);
+        
+        // Percentage and Value
         ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = theme.text + 'CC';
-        ctx.fillText(`${percentage}%`, legendX + 20, y + 16);
-        
-        // Value
-        ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        ctx.fillStyle = theme.text + '80';
-        ctx.fillText(metric.format(item.value), legendX + 20, y + 28);
-        
-        legendIndex++;
+        if (isDesktop) {
+            ctx.fillStyle = theme.text + 'CC';
+            ctx.fillText(`${percentage}%`, x + 18, y + 14);
+            ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.fillStyle = theme.text + '80';
+            ctx.fillText(value, x + 18, y + 26);
+        } else {
+            // Compact for mobile: Ticker - 20%
+            ctx.fillStyle = theme.text;
+            ctx.fillText(`${percentage}%`, x + 18 + ctx.measureText(labelText).width + 8, y);
+        }
+    }
+    
+    // Initial render
+    render();
+    
+    // Handle resize
+    const resizeObserver = new ResizeObserver(() => {
+        window.requestAnimationFrame(() => render());
     });
+    resizeObserver.observe(wrapper);
 }
 
 // Create Treemap Chart with TradingView styling
