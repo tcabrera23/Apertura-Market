@@ -847,9 +847,8 @@
         // Nueva función para crear suscripción con plataforma seleccionada (Vexor)
         window.createSubscriptionWithPlatform = async function(platform) {
             const token = getAuthToken();
-            const userData = JSON.parse(localStorage.getItem('user_data'));
             
-            if (!token || !userData) {
+            if (!token) {
                 alert('Debes iniciar sesión para crear una suscripción');
                 window.location.href = 'login.html';
                 return;
@@ -857,6 +856,31 @@
             
             if (!selectedPlan) {
                 alert('Por favor selecciona un plan');
+                return;
+            }
+            
+            // Obtener user_id desde el API
+            let userId;
+            try {
+                const userResponse = await fetch(`${window.API_BASE_URL}/v1/user/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!userResponse.ok) {
+                    throw new Error('No se pudo obtener información del usuario');
+                }
+                
+                const userData = await userResponse.json();
+                userId = userData.user_id;
+                
+                if (!userId) {
+                    throw new Error('ID de usuario no disponible');
+                }
+            } catch (error) {
+                console.error('Error obteniendo user_id:', error);
+                alert('Error: No se pudo obtener tu información de usuario. Por favor, recarga la página e intenta nuevamente.');
                 return;
             }
             
@@ -875,6 +899,13 @@
                     ? document.getElementById('couponCodeInput').value.trim() 
                     : null;
                 
+                console.log('Creando suscripción con:', {
+                    plan_name: selectedPlan.name,
+                    platform: platform,
+                    user_id: userId,
+                    coupon_code: couponCode
+                });
+                
                 // Llamar a Supabase Edge Function
                 const response = await fetch(`${SUPABASE_URL}/functions/v1/vexor-payments`, {
                     method: 'POST',
@@ -885,17 +916,19 @@
                     body: JSON.stringify({
                         plan_name: selectedPlan.name,
                         platform: platform,
-                        user_id: userData.id,
+                        user_id: userId,
                         coupon_code: couponCode
                     })
                 });
 
                 if (!response.ok) {
                     const errorData = await response.json();
+                    console.error('Error de Vexor:', errorData);
                     throw new Error(errorData.error || 'Error al iniciar el pago con Vexor');
                 }
 
                 const result = await response.json();
+                console.log('Respuesta de Vexor:', result);
                 
                 if (result.success && result.approval_url) {
                     // Guardar vexor_id por si necesitamos verificarlo luego
