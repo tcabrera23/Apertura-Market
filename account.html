@@ -230,22 +230,28 @@
                     <div id="couponMessage" class="mt-2 text-sm"></div>
                 </div>
                 
-                <!-- PayPal Checkout Container -->
-                <div id="paypalCheckoutContainer" class="hidden mt-6 p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-gray-200 dark:border-gray-600">
+                <!-- Payment Platform Selection Container -->
+                <div id="paymentPlatformContainer" class="hidden mt-6 p-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg border-2 border-gray-200 dark:border-gray-600">
                     <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-4">Completar Pago</h4>
                     <div id="selectedPlanInfo" class="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
                         <!-- Información del plan seleccionado -->
                     </div>
-                    <div id="paypal-button-container" class="flex justify-center">
+                    
+                    <!-- Platform Selection Buttons -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button 
-                            id="createSubscriptionBtn"
-                            onclick="createSubscriptionWithCoupon()"
-                            class="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all font-semibold flex items-center gap-2"
+                            onclick="createSubscriptionWithPlatform('paypal')"
+                            class="flex items-center justify-center gap-3 p-4 bg-[#0070ba] hover:bg-[#005ea6] text-white rounded-xl transition-all font-bold"
                         >
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
-                            </svg>
-                            Continuar con PayPal
+                            <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" class="h-6">
+                            Pagar con PayPal (USD)
+                        </button>
+                        <button 
+                            onclick="createSubscriptionWithPlatform('mercadopago')"
+                            class="flex items-center justify-center gap-3 p-4 bg-[#009ee3] hover:bg-[#008cc9] text-white rounded-xl transition-all font-bold"
+                        >
+                            <img src="https://vignette.wikia.nocookie.net/logopedia/images/2/22/Mercado_Pago_logo.png/revision/latest?cb=20180706173059" alt="Mercado Pago" class="h-6 invert">
+                            Pagar con Mercado Pago (ARS)
                         </button>
                     </div>
                 </div>
@@ -284,6 +290,7 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="js/currency-handler.js"></script>
     <script src="js/dark-mode.js"></script>
     <script src="js/mobile-nav.js"></script>
     <script src="js/account.js"></script>
@@ -368,11 +375,11 @@
         selectedPlan = null;
         appliedCoupon = null;
         
-        // Ocultar secciones de cupón y PayPal inicialmente
+        // Ocultar secciones de cupón y plataforma de pago inicialmente
         const couponSection = document.getElementById('couponSection');
-        const paypalContainer = document.getElementById('paypalCheckoutContainer');
+        const paymentContainer = document.getElementById('paymentPlatformContainer');
         if (couponSection) couponSection.classList.add('hidden');
-        if (paypalContainer) paypalContainer.classList.add('hidden');
+        if (paymentContainer) paymentContainer.classList.add('hidden');
         
         // Limpiar input de cupón
         const couponInput = document.getElementById('couponCodeInput');
@@ -400,18 +407,13 @@
         }
         selectedPlan = null;
         appliedCoupon = null;
-        const paypalContainer = document.getElementById('paypalCheckoutContainer');
-        if (paypalContainer) {
-            paypalContainer.classList.add('hidden');
+        const paymentContainer = document.getElementById('paymentPlatformContainer');
+        if (paymentContainer) {
+            paymentContainer.classList.add('hidden');
         }
         const couponSection = document.getElementById('couponSection');
         if (couponSection) {
             couponSection.classList.add('hidden');
-        }
-        // Limpiar contenedor de PayPal
-        const container = document.getElementById('paypal-button-container');
-        if (container) {
-            container.innerHTML = '';
         }
         // Limpiar input de cupón
         const couponInput = document.getElementById('couponCodeInput');
@@ -580,7 +582,7 @@
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
                                 ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
-                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-price-with-period="${plan.name}" data-period="mes">
                                     $${price.toFixed(2)}
                                     <span class="text-lg font-normal">/mes</span>
                                 </p>
@@ -589,6 +591,11 @@
                         </div>
                     `;
                 }).join('');
+                
+                // Actualizar precios según moneda del usuario
+                if (window.CurrencyHandler) {
+                    window.CurrencyHandler.updateAllPrices();
+                }
             })
             .catch(err => {
                 console.error('Error getting current subscription:', err);
@@ -604,7 +611,7 @@
                             <div class="text-center">
                                 <h4 class="text-xl font-bold text-gray-900 dark:text-white mb-2">${plan.display_name || plan.name}</h4>
                                 ${plan.description ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">${plan.description}</p>` : ''}
-                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                                <p class="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-price-with-period="${plan.name}" data-period="mes">
                                     $${price.toFixed(2)}
                                     <span class="text-lg font-normal">/mes</span>
                                 </p>
@@ -612,6 +619,11 @@
                         </div>
                     `;
                 }).join('');
+                
+                // Actualizar precios según moneda del usuario
+                if (window.CurrencyHandler) {
+                    window.CurrencyHandler.updateAllPrices();
+                }
             });
         }
 
@@ -665,9 +677,9 @@
             // Mostrar información del plan seleccionado (incluso si es el actual)
             window.updatePlanInfo();
 
-            // Mostrar sección de cupón y contenedor de PayPal
+            // Mostrar sección de cupón y contenedor de plataformas de pago
             document.getElementById('couponSection').classList.remove('hidden');
-            document.getElementById('paypalCheckoutContainer').classList.remove('hidden');
+            document.getElementById('paymentPlatformContainer').classList.remove('hidden');
             
             // Limpiar cupón aplicado al cambiar de plan
             appliedCoupon = null;
@@ -828,14 +840,18 @@
                 button.textContent = originalText;
             }
             
-            // Scroll al contenedor de PayPal
-            document.getElementById('paypalCheckoutContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Scroll al contenedor de plataformas de pago
+            document.getElementById('paymentPlatformContainer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        window.createSubscriptionWithCoupon = async function() {
+        // Nueva función para crear suscripción con plataforma seleccionada (Vexor)
+        window.createSubscriptionWithPlatform = async function(platform) {
             const token = getAuthToken();
-            if (!token) {
+            const userData = JSON.parse(localStorage.getItem('user_data'));
+            
+            if (!token || !userData) {
                 alert('Debes iniciar sesión para crear una suscripción');
+                window.location.href = 'login.html';
                 return;
             }
             
@@ -844,45 +860,64 @@
                 return;
             }
             
-            const button = document.getElementById('createSubscriptionBtn');
-            if (button) {
-                button.disabled = true;
-                button.textContent = 'Creando suscripción...';
-            }
+            // Mostrar estado de carga en el botón clickeado
+            const buttons = document.querySelectorAll('#paymentPlatformContainer button');
+            buttons.forEach(btn => btn.disabled = true);
+            const clickedButton = event.currentTarget;
+            const originalText = clickedButton.innerHTML;
+            clickedButton.innerHTML = '<svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/subscriptions/create`, {
+                const SUPABASE_URL = "https://pwumamzbicapuiqkwrey.supabase.co";
+                
+                // Obtener cupón si fue aplicado
+                const couponCode = appliedCoupon && appliedCoupon.valid 
+                    ? document.getElementById('couponCodeInput').value.trim() 
+                    : null;
+                
+                // Llamar a Supabase Edge Function
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/vexor-payments`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
                         plan_name: selectedPlan.name,
-                        coupon_code: appliedCoupon && appliedCoupon.valid ? document.getElementById('couponCodeInput').value.trim() : null
+                        platform: platform,
+                        user_id: userData.id,
+                        coupon_code: couponCode
                     })
                 });
-                
-                const data = await response.json();
-                
+
                 if (!response.ok) {
-                    throw new Error(data.detail || data.message || 'Error creando suscripción');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Error al iniciar el pago con Vexor');
                 }
+
+                const result = await response.json();
                 
-                // Redirigir al usuario a PayPal para aprobar el pago
-                if (data.approval_url) {
-                    window.location.href = data.approval_url;
+                if (result.success && result.approval_url) {
+                    // Guardar vexor_id por si necesitamos verificarlo luego
+                    localStorage.setItem('pending_vexor_id', result.vexor_id);
+                    // Redirigir al checkout de Vexor (ya sea PayPal o Mercado Pago)
+                    window.location.href = result.approval_url;
                 } else {
-                    throw new Error('No se recibió URL de aprobación de PayPal');
+                    throw new Error('No se recibió la URL de aprobación');
                 }
+
             } catch (error) {
-                console.error('Error creating subscription:', error);
-                alert(error.message || 'Error creando suscripción. Por favor, intenta de nuevo.');
-                if (button) {
-                    button.disabled = false;
-                    button.textContent = 'Continuar con PayPal';
-                }
+                console.error('Error Vexor:', error);
+                alert(`Error al procesar el pago: ${error.message}`);
+                buttons.forEach(btn => btn.disabled = false);
+                clickedButton.innerHTML = originalText;
             }
+        }
+
+        // Función legacy de PayPal (mantener por compatibilidad)
+        window.createSubscriptionWithCoupon = async function() {
+            // Redirigir a la nueva función con PayPal como plataforma por defecto
+            await window.createSubscriptionWithPlatform('paypal');
         }
 
         async function verifyPayPalSubscription(subscriptionId) {
