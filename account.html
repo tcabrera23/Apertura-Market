@@ -240,14 +240,16 @@
                     <!-- Platform Selection Buttons -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <button 
-                            onclick="createSubscriptionWithPlatform('paypal')"
+                            id="paypalButton"
+                            onclick="window.createSubscriptionWithPlatform('paypal', this)"
                             class="flex items-center justify-center gap-3 p-4 bg-[#0070ba] hover:bg-[#005ea6] text-white rounded-xl transition-all font-bold"
                         >
                             <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" class="h-6">
                             Pagar con PayPal (USD)
                         </button>
                         <button 
-                            onclick="createSubscriptionWithPlatform('mercadopago')"
+                            id="mercadopagoButton"
+                            onclick="window.createSubscriptionWithPlatform('mercadopago', this)"
                             class="flex items-center justify-center gap-3 p-4 bg-[#009ee3] hover:bg-[#008cc9] text-white rounded-xl transition-all font-bold"
                         >
                             <img src="https://vignette.wikia.nocookie.net/logopedia/images/2/22/Mercado_Pago_logo.png/revision/latest?cb=20180706173059" alt="Mercado Pago" class="h-6 invert">
@@ -687,21 +689,45 @@
             document.getElementById('couponMessage').innerHTML = '';
         };
 
-        window.updatePlanInfo = function() {
+        window.updatePlanInfo = async function() {
             const infoContainer = document.getElementById('selectedPlanInfo');
-            const price = parseFloat(selectedPlan.price || 0);
-            let finalPrice = price;
+            const priceUSD = parseFloat(selectedPlan.price || 0);
+            let finalPriceUSD = priceUSD;
             let discountText = '';
             
+            // Calcular descuento si hay cupón aplicado
             if (appliedCoupon && appliedCoupon.valid) {
                 if (appliedCoupon.coupon.discount_percent) {
-                    finalPrice = price * (1 - appliedCoupon.coupon.discount_percent / 100);
+                    finalPriceUSD = priceUSD * (1 - appliedCoupon.coupon.discount_percent / 100);
                     discountText = `<p class="text-sm text-green-600 dark:text-green-400">Descuento: ${appliedCoupon.coupon.discount_percent}%</p>`;
                 } else if (appliedCoupon.coupon.type === 'free_access') {
-                    finalPrice = 0;
+                    finalPriceUSD = 0;
                     discountText = `<p class="text-sm text-green-600 dark:text-green-400">Acceso gratis por ${appliedCoupon.coupon.duration_months || 12} meses</p>`;
                 }
             }
+            
+            // Obtener info de moneda del usuario
+            const currencyInfo = window.CurrencyHandler ? 
+                window.CurrencyHandler.getUserCurrencyInfo() : 
+                { code: 'USD', symbol: '$', name: 'US Dollar' };
+            
+            // Convertir precio a moneda local
+            let finalPriceLocal = finalPriceUSD;
+            let priceLocal = priceUSD;
+            
+            if (window.CurrencyHandler && currencyInfo.code !== 'USD') {
+                finalPriceLocal = await window.CurrencyHandler.convertPrice(finalPriceUSD, currencyInfo.code);
+                priceLocal = await window.CurrencyHandler.convertPrice(priceUSD, currencyInfo.code);
+            }
+            
+            // Formatear precios
+            const formattedFinalPrice = window.CurrencyHandler ? 
+                window.CurrencyHandler.formatPrice(finalPriceLocal, currencyInfo.code) :
+                `$${finalPriceLocal.toFixed(2)}`;
+            
+            const formattedOriginalPrice = window.CurrencyHandler ?
+                window.CurrencyHandler.formatPrice(priceLocal, currencyInfo.code) :
+                `$${priceLocal.toFixed(2)}`;
             
             infoContainer.innerHTML = `
                 <div class="flex justify-between items-center">
@@ -711,11 +737,12 @@
                         ${discountText}
                     </div>
                     <div class="text-right">
-                        ${price !== finalPrice ? `<p class="text-sm text-gray-500 line-through">$${price.toFixed(2)}/mes</p>` : ''}
+                        ${priceUSD !== finalPriceUSD ? `<p class="text-sm text-gray-500 line-through">${formattedOriginalPrice}/mes</p>` : ''}
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                            ${finalPrice === 0 ? 'Gratis' : `$${finalPrice.toFixed(2)}`}
-                            ${finalPrice > 0 ? '<span class="text-sm font-normal">/mes</span>' : ''}
+                            ${finalPriceUSD === 0 ? 'Gratis' : formattedFinalPrice}
+                            ${finalPriceUSD > 0 ? '<span class="text-sm font-normal">/mes</span>' : ''}
                         </p>
+                        ${finalPriceUSD > 0 && currencyInfo.code !== 'USD' ? `<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">${currencyInfo.code} • ~$${finalPriceUSD.toFixed(2)} USD</p>` : ''}
                     </div>
                 </div>
             `;
@@ -845,7 +872,7 @@
         }
 
         // Nueva función para crear suscripción con plataforma seleccionada (Vexor)
-        window.createSubscriptionWithPlatform = async function(platform) {
+        window.createSubscriptionWithPlatform = async function(platform, buttonElement) {
             const token = getAuthToken();
             
             if (!token) {
@@ -887,9 +914,9 @@
             // Mostrar estado de carga en el botón clickeado
             const buttons = document.querySelectorAll('#paymentPlatformContainer button');
             buttons.forEach(btn => btn.disabled = true);
-            const clickedButton = event.currentTarget;
-            const originalText = clickedButton.innerHTML;
-            clickedButton.innerHTML = '<svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...';
+            
+            const originalText = buttonElement.innerHTML;
+            buttonElement.innerHTML = '<svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="ml-2">Procesando...</span>';
             
             try {
                 const SUPABASE_URL = "https://pwumamzbicapuiqkwrey.supabase.co";
@@ -933,6 +960,7 @@
                 if (result.success && result.approval_url) {
                     // Guardar vexor_id por si necesitamos verificarlo luego
                     localStorage.setItem('pending_vexor_id', result.vexor_id);
+                    console.log('Redirigiendo a:', result.approval_url);
                     // Redirigir al checkout de Vexor (ya sea PayPal o Mercado Pago)
                     window.location.href = result.approval_url;
                 } else {
@@ -943,7 +971,7 @@
                 console.error('Error Vexor:', error);
                 alert(`Error al procesar el pago: ${error.message}`);
                 buttons.forEach(btn => btn.disabled = false);
-                clickedButton.innerHTML = originalText;
+                buttonElement.innerHTML = originalText;
             }
         }
 
