@@ -35,6 +35,10 @@ from email_templates import (
     get_password_reset_email_template,
     get_subscription_confirmation_email_template
 )
+from cryptography.fernet import Fernet
+import hmac
+import hashlib
+from broker_clients import get_iol_access_token, get_iol_portfolio, get_binance_portfolio
 
 # Load environment variables
 load_dotenv()
@@ -76,6 +80,17 @@ PAYPAL_BASE_URL = "https://api-m.sandbox.paypal.com" if PAYPAL_MODE == "sandbox"
 # PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "http://localhost:8080/pricing.html")
 PAYPAL_RETURN_URL = os.getenv("PAYPAL_RETURN_URL", "https://bullanalytics.io/subscription-success.html")
 PAYPAL_CANCEL_URL = os.getenv("PAYPAL_CANCEL_URL", "https://bullanalytics.io/pricing.html")
+
+# Encryption key for API keys (store securely in environment)
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+if not ENCRYPTION_KEY:
+    # Generate a new key if not exists (for development only, use env var in production)
+    ENCRYPTION_KEY = Fernet.generate_key()
+    logger.warning("No ENCRYPTION_KEY found, generated a new one. Set this in environment for production!")
+else:
+    ENCRYPTION_KEY = ENCRYPTION_KEY.encode()
+
+cipher_suite = Fernet(ENCRYPTION_KEY)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -314,9 +329,38 @@ class CouponValidate(BaseModel):
     code: str
     plan_name: str
 
+# Broker Connection Models
+class BrokerConnectionCreate(BaseModel):
+    broker_name: str  # 'IOL' or 'BINANCE'
+    api_key: str
+    api_secret: Optional[str] = None  # Required for Binance, optional for IOL
+    username: Optional[str] = None  # For IOL authentication
+    password: Optional[str] = None  # For IOL authentication
+
+class BrokerConnectionUpdate(BaseModel):
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class BrokerConnectionResponse(BaseModel):
+    id: str
+    broker_name: str
+    is_active: bool
+    created_at: str
+    last_synced: Optional[str] = None
+
 # ============================================
 # HELPER FUNCTIONS
 # ============================================
+
+# Encryption/Decryption helpers for API keys
+def encrypt_api_key(api_key: str) -> str:
+    """Encrypt an API key for secure storage"""
+    return cipher_suite.encrypt(api_key.encode()).decode()
+
+def decrypt_api_key(encrypted_key: str) -> str:
+    """Decrypt an API key for use"""
+    return cipher_suite.decrypt(encrypted_key.encode()).decode()
 
 # Thread pool for timeout operations - aumentado para manejar muchos activos
 executor = ThreadPoolExecutor(max_workers=30)
@@ -2009,6 +2053,229 @@ async def update_watchlist(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating watchlist: {str(e)}")
+
+# ============================================
+# BROKER CONNECTIONS ENDPOINTS
+# ============================================
+
+@app.post("/api/broker-connections", tags=["Broker"])
+async def create_broker_connection(
+    connection: BrokerConnectionCreate,
+    user = Depends(get_current_user)
+):
+    """Create a new broker connection for paid users"""
+    try:
+        # Check if user has active paid subscription
+        sub_response = supabase.table("subscriptions") \
+            .select("*, subscription_plans(*)") \
+            .eq("user_id", user.id) \
+            .eq("status", "active") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if not sub_response.data:
+            raise HTTPException(
+                status_code=403,
+                detail="Broker connections require an active paid subscription"
+            )
+        
+        plan = sub_response.data[0].get("subscription_plans", {})
+        if plan.get("name") == "free":
+            raise HTTPException(
+                status_code=403,
+                detail="Broker connections are only available for Plus and Pro plans"
+            )
+        
+        # Validate broker name
+        if connection.broker_name not in ["IOL", "BINANCE"]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid broker. Supported brokers: IOL, BINANCE"
+            )
+        
+        # Validate broker-specific credentials
+        if connection.broker_name == "IOL":
+            if not connection.username or not connection.password:
+                raise HTTPException(
+                    status_code=400,
+                    detail="IOL requires username and password"
+                )
+            # Test IOL connection
+            access_token = await get_iol_access_token(connection.username, connection.password)
+            if not access_token:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Failed to authenticate with IOL. Please check your credentials."
+                )
+        
+        elif connection.broker_name == "BINANCE":
+            if not connection.api_key or not connection.api_secret:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Binance requires api_key and api_secret"
+                )
+            # Test Binance connection
+            portfolio = await get_binance_portfolio(connection.api_key, connection.api_secret)
+            if portfolio is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Failed to connect to Binance. Please check your API credentials."
+                )
+        
+        # Check if connection already exists
+        existing = supabase.table("broker_connections") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .eq("broker_name", connection.broker_name) \
+            .execute()
+        
+        if existing.data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Connection to {connection.broker_name} already exists. Please update or delete the existing one."
+            )
+        
+        # Encrypt sensitive data
+        encrypted_api_key = encrypt_api_key(connection.api_key) if connection.api_key else None
+        encrypted_api_secret = encrypt_api_key(connection.api_secret) if connection.api_secret else None
+        encrypted_username = encrypt_api_key(connection.username) if connection.username else None
+        encrypted_password = encrypt_api_key(connection.password) if connection.password else None
+        
+        # Create connection
+        connection_data = {
+            "user_id": user.id,
+            "broker_name": connection.broker_name,
+            "api_key_encrypted": encrypted_api_key,
+            "api_secret_encrypted": encrypted_api_secret,
+            "username_encrypted": encrypted_username,
+            "password_encrypted": encrypted_password,
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        response = supabase.table("broker_connections").insert(connection_data).execute()
+        
+        return {
+            "message": "Broker connection created successfully",
+            "connection": {
+                "id": response.data[0]["id"],
+                "broker_name": response.data[0]["broker_name"],
+                "is_active": response.data[0]["is_active"],
+                "created_at": response.data[0]["created_at"]
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating broker connection: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating broker connection: {str(e)}")
+
+@app.get("/api/broker-connections", tags=["Broker"])
+async def get_broker_connections(user = Depends(get_current_user)):
+    """Get all broker connections for the authenticated user"""
+    try:
+        response = supabase.table("broker_connections") \
+            .select("id, broker_name, is_active, created_at, last_synced") \
+            .eq("user_id", user.id) \
+            .order("created_at", desc=True) \
+            .execute()
+        
+        return response.data
+    
+    except Exception as e:
+        logger.error(f"Error fetching broker connections: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching broker connections: {str(e)}")
+
+@app.delete("/api/broker-connections/{connection_id}", tags=["Broker"])
+async def delete_broker_connection(connection_id: str, user = Depends(get_current_user)):
+    """Delete a broker connection"""
+    try:
+        # Verify connection belongs to user
+        connection_response = supabase.table("broker_connections") \
+            .select("*") \
+            .eq("id", connection_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not connection_response.data:
+            raise HTTPException(status_code=404, detail="Broker connection not found")
+        
+        # Delete connection
+        supabase.table("broker_connections").delete().eq("id", connection_id).execute()
+        
+        return {"message": "Broker connection deleted successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting broker connection: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting broker connection: {str(e)}")
+
+@app.get("/api/broker-connections/{connection_id}/portfolio", tags=["Broker"])
+async def get_broker_portfolio(connection_id: str, user = Depends(get_current_user)):
+    """Get portfolio from a connected broker"""
+    try:
+        # Get connection
+        connection_response = supabase.table("broker_connections") \
+            .select("*") \
+            .eq("id", connection_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not connection_response.data:
+            raise HTTPException(status_code=404, detail="Broker connection not found")
+        
+        connection = connection_response.data[0]
+        
+        if not connection.get("is_active"):
+            raise HTTPException(status_code=400, detail="Broker connection is not active")
+        
+        portfolio = None
+        
+        # Fetch portfolio based on broker
+        if connection["broker_name"] == "IOL":
+            # Decrypt credentials
+            username = decrypt_api_key(connection["username_encrypted"])
+            password = decrypt_api_key(connection["password_encrypted"])
+            
+            # Get access token
+            access_token = await get_iol_access_token(username, password)
+            if not access_token:
+                raise HTTPException(status_code=400, detail="Failed to authenticate with IOL")
+            
+            # Get portfolio
+            portfolio = await get_iol_portfolio(access_token)
+        
+        elif connection["broker_name"] == "BINANCE":
+            # Decrypt credentials
+            api_key = decrypt_api_key(connection["api_key_encrypted"])
+            api_secret = decrypt_api_key(connection["api_secret_encrypted"])
+            
+            # Get portfolio
+            portfolio = await get_binance_portfolio(api_key, api_secret)
+        
+        if portfolio is None:
+            raise HTTPException(status_code=500, detail="Failed to fetch portfolio from broker")
+        
+        # Update last_synced timestamp
+        supabase.table("broker_connections") \
+            .update({"last_synced": datetime.now(timezone.utc).isoformat()}) \
+            .eq("id", connection_id) \
+            .execute()
+        
+        return {
+            "broker": connection["broker_name"],
+            "last_synced": datetime.now(timezone.utc).isoformat(),
+            "portfolio": portfolio
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching broker portfolio: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching broker portfolio: {str(e)}")
 
 # ============================================
 # ALERTS ENDPOINTS (Supabase Integration)
@@ -3939,6 +4206,90 @@ async def verify_subscription(
     except Exception as e:
         logger.error(f"Error verificando suscripción: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error verificando suscripción: {str(e)}")
+
+@app.post("/api/webhooks/vexor")
+async def vexor_webhook(request: Request):
+    """
+    Recibe notificaciones de Vexor para actualizar el estado de las suscripciones
+    Compatible con PayPal y Mercado Pago a través de Vexor.
+    """
+    try:
+        payload = await request.json()
+        logger.info(f"🔔 Webhook de Vexor recibido: {payload}")
+        
+        # Extraer información básica
+        # Vexor envía el identificador único de la operación
+        vexor_id = payload.get("identifier")
+        event_type = payload.get("event")  # Ej: 'subscription.created', 'payment.succeeded'
+        platform = payload.get("platform") # 'paypal' o 'mercadopago'
+        
+        # Recuperar los metadatos que enviamos desde la Edge Function
+        custom_data = payload.get("customData", {})
+        user_id = custom_data.get("user_id")
+        plan_id = custom_data.get("plan_id")
+        
+        if not user_id or not plan_id:
+            logger.warning(f"⚠️ Webhook de Vexor {vexor_id} ignorado: falta user_id o plan_id en customData")
+            return {"status": "ignored", "reason": "missing_metadata"}
+
+        # Mapear el estado según el evento
+        # Vexor normaliza los eventos de diferentes plataformas
+        new_status = "active"
+        if event_type in ["subscription.cancelled", "subscription.expired", "payment.failed"]:
+            new_status = "inactive"
+        elif event_type == "subscription.past_due":
+            new_status = "past_due"
+
+        # Datos para actualizar/insertar en Supabase
+        now = datetime.now(timezone.utc)
+        update_data = {
+            "user_id": user_id,
+            "plan_id": plan_id,
+            "status": new_status,
+            "vexor_id": vexor_id,
+            "platform": platform,
+            "updated_at": now.isoformat()
+        }
+
+        # Si es un evento de éxito, actualizamos el periodo de vigencia
+        if new_status == "active":
+            update_data["current_period_start"] = now.isoformat()
+            # Por defecto sumamos 30 días, el webhook de renovación actualizará esto luego
+            update_data["current_period_end"] = (now + timedelta(days=32)).isoformat()
+
+        # 1. Buscar si ya existe la suscripción en nuestra tabla
+        # Intentamos buscar por vexor_id
+        check_response = supabase.table("subscriptions").select("*").eq("vexor_id", vexor_id).execute()
+        
+        if check_response.data and len(check_response.data) > 0:
+            # Actualizar existente
+            supabase.table("subscriptions").update(update_data).eq("vexor_id", vexor_id).execute()
+            logger.info(f"✅ Suscripción Vexor {vexor_id} actualizada para usuario {user_id} (Estado: {new_status})")
+        else:
+            # 2. Si no existe por vexor_id, quizás existe una pendiente del usuario para ese plan
+            # Esto ayuda a limpiar registros temporales si los hubiera
+            user_check = supabase.table("subscriptions") \
+                .select("*") \
+                .eq("user_id", user_id) \
+                .eq("status", "pending_approval") \
+                .execute()
+                
+            if user_check.data and len(user_check.data) > 0:
+                # Reutilizar el registro pendiente
+                supabase.table("subscriptions").update(update_data).eq("id", user_check.data[0]["id"]).execute()
+                logger.info(f"✅ Registro pendiente convertido a Vexor {vexor_id} para usuario {user_id}")
+            else:
+                # Crear nuevo registro
+                supabase.table("subscriptions").insert(update_data).execute()
+                logger.info(f"✅ Nueva suscripción Vexor {vexor_id} creada para usuario {user_id}")
+
+        return {"status": "success", "event": event_type}
+
+    except Exception as e:
+        logger.error(f"❌ Error procesando webhook de Vexor: {str(e)}", exc_info=True)
+        # Retornamos 200 para que Vexor no reintente infinitamente si es un error de lógica nuestro,
+        # pero podrías retornar 500 si quieres reintentos.
+        return {"status": "error", "message": str(e)}
 
 # Run server
 if __name__ == "__main__":

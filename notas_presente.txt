@@ -6,9 +6,13 @@ que medidas de seguridad implementar? captcha?
 luego de publicar la app:
 - agregar soporte por telegram
 
-el div de usd ars va abajo en el header de monitor
+- el div de usd ars va abajo en el header de monitor
 ver como resolver la pagina duplicada en api (eliminando todo del vps obvio)
 ver como presentar la app al usuario, el breve tutorial interactivo estaria bueno! Sino la info en el eliminarlo
 no queda listo, el asistente de IA no debe estar disponible para los usuarios free. lo mas facil es eliminar el widget de la pagina y ya
 
+revisar que se hayan aplicado todos los cambios!!!!!!
+agregrar la seccion de Portfolio la cual integra un analisis directo sobre tu Portfolio de tu broker que hayas conectado
+aa lo de tds
 
+revisar lo que ya me presenta cocos pero con graficos mas piolas y directo con mis datos

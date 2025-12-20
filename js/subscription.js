@@ -1,7 +1,20 @@
-// Subscription Management JavaScript
+// Subscription Management JavaScript with Vexor Integration
+
+// Supabase Configuration (Matching app_supabase.py)
+const SUPABASE_URL = "https://pwumamzbicapuiqkwrey.supabase.co";
+// NOTA: En una app real, la ANON_KEY debería estar en un config.js o cargada de env.
+// La obtenemos de lo que ya está en uso o la definimos aquí para la migración.
+const SUPABASE_ANON_KEY = ""; // El usuario debe completar esto o lo sacamos de js/login.js si estuviera allí.
+
 // Obtener token del localStorage
 function getAuthToken() {
     return localStorage.getItem('access_token');
+}
+
+// Obtener datos del usuario
+function getUserData() {
+    const data = localStorage.getItem('user_data');
+    return data ? JSON.parse(data) : null;
 }
 
 // Verificar si el usuario está autenticado
@@ -12,7 +25,6 @@ function isAuthenticated() {
 // Redirigir a login si no está autenticado
 function requireAuth() {
     if (!isAuthenticated()) {
-        // Guardar la URL actual para redirigir después del login
         const currentUrl = window.location.href;
         localStorage.setItem('redirect_after_login', currentUrl);
         window.location.href = 'login.html';
@@ -21,82 +33,103 @@ function requireAuth() {
     return true;
 }
 
-// Crear suscripción y redirigir a PayPal
-async function createSubscription(planName, buttonElement = null) {
-    // Verificar autenticación
-    if (!requireAuth()) {
+/**
+ * Muestra un modal para elegir la plataforma de pago
+ */
+function showPlatformSelector(planName, buttonElement) {
+    // Si ya existe un modal, lo eliminamos
+    const existingModal = document.getElementById('platform-selector-modal');
+    if (existingModal) existingModal.remove();
+
+    const modalHtml = `
+        <div id="platform-selector-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-gray-700">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">Selecciona tu método de pago</h3>
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="window.createSubscription('${planName}', 'paypal')" class="flex items-center justify-center gap-3 p-4 bg-[#0070ba] hover:bg-[#005ea6] text-white rounded-xl transition-all font-bold">
+                        <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" class="h-6">
+                        Pagar con PayPal
+                    </button>
+                    <button onclick="window.createSubscription('${planName}', 'mercadopago')" class="flex items-center justify-center gap-3 p-4 bg-[#009ee3] hover:bg-[#008cc9] text-white rounded-xl transition-all font-bold">
+                        <img src="https://vignette.wikia.nocookie.net/logopedia/images/2/22/Mercado_Pago_logo.png/revision/latest?cb=20180706173059" alt="Mercado Pago" class="h-6 invert">
+                        Pagar con Mercado Pago
+                    </button>
+                </div>
+                <button onclick="document.getElementById('platform-selector-modal').remove()" class="mt-6 w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm font-medium">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+// Crear suscripción y redirigir a la plataforma vía Vexor Edge Function
+async function createSubscription(planName, platform = null, buttonElement = null) {
+    // 1. Verificar autenticación
+    if (!requireAuth()) return;
+
+    // 2. Si no hay plataforma, mostrar selector
+    if (!platform) {
+        showPlatformSelector(planName, buttonElement);
         return;
     }
 
+    // Cerrar modal si existe
+    const modal = document.getElementById('platform-selector-modal');
+    if (modal) modal.remove();
+
     const token = getAuthToken();
+    const userData = getUserData();
     
-    // Si se pasa un botón, mostrar loading
+    // 3. Mostrar loading
+    const originalText = buttonElement ? buttonElement.textContent : 'Procesando...';
     if (buttonElement) {
-        const originalText = buttonElement.textContent;
         buttonElement.disabled = true;
-        buttonElement.textContent = 'Procesando...';
+        buttonElement.textContent = 'Iniciando checkout...';
         buttonElement.style.opacity = '0.6';
     }
 
     try {
-        // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
-        const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
-        const response = await fetch(`${API_BASE_URL}/subscriptions/create`, {
+        console.log(`Iniciando suscripción a ${planName} vía ${platform} para usuario ${userData?.id}`);
+
+        // Llamada a Supabase Edge Function
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/vexor-payments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                plan_name: planName
+                plan_name: planName,
+                platform: platform,
+                user_id: userData.id
             })
         });
 
         if (!response.ok) {
-            if (response.status === 401) {
-                // Token inválido, redirigir al login
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('user_data');
-                alert('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
-                window.location.href = 'login.html';
-                return;
-            }
-
-            const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.detail || errorData.message || 'Error al crear suscripción';
-            alert(`Error: ${errorMessage}`);
-            if (buttonElement) {
-                buttonElement.disabled = false;
-                buttonElement.textContent = originalText || 'Proceder con PayPal';
-                buttonElement.style.opacity = '1';
-            }
-            return;
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al iniciar el pago con Vexor');
         }
 
         const result = await response.json();
         
-        if (result.success) {
-            if (result.skip_paypal) {
-                // Cupón free_access - suscripción creada directamente sin PayPal
-                alert(`¡Éxito! ${result.message}`);
-                // Redirigir a account para ver la suscripción activa
-                window.location.href = 'account.html';
-            } else if (result.approval_url) {
-                // Redirigir a PayPal checkout
-                window.location.href = result.approval_url;
-            } else {
-                throw new Error('Respuesta inesperada del servidor');
-            }
+        if (result.success && result.approval_url) {
+            // Guardamos el vexor_id localmente por si necesitamos verificarlo luego
+            localStorage.setItem('pending_vexor_id', result.vexor_id);
+            // Redirigir al checkout de Vexor (ya sea PayPal o Mercado Pago)
+            window.location.href = result.approval_url;
         } else {
-            throw new Error('Error al procesar la suscripción');
+            throw new Error('No se recibió la URL de aprobación');
         }
 
     } catch (error) {
-        console.error('Error creando suscripción:', error);
-        alert(`Error al procesar la suscripción: ${error.message}`);
+        console.error('Error Vexor:', error);
+        alert(`Error al procesar el pago: ${error.message}`);
         if (buttonElement) {
             buttonElement.disabled = false;
-            buttonElement.textContent = originalText || 'Proceder con PayPal';
+            buttonElement.textContent = originalText;
             buttonElement.style.opacity = '1';
         }
     }
@@ -105,77 +138,13 @@ async function createSubscription(planName, buttonElement = null) {
 // Exponer función globalmente
 window.createSubscription = createSubscription;
 
-// Verificar suscripción después del retorno de PayPal
-async function verifySubscription() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const subscriptionId = urlParams.get('subscription_id');
-    const token = urlParams.get('token');
-
-    if (!subscriptionId) {
-        console.log('No se encontró subscription_id en la URL');
-        return;
-    }
-
-    const authToken = getAuthToken();
-    if (!authToken) {
-        console.error('No hay token de autenticación');
-        window.location.href = 'login.html';
-        return;
-    }
-
-    try {
-        // const API_BASE_URL = window.API_BASE_URL || 'http://localhost:8080/api'; // Development
-        const API_BASE_URL = window.API_BASE_URL || 'https://api.bullanalytics.io/api'; // Production
-        const response = await fetch(
-            `${API_BASE_URL}/subscriptions/verify?subscription_id=${subscriptionId}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error('Error verificando suscripción');
-        }
-
-        const result = await response.json();
-        console.log('Suscripción verificada:', result);
-
-        // Mostrar mensaje de éxito
-        if (result.status === 'ACTIVE' || result.status === 'active') {
-            // La suscripción está activa
-            return {
-                success: true,
-                status: result.status
-            };
-        } else {
-            // La suscripción está pendiente
-            return {
-                success: true,
-                status: result.status,
-                pending: true
-            };
-        }
-
-    } catch (error) {
-        console.error('Error verificando suscripción:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
 // Inicializar botones de suscripción
 function initializeSubscriptionButtons() {
-    // Buscar todos los botones con data-plan
     document.querySelectorAll('[data-plan]').forEach(button => {
         button.addEventListener('click', (e) => {
             e.preventDefault();
             const planName = button.getAttribute('data-plan');
-            createSubscription(planName);
+            createSubscription(planName, null, button);
         });
     });
 }
@@ -184,9 +153,14 @@ function initializeSubscriptionButtons() {
 document.addEventListener('DOMContentLoaded', () => {
     initializeSubscriptionButtons();
     
-    // Si estamos en la página de éxito, verificar la suscripción
+    // Verificar si venimos de un pago exitoso
     if (window.location.pathname.includes('subscription-success')) {
-        verifySubscription();
+        const vexorId = localStorage.getItem('pending_vexor_id');
+        if (vexorId) {
+            console.log('Pago completado exitosamente. Identificador Vexor:', vexorId);
+            localStorage.removeItem('pending_vexor_id');
+            // Aquí podrías llamar a una función para verificar el estado final
+            // aunque el Webhook ya debería haber actualizado la base de datos.
+        }
     }
 });
-

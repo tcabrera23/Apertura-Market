@@ -189,6 +189,14 @@
                     <button
                         class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
                         data-tab="argentina">Argentina</button>
+                    <button
+                        class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+                        data-tab="broker" id="brokerTabBtn" style="display: none;">
+                        <svg class="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        Broker
+                    </button>
                     <!-- Custom watchlist tabs will be added here dynamically -->
                 </div>
                 <button
@@ -481,6 +489,70 @@
                 <!-- Analysis Charts for Argentina -->
                 <div id="argentina-charts-container" class="mt-8"></div>
             </div>
+
+            <!-- Broker Tab -->
+            <div class="tab-content hidden" id="broker-tab">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Conexiones de Broker</h2>
+                    <button
+                        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                        id="addBrokerConnectionBtn">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>Conectar Broker</span>
+                    </button>
+                </div>
+
+                <!-- Connected Brokers List -->
+                <div class="mb-8" id="connectedBrokersList">
+                    <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+                        id="broker-loading">
+                        <div
+                            class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin">
+                        </div>
+                        <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando conexiones...</p>
+                    </div>
+                </div>
+
+                <!-- Broker Portfolio -->
+                <div id="brokerPortfolioContainer" style="display: none;">
+                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Portafolio</h3>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="brokerPortfolioTable">
+                                <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Broker
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Activo
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Cantidad
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Precio Promedio
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Precio Actual
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Valor de Mercado
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                            Ganancia/Pérdida
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="brokerPortfolioTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         </div>
     </main>
@@ -755,6 +827,7 @@
     <script src="js/mobile-nav.js"></script>
     <script src="js/dollar-rates.js"></script>
     <script src="js/dashboard.js"></script>
+    <script src="js/broker-connections.js"></script>
     <script src="js/table-config.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/fullscreen-charts.js"></script>
@@ -794,6 +867,76 @@
             display: none !important;
         }
     </style>
+
+    <!-- Broker Connection Modal -->
+    <div id="brokerConnectionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Conectar Broker</h2>
+                    <button id="closeBrokerModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Seleccionar Broker</label>
+                    <select id="brokerSelect" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all">
+                        <option value="">-- Selecciona un broker --</option>
+                        <option value="IOL">InvertirOnline (IOL)</option>
+                        <option value="BINANCE">Binance</option>
+                    </select>
+                </div>
+
+                <!-- IOL Credentials -->
+                <div id="iolCredentials" class="hidden space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Usuario IOL</label>
+                        <input type="text" id="iolUsername" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Tu usuario de IOL">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Contraseña IOL</label>
+                        <input type="password" id="iolPassword" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Tu contraseña de IOL">
+                    </div>
+                </div>
+
+                <!-- Binance Credentials -->
+                <div id="binanceCredentials" class="hidden space-y-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">API Key</label>
+                        <input type="text" id="binanceApiKey" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Tu API Key de Binance">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">API Secret</label>
+                        <input type="password" id="binanceApiSecret" class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all" placeholder="Tu API Secret de Binance">
+                    </div>
+                    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                        <p class="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>Nota:</strong> Solo otorga permisos de lectura y trading. Nunca otorgues permisos de retiro.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-6">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Seguridad:</strong> Tus credenciales se almacenan de forma encriptada. Solo se usan para obtener información de tu portafolio.
+                    </p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button id="cancelBrokerModal" class="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-semibold">
+                        Cancelar
+                    </button>
+                    <button id="saveBrokerConnection" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-semibold shadow-md hover:shadow-lg">
+                        Conectar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
