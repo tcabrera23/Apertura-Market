@@ -103,16 +103,47 @@ Deno.serve(async (req) => {
     }
 
     // 5. Crear la suscripción en Vexor (que la crea en PayPal o MercadoPago)
+    console.log('Creando suscripción con Vexor:', {
+      platform,
+      subscriptionBody: {
+        ...subscriptionBody,
+        price: finalPrice,
+        currency: currency
+      }
+    })
+    
     let response
-    if (platform === 'paypal') {
-      response = await vexor.subscribe.paypal(subscriptionBody)
-    } else if (platform === 'mercadopago') {
-      response = await vexor.subscribe.mercadopago(subscriptionBody)
-    } else {
-      throw new Error(`Plataforma ${platform} no soportada`)
+    try {
+      if (platform === 'paypal') {
+        response = await vexor.subscribe.paypal(subscriptionBody)
+      } else if (platform === 'mercadopago') {
+        // Para Mercado Pago, asegurarnos de que el precio sea válido (mínimo $10 ARS según MP)
+        if (currency === 'ARS' && finalPrice < 10) {
+          console.warn(`Precio ${finalPrice} ARS es muy bajo. Mercado Pago requiere mínimo $10 ARS. Ajustando a $10 ARS.`)
+          subscriptionBody.price = 10
+          finalPrice = 10
+        }
+        response = await vexor.subscribe.mercadopago(subscriptionBody)
+      } else {
+        throw new Error(`Plataforma ${platform} no soportada`)
+      }
+      
+      console.log('Respuesta de Vexor:', {
+        identifier: response.identifier,
+        payment_url: response.payment_url,
+        has_payment_url: !!response.payment_url
+      })
+    } catch (vexorError) {
+      console.error('Error de Vexor:', vexorError)
+      throw new Error(`Error creando suscripción en Vexor: ${vexorError.message}`)
     }
 
     // 6. Retornar la URL de checkout de Vexor al frontend
+    if (!response.payment_url) {
+      console.error('Vexor no retornó payment_url. Respuesta completa:', response)
+      throw new Error('Vexor no retornó URL de pago. Verifica la configuración.')
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
