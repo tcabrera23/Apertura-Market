@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Sistema de Monedas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold mb-6 text-gray-900">🧪 Test - Sistema de Monedas Multi-País</h1>
+        
+        <!-- Status -->
+        <div id="status" class="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <p class="text-blue-800 font-semibold">⏳ Inicializando tests...</p>
+        </div>
+
+        <!-- Detección de País -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">1️⃣ Detección de País</h2>
+            <div id="country-detection" class="p-4 bg-gray-50 rounded-lg">
+                <p>Detectando...</p>
+            </div>
+        </div>
+
+        <!-- Tasas de Cambio -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">2️⃣ Tasas de Cambio Actuales</h2>
+            <div id="exchange-rates" class="p-4 bg-gray-50 rounded-lg">
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Conversión de Precios -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">3️⃣ Conversión de Precios</h2>
+            <table class="w-full border-collapse border border-gray-300">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="border border-gray-300 p-2">Plan</th>
+                        <th class="border border-gray-300 p-2">USD (Base)</th>
+                        <th class="border border-gray-300 p-2" id="target-currency-header">ARS</th>
+                    </tr>
+                </thead>
+                <tbody id="price-conversion-table">
+                    <tr>
+                        <td class="border border-gray-300 p-2 font-bold">Free</td>
+                        <td class="border border-gray-300 p-2">$0.00</td>
+                        <td class="border border-gray-300 p-2" id="price-free">Gratis</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2 font-bold">Plus</td>
+                        <td class="border border-gray-300 p-2">$9.99</td>
+                        <td class="border border-gray-300 p-2" id="price-plus">Calculando...</td>
+                    </tr>
+                    <tr>
+                        <td class="border border-gray-300 p-2 font-bold">Pro</td>
+                        <td class="border border-gray-300 p-2">$19.99</td>
+                        <td class="border border-gray-300 p-2" id="price-pro">Calculando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Plataforma Recomendada -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">4️⃣ Plataforma Recomendada</h2>
+            <div id="recommended-platform" class="p-4 bg-gray-50 rounded-lg">
+                <p>Calculando...</p>
+            </div>
+        </div>
+
+        <!-- Test Manual -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">5️⃣ Test Manual de Conversión</h2>
+            <div class="flex gap-4 mb-4">
+                <input type="number" id="manual-price" value="9.99" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg" placeholder="Precio en USD">
+                <select id="manual-currency" class="px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS - Peso Argentino</option>
+                    <option value="BRL">BRL - Real Brasileño</option>
+                    <option value="MXN">MXN - Peso Mexicano</option>
+                    <option value="CLP">CLP - Peso Chileno</option>
+                    <option value="COP">COP - Peso Colombiano</option>
+                </select>
+                <button onclick="testManualConversion()" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">
+                    Convertir
+                </button>
+            </div>
+            <div id="manual-result" class="p-4 bg-gray-50 rounded-lg">
+                <p class="text-gray-500">Ingresa un precio y selecciona una moneda para convertir</p>
+            </div>
+        </div>
+
+        <!-- Console Logs -->
+        <div class="mb-6">
+            <h2 class="text-xl font-bold mb-3">📋 Console Logs</h2>
+            <div id="console-logs" class="p-4 bg-gray-900 text-green-400 rounded-lg font-mono text-sm h-64 overflow-y-auto">
+                <p>> Iniciando tests...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/currency-handler.js"></script>
+    <script>
+        // Override console.log para mostrar en la página
+        const originalLog = console.log;
+        const logContainer = document.getElementById('console-logs');
+        
+        console.log = function(...args) {
+            originalLog(...args);
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            logContainer.innerHTML += `<p>> ${message}</p>`;
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+
+        // Función principal de testing
+        async function runTests() {
+            try {
+                // Update status
+                document.getElementById('status').innerHTML = '<p class="text-blue-800 font-semibold">🔄 Ejecutando tests...</p>';
+
+                // Test 1: Detección de País
+                console.log('Test 1: Detectando país del usuario...');
+                const countryCode = await window.CurrencyHandler.detectUserCountry();
+                const currencyInfo = window.CurrencyHandler.SUPPORTED_CURRENCIES[countryCode] || window.CurrencyHandler.SUPPORTED_CURRENCIES.DEFAULT;
+                
+                document.getElementById('country-detection').innerHTML = `
+                    <p><strong>País detectado:</strong> ${countryCode}</p>
+                    <p><strong>Moneda:</strong> ${currencyInfo.name} (${currencyInfo.code})</p>
+                    <p><strong>Símbolo:</strong> ${currencyInfo.symbol}</p>
+                    <p><strong>Plataforma recomendada:</strong> ${currencyInfo.platform.toUpperCase()}</p>
+                `;
+                console.log(`País: ${countryCode}, Moneda: ${currencyInfo.code}`);
+
+                // Test 2: Tasas de Cambio
+                console.log('Test 2: Obteniendo tasas de cambio...');
+                const rates = await window.CurrencyHandler.getExchangeRates();
+                
+                document.getElementById('exchange-rates').innerHTML = `
+                    <p><strong>1 USD =</strong></p>
+                    <ul class="list-disc list-inside mt-2">
+                        <li>${rates.ARS.toFixed(2)} ARS (Peso Argentino)</li>
+                        <li>${rates.BRL.toFixed(2)} BRL (Real Brasileño)</li>
+                        <li>${rates.MXN.toFixed(2)} MXN (Peso Mexicano)</li>
+                        <li>${rates.CLP.toFixed(2)} CLP (Peso Chileno)</li>
+                        <li>${rates.COP.toFixed(2)} COP (Peso Colombiano)</li>
+                        <li>${rates.PEN.toFixed(2)} PEN (Sol Peruano)</li>
+                    </ul>
+                    <p class="mt-2 text-sm text-gray-600">Última actualización: ${new Date().toLocaleString('es-AR')}</p>
+                `;
+                console.log('Tasas de cambio:', rates);
+
+                // Test 3: Conversión de Precios
+                console.log('Test 3: Convirtiendo precios de planes...');
+                document.getElementById('target-currency-header').textContent = currencyInfo.code;
+                
+                const plusPrice = await window.CurrencyHandler.convertPrice(9.99, currencyInfo.code);
+                const proPrice = await window.CurrencyHandler.convertPrice(19.99, currencyInfo.code);
+                
+                document.getElementById('price-plus').textContent = window.CurrencyHandler.formatPrice(plusPrice, currencyInfo.code);
+                document.getElementById('price-pro').textContent = window.CurrencyHandler.formatPrice(proPrice, currencyInfo.code);
+                
+                console.log(`Plan Plus: $9.99 USD = ${window.CurrencyHandler.formatPrice(plusPrice, currencyInfo.code)}`);
+                console.log(`Plan Pro: $19.99 USD = ${window.CurrencyHandler.formatPrice(proPrice, currencyInfo.code)}`);
+
+                // Test 4: Plataforma Recomendada
+                console.log('Test 4: Determinando plataforma recomendada...');
+                const platformBadge = currencyInfo.platform === 'mercadopago' 
+                    ? '<span class="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm">Mercado Pago</span>'
+                    : '<span class="inline-block bg-blue-700 text-white px-3 py-1 rounded-full text-sm">PayPal</span>';
+                
+                const platformCurrency = currencyInfo.platform === 'mercadopago' ? 'ARS' : 'USD';
+                
+                document.getElementById('recommended-platform').innerHTML = `
+                    <p class="mb-2"><strong>Plataforma:</strong> ${platformBadge}</p>
+                    <p><strong>Moneda de cobro:</strong> ${platformCurrency}</p>
+                    <p class="mt-2 text-sm text-gray-600">
+                        ${currencyInfo.platform === 'mercadopago' 
+                            ? '💳 Mercado Pago cobrará en Pesos Argentinos (ARS)' 
+                            : '💰 PayPal cobrará en Dólares (USD)'}
+                    </p>
+                `;
+                console.log(`Plataforma recomendada: ${currencyInfo.platform.toUpperCase()} (${platformCurrency})`);
+
+                // Success
+                document.getElementById('status').innerHTML = '<p class="text-green-800 font-semibold">✅ Todos los tests completados exitosamente!</p>';
+                console.log('✅ Tests completados!');
+
+            } catch (error) {
+                console.error('❌ Error en los tests:', error);
+                document.getElementById('status').innerHTML = `<p class="text-red-800 font-semibold">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        // Test manual de conversión
+        async function testManualConversion() {
+            const priceUSD = parseFloat(document.getElementById('manual-price').value);
+            const targetCurrency = document.getElementById('manual-currency').value;
+            
+            console.log(`Convirtiendo $${priceUSD} USD a ${targetCurrency}...`);
+            
+            const convertedPrice = await window.CurrencyHandler.convertPrice(priceUSD, targetCurrency);
+            const formattedPrice = window.CurrencyHandler.formatPrice(convertedPrice, targetCurrency);
+            
+            document.getElementById('manual-result').innerHTML = `
+                <p class="text-2xl font-bold text-green-600">${formattedPrice}</p>
+                <p class="text-sm text-gray-600 mt-2">
+                    $${priceUSD.toFixed(2)} USD = ${formattedPrice} ${targetCurrency}
+                </p>
+            `;
+            
+            console.log(`Resultado: $${priceUSD} USD = ${formattedPrice}`);
+        }
+
+        // Ejecutar tests al cargar
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 1000); // Esperar a que currency-handler.js termine de cargar
+        });
+    </script>
+</body>
+</html>
+

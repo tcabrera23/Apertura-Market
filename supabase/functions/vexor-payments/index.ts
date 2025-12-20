@@ -6,6 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Función para obtener la tasa de cambio USD → ARS
+async function getExchangeRate(): Promise<number> {
+  try {
+    // Usar API gratuita para obtener tasa de cambio
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+    const data = await response.json()
+    
+    // Retornar tasa ARS, con fallback a 1000 si falla
+    return data.rates?.ARS || 1000
+  } catch (error) {
+    console.error('Error obteniendo tasa de cambio, usando fallback:', error)
+    // Fallback: tasa aproximada si falla la API
+    return 1000
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
@@ -50,14 +66,27 @@ Deno.serve(async (req) => {
       throw new Error(`Usuario ${user_id} no encontrado.`)
     }
 
-    // 3. Construir el objeto de suscripción según la documentación de Vexor
+    // 3. Determinar moneda y precio según la plataforma
+    let currency = 'USD'
+    let finalPrice = parseFloat(plan.price)
+    
+    // Mercado Pago: siempre en ARS (pesos argentinos)
+    // PayPal: siempre en USD
+    if (platform === 'mercadopago') {
+      currency = 'ARS'
+      // Convertir USD a ARS (obtener tasa de cambio actual)
+      const exchangeRate = await getExchangeRate()
+      finalPrice = Math.round(parseFloat(plan.price) * exchangeRate) // Redondear a entero para ARS
+    }
+
+    // 4. Construir el objeto de suscripción según la documentación de Vexor
     // Vexor crea el plan dinámicamente en el proveedor
     const subscriptionBody = {
       name: plan.display_name || `Plan ${plan.name}`,
       description: plan.description || `Suscripción ${plan.name}`,
       interval: plan.billing_interval, // 'month' o 'year'
-      price: plan.price,
-      currency: 'USD',
+      price: finalPrice,
+      currency: currency,
       successRedirect: `${Deno.env.get('FRONTEND_URL')}/subscription-success.html`,
       failureRedirect: `${Deno.env.get('FRONTEND_URL')}/pricing.html`,
       customer: {
@@ -67,11 +96,13 @@ Deno.serve(async (req) => {
       metadata: {
         user_id: user_id,
         plan_id: plan.id,
-        coupon_code: coupon_code || null
+        coupon_code: coupon_code || null,
+        original_price_usd: plan.price, // Guardar precio original en USD
+        currency: currency
       }
     }
 
-    // 4. Crear la suscripción en Vexor (que la crea en PayPal o MercadoPago)
+    // 5. Crear la suscripción en Vexor (que la crea en PayPal o MercadoPago)
     let response
     if (platform === 'paypal') {
       response = await vexor.subscribe.paypal(subscriptionBody)
@@ -81,12 +112,14 @@ Deno.serve(async (req) => {
       throw new Error(`Plataforma ${platform} no soportada`)
     }
 
-    // 5. Retornar la URL de checkout de Vexor al frontend
+    // 6. Retornar la URL de checkout de Vexor al frontend
     return new Response(
       JSON.stringify({ 
         success: true, 
         approval_url: response.payment_url, // Vexor usa payment_url
-        vexor_id: response.identifier 
+        vexor_id: response.identifier,
+        currency: currency, // Informar al frontend la moneda usada
+        final_price: finalPrice // Informar el precio final
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
