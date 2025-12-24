@@ -101,3 +101,4 @@ COMMENT ON COLUMN broker_connections.is_active IS 'Whether the connection is act
 COMMENT ON COLUMN broker_connections.last_synced IS 'Last successful portfolio synchronization';
 
 
+

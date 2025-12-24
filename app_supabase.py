@@ -38,7 +38,8 @@ from email_templates import (
 from cryptography.fernet import Fernet
 import hmac
 import hashlib
-from broker_clients import get_iol_access_token, get_iol_portfolio, get_binance_portfolio
+from conexion_iol import ConexionIOL, get_iol_access_token, get_iol_portfolio
+from conexion_binance import ConexionBinance, get_binance_portfolio
 
 # Load environment variables
 load_dotenv()
@@ -2094,16 +2095,16 @@ async def create_broker_connection(
                 detail="Invalid broker. Supported brokers: IOL, BINANCE"
             )
         
-        # Validate broker-specific credentials
+        # Validate broker-specific credentials using new connection modules
         if connection.broker_name == "IOL":
             if not connection.username or not connection.password:
                 raise HTTPException(
                     status_code=400,
                     detail="IOL requires username and password"
                 )
-            # Test IOL connection
-            access_token = await get_iol_access_token(connection.username, connection.password)
-            if not access_token:
+            # Test IOL connection using new module
+            conexion_iol = ConexionIOL(connection.username, connection.password)
+            if not await conexion_iol.validar_credenciales():
                 raise HTTPException(
                     status_code=400,
                     detail="Failed to authenticate with IOL. Please check your credentials."
@@ -2115,9 +2116,9 @@ async def create_broker_connection(
                     status_code=400,
                     detail="Binance requires api_key and api_secret"
                 )
-            # Test Binance connection
-            portfolio = await get_binance_portfolio(connection.api_key, connection.api_secret)
-            if portfolio is None:
+            # Test Binance connection using new module
+            conexion_binance = ConexionBinance(connection.api_key, connection.api_secret)
+            if not await conexion_binance.validar_credenciales():
                 raise HTTPException(
                     status_code=400,
                     detail="Failed to connect to Binance. Please check your API credentials."
@@ -2234,27 +2235,28 @@ async def get_broker_portfolio(connection_id: str, user = Depends(get_current_us
         
         portfolio = None
         
-        # Fetch portfolio based on broker
+        # Fetch portfolio based on broker using new connection modules
         if connection["broker_name"] == "IOL":
             # Decrypt credentials
             username = decrypt_api_key(connection["username_encrypted"])
             password = decrypt_api_key(connection["password_encrypted"])
             
-            # Get access token
-            access_token = await get_iol_access_token(username, password)
-            if not access_token:
-                raise HTTPException(status_code=400, detail="Failed to authenticate with IOL")
-            
-            # Get portfolio
-            portfolio = await get_iol_portfolio(access_token)
+            # Use new IOL connection module
+            conexion_iol = ConexionIOL(username, password)
+            portfolio = await conexion_iol.obtener_portfolio()
+            if portfolio is None:
+                raise HTTPException(status_code=400, detail="Failed to fetch portfolio from IOL")
         
         elif connection["broker_name"] == "BINANCE":
             # Decrypt credentials
             api_key = decrypt_api_key(connection["api_key_encrypted"])
             api_secret = decrypt_api_key(connection["api_secret_encrypted"])
             
-            # Get portfolio
-            portfolio = await get_binance_portfolio(api_key, api_secret)
+            # Use new Binance connection module
+            conexion_binance = ConexionBinance(api_key, api_secret)
+            portfolio = await conexion_binance.obtener_portfolio()
+            if portfolio is None:
+                raise HTTPException(status_code=400, detail="Failed to fetch portfolio from Binance")
         
         if portfolio is None:
             raise HTTPException(status_code=500, detail="Failed to fetch portfolio from broker")
