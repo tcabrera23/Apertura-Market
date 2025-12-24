@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Guía Completa de Alertas Financieras | BullAnalytics Blog</title>
+    <meta name="title" content="Guía Completa de Alertas Financieras | BullAnalytics Blog">
+    <meta name="description" content="Aprende a configurar alertas personalizadas para no perder oportunidades. Incluye tipos de alertas, mejores prácticas y casos de uso reales.">
+    <meta name="keywords" content="alertas financieras, trading, inversiones, configuración, guía">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://bullanalytics.io/blog/guias/guia-alertas-financieras.html">
+    <meta property="og:title" content="Guía Completa de Alertas Financieras">
+    <meta property="og:description" content="Aprende a configurar alertas personalizadas para no perder oportunidades.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://bullanalytics.io/blog/guias/guia-alertas-financieras.html">
+    <meta name="twitter:title" content="Guía Completa de Alertas Financieras">
+    <meta name="twitter:description" content="Aprende a configurar alertas personalizadas para no perder oportunidades.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://bullanalytics.io/blog/guias/guia-alertas-financieras.html">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../../images/logo.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#28a745',
+                            dark: '#218838',
+                            light: '#e8f5e9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        .prose {
+            color: #374151;
+        }
+        .prose h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+        .prose h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+        .prose p {
+            margin-bottom: 1.25rem;
+            line-height: 1.75;
+        }
+        .prose ul, .prose ol {
+            margin-bottom: 1.25rem;
+            padding-left: 1.5rem;
+        }
+        .prose li {
+            margin-bottom: 0.5rem;
+        }
+        .prose code {
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+        .dark .prose {
+            color: #d1d5db;
+        }
+        .dark .prose h2 {
+            color: #f9fafb;
+        }
+        .dark .prose h3 {
+            color: #e5e7eb;
+        }
+        .dark .prose code {
+            background-color: #374151;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <img src="../../images/logo.png" alt="BullAnalytics Logo" class="h-10 w-10 rounded-lg object-contain">
+                    <a href="../../index.html" class="text-xl font-bold text-gray-900 dark:text-white">
+                        Bull<span class="text-green-500">Analytics</span>
+                    </a>
+                </div>
+                <ul class="hidden md:flex items-center gap-6">
+                    <li><a href="../../index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Inicio</a></li>
+                    <li><a href="../../blog.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Blog</a></li>
+                    <li><a href="../../dashboard.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Dashboard</a></li>
+                </ul>
+                <div class="flex items-center gap-3">
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <svg id="moonIcon" class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Article Header -->
+    <header class="pt-24 pb-12 bg-gradient-to-br from-white via-green-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-4">
+                <a href="../../blog.html" class="inline-flex items-center text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium mb-4">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Volver al Blog
+                </a>
+            </div>
+            <div class="mb-4">
+                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold rounded-full">Guía</span>
+            </div>
+            <h1 class="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+                Guía Completa de Alertas Financieras
+            </h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-6">
+                Aprende a configurar alertas personalizadas para no perder oportunidades. Incluye tipos de alertas, mejores prácticas y casos de uso reales.
+            </p>
+            <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span>15 de Diciembre, 2025</span>
+                <span>•</span>
+                <span>8 min de lectura</span>
+                <span>•</span>
+                <span>Por Equipo BullAnalytics</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Article Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <article class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 lg:p-12">
+            <!-- Featured Image -->
+            <div class="mb-8 rounded-lg overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80" alt="Guía Completa de Alertas Financieras" class="w-full h-auto object-cover">
+            </div>
+
+            <!-- Article Body -->
+            <div class="prose prose-lg dark:prose-invert max-w-none">
+                <h2>¿Qué son las Alertas Financieras?</h2>
+                <p>
+                    Las alertas financieras son notificaciones automáticas que te avisan cuando se cumplen ciertas condiciones en el mercado. 
+                    En BullAnalytics, puedes configurar alertas personalizadas para monitorear precios, ratios financieros, y mucho más.
+                </p>
+
+                <h2>Tipos de Alertas Disponibles</h2>
+                <h3>1. Alertas de Precio</h3>
+                <p>
+                    Configura alertas cuando un activo alcanza un precio específico:
+                </p>
+                <ul>
+                    <li><strong>Precio por debajo de:</strong> Recibe una alerta cuando el precio cae por debajo de un umbral</li>
+                    <li><strong>Precio por encima de:</strong> Recibe una alerta cuando el precio supera un nivel</li>
+                </ul>
+
+                <h3>2. Alertas de Ratios Financieros</h3>
+                <p>
+                    Monitorea métricas clave como P/E, ROE, y más:
+                </p>
+                <ul>
+                    <li><strong>P/E Ratio:</strong> Alerta cuando el ratio precio/ganancia está en un rango específico</li>
+                    <li><strong>ROE:</strong> Monitorea el retorno sobre el capital</li>
+                    <li><strong>Margen de Ganancia:</strong> Alerta sobre cambios en la rentabilidad</li>
+                </ul>
+
+                <h3>3. Alertas de Distancia Máxima</h3>
+                <p>
+                    Recibe notificaciones cuando un activo se aleja significativamente de su máximo histórico, 
+                    lo que puede indicar una oportunidad de compra.
+                </p>
+
+                <h2>Cómo Crear tu Primera Alerta</h2>
+                <p>
+                    Sigue estos pasos para crear una alerta en BullAnalytics:
+                </p>
+                <ol>
+                    <li>Ve a la sección de <strong>Reglas</strong> en tu dashboard</li>
+                    <li>Haz clic en <strong>"Crear Nueva Regla"</strong></li>
+                    <li>Selecciona el tipo de alerta que deseas configurar</li>
+                    <li>Ingresa el ticker del activo que quieres monitorear</li>
+                    <li>Define el valor umbral para tu alerta</li>
+                    <li>Confirma tu email para recibir las notificaciones</li>
+                </ol>
+
+                <h2>Mejores Prácticas</h2>
+                <h3>1. Define Objetivos Claros</h3>
+                <p>
+                    Antes de crear una alerta, define claramente qué quieres lograr. ¿Estás buscando oportunidades de compra? 
+                    ¿Quieres proteger tus ganancias? ¿Necesitas monitorear un activo específico?
+                </p>
+
+                <h3>2. No Te Excedas</h3>
+                <p>
+                    Aunque puedes crear múltiples alertas, es mejor empezar con pocas y bien definidas. 
+                    Demasiadas alertas pueden generar fatiga y hacer que ignores las importantes.
+                </p>
+
+                <h3>3. Revisa y Ajusta Regularmente</h3>
+                <p>
+                    Los mercados cambian constantemente. Revisa tus alertas periódicamente y ajusta los umbrales 
+                    según las condiciones del mercado.
+                </p>
+
+                <h2>Casos de Uso Reales</h2>
+                <h3>Caso 1: Oportunidad de Compra</h3>
+                <p>
+                    <strong>Escenario:</strong> Quieres comprar NVIDIA cuando caiga por debajo de $400.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Crea una alerta de "Precio por debajo de" con el valor 400 para el ticker NVDA. 
+                    Recibirás un email cuando se cumpla la condición.
+                </p>
+
+                <h3>Caso 2: Monitoreo de Ratios</h3>
+                <p>
+                    <strong>Escenario:</strong> Buscas empresas con P/E ratio bajo (menos de 15) para inversión value.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Configura una alerta de "P/E por debajo de" con valor 15. 
+                    Puedes crear múltiples alertas para diferentes activos.
+                </p>
+
+                <h3>Caso 3: Protección de Ganancias</h3>
+                <p>
+                    <strong>Escenario:</strong> Tienes acciones de Apple y quieres vender si el precio cae más del 10% desde su máximo.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Usa la alerta de "Distancia máxima" con un valor de -10% para AAPL.
+                </p>
+
+                <h2>Límites por Plan</h2>
+                <p>
+                    Los límites de alertas varían según tu plan:
+                </p>
+                <ul>
+                    <li><strong>Plan Gratis:</strong> 3 alertas activas</li>
+                    <li><strong>Plan Plus:</strong> 10 alertas activas</li>
+                    <li><strong>Plan Pro:</strong> Alertas ilimitadas</li>
+                </ul>
+
+                <h2>Conclusión</h2>
+                <p>
+                    Las alertas financieras son una herramienta poderosa para mantenerte informado sobre el mercado sin 
+                    tener que monitorearlo constantemente. Con BullAnalytics, puedes configurar alertas personalizadas 
+                    que se adapten a tu estrategia de inversión.
+                </p>
+                <p>
+                    ¿Listo para crear tu primera alerta? <a href="../../dashboard.html" class="text-green-600 dark:text-green-400 hover:underline font-semibold">Ve al Dashboard</a> y comienza a configurar tus alertas personalizadas.
+                </p>
+            </div>
+
+            <!-- Share Section -->
+            <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Compartir esta guía</h3>
+                <div class="flex gap-4">
+                    <a href="https://twitter.com/intent/tweet?text=Guía Completa de Alertas Financieras&url=https://bullanalytics.io/blog/guias/guia-alertas-financieras.html" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                        Twitter
+                    </a>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://bullanalytics.io/blog/guias/guia-alertas-financieras.html" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <!-- Related Articles -->
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Guías Relacionadas</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <a href="guia-bull-agent.html" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80');"></div>
+                    <div class="p-6">
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">Guía</span>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-3 mb-2">Bull Agent: Tu Asesor Financiero con IA</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros.</p>
+                    </div>
+                </a>
+                <a href="primeros-pasos-onboarding.html" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80');"></div>
+                    <div class="p-6">
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">Onboarding</span>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-3 mb-2">Primeros Pasos: Guía de Onboarding</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Comienza tu viaje con BullAnalytics.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-left">
+                    © 2025 BullAnalytics. Todos los derechos reservados.
+                </p>
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-right">
+                    Powered by <span class="font-semibold text-green-500">Apertura IA</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../../js/dark-mode.js"></script>
+</body>
+
+</html>
+

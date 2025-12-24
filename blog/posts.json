@@ -1,0 +1,118 @@
+{
+  "guias": [
+    {
+      "slug": "guia-alertas-financieras",
+      "title": "Guía Completa de Alertas Financieras",
+      "description": "Aprende a configurar alertas personalizadas para no perder oportunidades. Incluye tipos de alertas, mejores prácticas y casos de uso reales.",
+      "image_url": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
+      "publish_date": "15 de Diciembre, 2025",
+      "read_time": 8,
+      "author": "Equipo BullAnalytics",
+      "keywords": "alertas financieras, trading, inversiones, configuración, guía",
+      "category": "Guía",
+      "file": "guias/guia-alertas-financieras.html"
+    },
+    {
+      "slug": "guia-bull-agent",
+      "title": "Bull Agent: Tu Asesor Financiero con IA",
+      "description": "Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros, interpretar métricas y crear alertas en lenguaje natural.",
+      "image_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80",
+      "publish_date": "10 de Diciembre, 2025",
+      "read_time": 6,
+      "author": "Equipo BullAnalytics",
+      "keywords": "IA, inteligencia artificial, asesor financiero, Bull Agent, chatbot",
+      "category": "Guía",
+      "file": "guias/guia-bull-agent.html"
+    },
+    {
+      "slug": "primeros-pasos-onboarding",
+      "title": "Primeros Pasos: Guía de Onboarding",
+      "description": "Comienza tu viaje con BullAnalytics. Aprende a explorar el dashboard, crear tu primera alerta y usar Bull Agent.",
+      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
+      "publish_date": "5 de Diciembre, 2025",
+      "read_time": 5,
+      "author": "Equipo BullAnalytics",
+      "keywords": "onboarding, tutorial, primeros pasos, guía inicio",
+      "category": "Onboarding",
+      "file": "guias/primeros-pasos-onboarding.html"
+    }
+  ],
+  "releases": [
+    {
+      "slug": "release-v2-0-calendario-earnings",
+      "title": "Nueva Versión 2.0: Calendario de Earnings",
+      "description": "Presentamos el calendario de resultados de activos. Visualiza los próximos earnings, filtra por mes y accede a los balances históricos.",
+      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
+      "publish_date": "20 de Diciembre, 2025",
+      "read_time": 5,
+      "version": "v2.0.0",
+      "keywords": "release, actualización, calendario, earnings, resultados",
+      "category": "Release",
+      "file": "releases/release-v2-0-calendario-earnings.html"
+    },
+    {
+      "slug": "release-v1-8-watchlists",
+      "title": "Watchlists Personalizadas",
+      "description": "Crea tus propias listas de seguimiento de activos. Busca cualquier activo y agrégalo a tus watchlists personalizadas.",
+      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
+      "publish_date": "1 de Diciembre, 2025",
+      "read_time": 4,
+      "version": "v1.8.0",
+      "keywords": "release, watchlists, listas personalizadas, seguimiento",
+      "category": "Novedad",
+      "file": "releases/release-v1-8-watchlists.html"
+    },
+    {
+      "slug": "release-v1-7-bull-agent-mejorado",
+      "title": "Bull Agent Mejorado",
+      "description": "Hemos mejorado las capacidades de Bull Agent para crear reglas más precisas y responder preguntas más complejas sobre inversiones.",
+      "image_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80",
+      "publish_date": "25 de Noviembre, 2025",
+      "read_time": 3,
+      "version": "v1.7.0",
+      "keywords": "release, Bull Agent, IA, mejoras",
+      "category": "Mejora",
+      "file": "releases/release-v1-7-bull-agent-mejorado.html"
+    }
+  ],
+  "noticias": [
+    {
+      "slug": "chat-gpt-trading-futuro-bolsa",
+      "title": "Chat GPT y Trading: El Futuro de la Bolsa",
+      "description": "Descubre cómo la inteligencia artificial está revolucionando el trading y el análisis de mercado. Exploramos casos de uso reales y el futuro de la IA en finanzas.",
+      "image_url": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80",
+      "publish_date": "18 de Diciembre, 2025",
+      "read_time": 7,
+      "author": "Equipo BullAnalytics",
+      "keywords": "IA, trading, ChatGPT, inteligencia artificial, finanzas",
+      "category": "Video",
+      "video_url": "https://www.youtube.com/watch?v=3Doy7d7EHdo&t=345s",
+      "file": "noticias/chat-gpt-trading-futuro-bolsa.html"
+    },
+    {
+      "slug": "ia-transformando-finanzas",
+      "title": "Cómo la IA Está Transformando las Finanzas",
+      "description": "Análisis profundo sobre cómo las empresas financieras están adoptando IA para análisis predictivo, detección de fraudes y automatización de procesos.",
+      "image_url": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&q=80",
+      "publish_date": "12 de Diciembre, 2025",
+      "read_time": 10,
+      "author": "Equipo BullAnalytics",
+      "keywords": "IA, finanzas, transformación digital, análisis predictivo",
+      "category": "Artículo",
+      "file": "noticias/ia-transformando-finanzas.html"
+    },
+    {
+      "slug": "prediccion-mercados-machine-learning",
+      "title": "Predicción de Mercados con Machine Learning",
+      "description": "Exploramos cómo los algoritmos de machine learning están siendo utilizados para predecir movimientos del mercado y optimizar estrategias de inversión.",
+      "image_url": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
+      "publish_date": "8 de Diciembre, 2025",
+      "read_time": 9,
+      "author": "Equipo BullAnalytics",
+      "keywords": "machine learning, predicción, mercados, algoritmos, trading",
+      "category": "Noticia",
+      "file": "noticias/prediccion-mercados-machine-learning.html"
+    }
+  ]
+}
+

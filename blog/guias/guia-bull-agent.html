@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <title>Bull Agent: Tu Asesor Financiero con IA | BullAnalytics Blog</title>
+    <meta name="title" content="Bull Agent: Tu Asesor Financiero con IA | BullAnalytics Blog">
+    <meta name="description" content="Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros, interpretar métricas y crear alertas en lenguaje natural.">
+    <meta name="keywords" content="IA, inteligencia artificial, asesor financiero, Bull Agent, chatbot, trading, inversiones">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://bullanalytics.io/blog/guias/guia-bull-agent.html">
+    <meta property="og:title" content="Bull Agent: Tu Asesor Financiero con IA">
+    <meta property="og:description" content="Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros, interpretar métricas y crear alertas en lenguaje natural.">
+    <meta property="og:image" content="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://bullanalytics.io/blog/guias/guia-bull-agent.html">
+    <meta name="twitter:title" content="Bull Agent: Tu Asesor Financiero con IA">
+    <meta name="twitter:description" content="Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros, interpretar métricas y crear alertas en lenguaje natural.">
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://bullanalytics.io/blog/guias/guia-bull-agent.html">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../../images/logo.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            DEFAULT: '#28a745',
+                            dark: '#218838',
+                            light: '#e8f5e9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        .prose {
+            color: #374151;
+        }
+        .prose h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+        .prose h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: #1f2937;
+        }
+        .prose p {
+            margin-bottom: 1.25rem;
+            line-height: 1.75;
+        }
+        .prose ul, .prose ol {
+            margin-bottom: 1.25rem;
+            padding-left: 1.5rem;
+        }
+        .prose li {
+            margin-bottom: 0.5rem;
+        }
+        .prose code {
+            background-color: #f3f4f6;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+        .prose blockquote {
+            border-left: 4px solid #28a745;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            font-style: italic;
+            color: #6b7280;
+        }
+        .dark .prose {
+            color: #d1d5db;
+        }
+        .dark .prose h2 {
+            color: #f9fafb;
+        }
+        .dark .prose h3 {
+            color: #e5e7eb;
+        }
+        .dark .prose code {
+            background-color: #374151;
+        }
+        .dark .prose blockquote {
+            border-left-color: #28a745;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+
+<body class="h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <img src="../../images/logo.png" alt="BullAnalytics Logo" class="h-10 w-10 rounded-lg object-contain">
+                    <a href="../../index.html" class="text-xl font-bold text-gray-900 dark:text-white">
+                        Bull<span class="text-green-500">Analytics</span>
+                    </a>
+                </div>
+                <ul class="hidden md:flex items-center gap-6">
+                    <li><a href="../../index.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Inicio</a></li>
+                    <li><a href="../../blog.html" class="text-green-500 dark:text-green-400 font-semibold border-b-2 border-green-500 pb-1">Blog</a></li>
+                    <li><a href="../../dashboard.html" class="text-gray-600 dark:text-gray-300 hover:text-green-500 dark:hover:text-green-400 font-medium transition-colors">Dashboard</a></li>
+                </ul>
+                <div class="flex items-center gap-3">
+                    <button id="darkModeToggle" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <svg id="sunIcon" class="w-5 h-5 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <svg id="moonIcon" class="w-5 h-5 block dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Article Header -->
+    <header class="pt-24 pb-12 bg-gradient-to-br from-white via-green-50/30 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-4">
+                <a href="../../blog.html" class="inline-flex items-center text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium mb-4">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Volver al Blog
+                </a>
+            </div>
+            <div class="mb-4">
+                <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold rounded-full">Guía</span>
+            </div>
+            <h1 class="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+                Bull Agent: Tu Asesor Financiero con IA
+            </h1>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-6">
+                Descubre cómo Bull Agent puede ayudarte a entender conceptos financieros, interpretar métricas y crear alertas en lenguaje natural.
+            </p>
+            <div class="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                <span>10 de Diciembre, 2025</span>
+                <span>•</span>
+                <span>6 min de lectura</span>
+                <span>•</span>
+                <span>Por Equipo BullAnalytics</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Article Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+        <article class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 lg:p-12">
+            <!-- Featured Image -->
+            <div class="mb-8 rounded-lg overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80" alt="Bull Agent: Tu Asesor Financiero con IA" class="w-full h-auto object-cover">
+            </div>
+
+            <!-- Article Body -->
+            <div class="prose prose-lg dark:prose-invert max-w-none">
+                <h2>¿Qué es Bull Agent?</h2>
+                <p>
+                    Bull Agent es tu asistente de inteligencia artificial integrado en BullAnalytics, diseñado para ayudarte a 
+                    navegar el mundo de las inversiones de manera más inteligente. A diferencia de los chatbots tradicionales, 
+                    Bull Agent entiende el contexto financiero y puede ayudarte con tareas complejas como interpretar métricas, 
+                    crear reglas de trading y responder preguntas sobre conceptos financieros.
+                </p>
+
+                <blockquote>
+                    "Bull Agent transforma la forma en que interactúas con tus datos financieros, haciendo que la información 
+                    compleja sea accesible y accionable."
+                </blockquote>
+
+                <h2>Características Principales</h2>
+                
+                <h3>1. Creación de Reglas en Lenguaje Natural</h3>
+                <p>
+                    Una de las características más poderosas de Bull Agent es su capacidad para convertir tus instrucciones en 
+                    lenguaje natural en reglas de trading complejas. En lugar de tener que entender la sintaxis técnica, 
+                    simplemente describe lo que quieres:
+                </p>
+                <ul>
+                    <li><strong>Ejemplo 1:</strong> "Avísame cuando NVIDIA suba más del 5% en un día"</li>
+                    <li><strong>Ejemplo 2:</strong> "Quiero una alerta si Apple tiene un P/E ratio menor a 25"</li>
+                    <li><strong>Ejemplo 3:</strong> "Notifícame cuando Tesla esté a más del 10% de su máximo histórico"</li>
+                </ul>
+                <p>
+                    Bull Agent interpreta tu solicitud y crea automáticamente la regla correspondiente con todos los parámetros 
+                    correctos configurados.
+                </p>
+
+                <h3>2. Interpretación de Métricas Financieras</h3>
+                <p>
+                    ¿No estás seguro de qué significa un P/E ratio de 30? ¿O qué implica un ROE del 15%? Bull Agent puede 
+                    explicarte cualquier métrica financiera en términos simples y contextualizados:
+                </p>
+                <ul>
+                    <li><strong>Explicaciones claras:</strong> Obtén explicaciones en lenguaje simple de cualquier métrica</li>
+                    <li><strong>Contexto de mercado:</strong> Entiende cómo se compara una métrica con el promedio del mercado</li>
+                    <li><strong>Implicaciones:</strong> Descubre qué significa una métrica para tus decisiones de inversión</li>
+                </ul>
+
+                <h3>3. Análisis de Activos</h3>
+                <p>
+                    Pregúntale a Bull Agent sobre cualquier activo y obtendrás un análisis completo:
+                </p>
+                <ul>
+                    <li>Métricas financieras clave</li>
+                    <li>Análisis de tendencias</li>
+                    <li>Comparación con competidores</li>
+                    <li>Recomendaciones basadas en datos</li>
+                </ul>
+
+                <h3>4. Respuestas a Preguntas Financieras</h3>
+                <p>
+                    Bull Agent puede responder preguntas sobre:
+                </p>
+                <ul>
+                    <li>Conceptos financieros (¿Qué es un dividendo?)</li>
+                    <li>Estrategias de inversión (¿Cuándo debo comprar?)</li>
+                    <li>Análisis técnico (¿Qué significa un RSI de 70?)</li>
+                    <li>Mercados y tendencias (¿Cómo afecta la inflación a las acciones?)</li>
+                </ul>
+
+                <h2>Cómo Usar Bull Agent</h2>
+
+                <h3>Paso 1: Acceder a Bull Agent</h3>
+                <p>
+                    Bull Agent está disponible en tu dashboard de BullAnalytics. Busca el ícono del chat en la esquina inferior 
+                    derecha o accede desde la sección "Bull Agent" en el menú principal.
+                </p>
+
+                <h3>Paso 2: Hacer tu Primera Pregunta</h3>
+                <p>
+                    Comienza con algo simple:
+                </p>
+                <ul>
+                    <li>"¿Qué es el P/E ratio?"</li>
+                    <li>"Explícame las métricas de Apple"</li>
+                    <li>"¿Cuál es el mejor momento para comprar acciones?"</li>
+                </ul>
+
+                <h3>Paso 3: Crear tu Primera Regla</h3>
+                <p>
+                    Una vez que te sientas cómodo, intenta crear una regla:
+                </p>
+                <ol>
+                    <li>Escribe: "Quiero una alerta cuando Microsoft suba más del 3% en un día"</li>
+                    <li>Bull Agent te mostrará la regla que va a crear</li>
+                    <li>Revisa los parámetros y confirma</li>
+                    <li>¡Listo! Tu regla está activa</li>
+                </ol>
+
+                <h2>Casos de Uso Reales</h2>
+
+                <h3>Caso 1: Inversor Principiante</h3>
+                <p>
+                    <strong>Escenario:</strong> Acabas de empezar a invertir y no entiendes muchas de las métricas que ves.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Usa Bull Agent como tu tutor personal. Pregunta sobre cualquier concepto que no 
+                    entiendas y obtén explicaciones claras y contextualizadas. Por ejemplo:
+                </p>
+                <ul>
+                    <li>"¿Qué significa que una acción tenga un P/E de 30?"</li>
+                    <li>"¿Es mejor un ROE alto o bajo?"</li>
+                    <li>"¿Cómo interpreto el margen de ganancia?"</li>
+                </ul>
+
+                <h3>Caso 2: Inversor Activo</h3>
+                <p>
+                    <strong>Escenario:</strong> Monitoreas múltiples activos y necesitas crear muchas alertas personalizadas.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Usa Bull Agent para crear reglas rápidamente en lenguaje natural. En lugar de 
+                    configurar cada alerta manualmente, simplemente describe lo que necesitas:
+                </p>
+                <ul>
+                    <li>"Avísame cuando cualquiera de mis watchlists suba más del 5%"</li>
+                    <li>"Crea una alerta si el volumen de trading de Tesla es 3 veces el promedio"</li>
+                    <li>"Notifícame cuando Amazon tenga un P/E menor a 40"</li>
+                </ul>
+
+                <h3>Caso 3: Análisis Rápido</h3>
+                <p>
+                    <strong>Escenario:</strong> Encontraste un activo interesante y quieres un análisis rápido antes de invertir.
+                </p>
+                <p>
+                    <strong>Solución:</strong> Pregúntale a Bull Agent sobre el activo:
+                </p>
+                <ul>
+                    <li>"Analiza las métricas de NVIDIA"</li>
+                    <li>"¿Es Apple una buena inversión según sus métricas actuales?"</li>
+                    <li>"Compara Microsoft con Google"</li>
+                </ul>
+
+                <h2>Consejos para Obtener Mejores Resultados</h2>
+
+                <h3>1. Sé Específico</h3>
+                <p>
+                    Cuanto más específico seas, mejor será la respuesta de Bull Agent. En lugar de "analiza Apple", prueba con 
+                    "analiza las métricas financieras de Apple y compáralas con el promedio del sector tecnológico".
+                </p>
+
+                <h3>2. Usa Contexto</h3>
+                <p>
+                    Bull Agent recuerda el contexto de la conversación. Puedes hacer preguntas de seguimiento como "¿Y qué 
+                    significa eso para mi inversión?" después de una explicación inicial.
+                </p>
+
+                <h3>3. Experimenta con Diferentes Formulaciones</h3>
+                <p>
+                    Si no obtienes la respuesta que buscas, intenta reformular tu pregunta. Bull Agent entiende múltiples 
+                    formas de expresar la misma idea.
+                </p>
+
+                <h3>4. Combina Funcionalidades</h3>
+                <p>
+                    Usa Bull Agent junto con otras funcionalidades de BullAnalytics. Por ejemplo, después de crear una regla, 
+                    pregunta "¿Esta regla es apropiada para mi estrategia de inversión?" para obtener feedback.
+                </p>
+
+                <h2>Límites y Consideraciones</h2>
+                <p>
+                    Aunque Bull Agent es una herramienta poderosa, es importante recordar:
+                </p>
+                <ul>
+                    <li><strong>No es asesoramiento financiero:</strong> Bull Agent proporciona información y análisis, pero 
+                        no constituye asesoramiento financiero personalizado</li>
+                    <li><strong>Verifica la información:</strong> Siempre verifica información crítica antes de tomar 
+                        decisiones de inversión</li>
+                    <li><strong>Usa tu criterio:</strong> Bull Agent es una herramienta de apoyo, pero las decisiones 
+                        finales son tuyas</li>
+                </ul>
+
+                <h2>Próximas Mejoras</h2>
+                <p>
+                    Estamos trabajando constantemente en mejorar Bull Agent. Próximamente:
+                </p>
+                <ul>
+                    <li>Análisis predictivo más avanzado</li>
+                    <li>Integración con más fuentes de datos</li>
+                    <li>Recomendaciones personalizadas basadas en tu historial</li>
+                    <li>Análisis de sentimiento de noticias</li>
+                </ul>
+
+                <h2>Conclusión</h2>
+                <p>
+                    Bull Agent es más que un chatbot: es tu compañero inteligente en el mundo de las inversiones. Ya sea que 
+                    seas un principiante que necesita explicaciones o un inversor experimentado que busca eficiencia, Bull Agent 
+                    puede ayudarte a tomar mejores decisiones financieras.
+                </p>
+                <p>
+                    <a href="../../dashboard.html" class="text-green-600 dark:text-green-400 hover:underline font-semibold">
+                        Prueba Bull Agent ahora →
+                    </a>
+                </p>
+            </div>
+
+            <!-- Share Section -->
+            <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Compartir esta guía</h3>
+                <div class="flex gap-4">
+                    <a href="https://twitter.com/intent/tweet?text=Bull Agent: Tu Asesor Financiero con IA&url=https://bullanalytics.io/blog/guias/guia-bull-agent.html" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                        Twitter
+                    </a>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url=https://bullanalytics.io/blog/guias/guia-bull-agent.html" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        LinkedIn
+                    </a>
+                </div>
+            </div>
+        </article>
+
+        <!-- Related Articles -->
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Guías Relacionadas</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <a href="guia-alertas-financieras.html" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80');"></div>
+                    <div class="p-6">
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">Guía</span>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-3 mb-2">Guía Completa de Alertas Financieras</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Aprende a configurar alertas personalizadas para no perder oportunidades.</p>
+                    </div>
+                </a>
+                <a href="primeros-pasos-onboarding.html" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-xl transition-shadow">
+                    <div class="h-48 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80');"></div>
+                    <div class="p-6">
+                        <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-semibold rounded-full">Onboarding</span>
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-3 mb-2">Primeros Pasos: Guía de Onboarding</h3>
+                        <p class="text-gray-600 dark:text-gray-300">Comienza tu viaje con BullAnalytics.</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 border-t border-gray-200 dark:border-gray-700 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-left">
+                    © 2025 BullAnalytics. Todos los derechos reservados.
+                </p>
+                <p class="text-gray-600 dark:text-gray-400 text-sm text-center md:text-right">
+                    Powered by <span class="font-semibold text-green-500">Apertura IA</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../../js/dark-mode.js"></script>
+</body>
+
+</html>
+

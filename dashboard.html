@@ -191,7 +191,7 @@
                         data-tab="argentina">Argentina</button>
                     <button
                         class="tab-button px-6 py-3 font-semibold text-sm rounded-t-lg border-b-3 border-transparent text-gray-600 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
-                        data-tab="broker" id="brokerTabBtn" style="display: none;">
+                        data-tab="broker" id="brokerTabBtn">
                         <svg class="inline-block w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                         </svg>
@@ -491,65 +491,90 @@
             </div>
 
             <!-- Broker Tab -->
-            <div class="tab-content hidden" id="broker-tab">
+            <div class="tab-content hidden" id="broker-tab" data-category="broker">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Conexiones de Broker</h2>
-                    <button
-                        class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
-                        id="addBrokerConnectionBtn">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <span>Conectar Broker</span>
-                    </button>
-                </div>
-
-                <!-- Connected Brokers List -->
-                <div class="mb-8" id="connectedBrokersList">
-                    <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
-                        id="broker-loading">
-                        <div
-                            class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin">
-                        </div>
-                        <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando conexiones...</p>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Portafolio de Broker</h2>
+                    <div class="flex items-center gap-2">
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                            onclick="openBrokerModal('IOL')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Conectar IOL</span>
+                        </button>
+                        <button
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-md hover:shadow-lg"
+                            onclick="openBrokerModal('BINANCE')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            <span>Conectar Binance</span>
+                        </button>
+                        <button
+                            class="flex items-center justify-center w-10 h-10 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700 hover:text-green-600 dark:hover:text-green-400 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm hover:shadow-md"
+                            data-refresh="broker" title="Actualizar">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Broker Portfolio -->
-                <div id="brokerPortfolioContainer" style="display: none;">
-                    <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Portafolio</h3>
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div class="overflow-x-auto">
-                            <table class="w-full" id="brokerPortfolioTable">
-                                <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Broker
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Activo
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Cantidad
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Precio Promedio
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Precio Actual
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Valor de Mercado
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                            Ganancia/Pérdida
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody id="brokerPortfolioTableBody" class="divide-y divide-gray-200 dark:divide-gray-700">
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- Loading State -->
+                <div class="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
+                    id="broker-loading">
+                    <div
+                        class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 border-t-green-500 rounded-full animate-spin">
+                    </div>
+                    <p class="mt-4 text-gray-600 dark:text-gray-400">Cargando portafolio de broker...</p>
+                </div>
+
+                <!-- Broker Portfolio Table -->
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+                    id="broker-table" style="display: none;">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="broker">Broker <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="name">Activo <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="quantity">Cantidad <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="avg_price">Precio Promedio <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="current_price">Precio Actual <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="market_value">Valor de Mercado <span class="sort-icon"></span></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors sortable" data-sort="profit_loss">Ganancia/Pérdida <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="broker-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="broker-empty" class="hidden text-center py-16 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                    <svg class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">No tienes brokers conectados</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500 mb-6">Conecta IOL o Binance para ver tu portafolio en tiempo real</p>
+                    <div class="flex gap-3 justify-center">
+                        <button onclick="openBrokerModal('IOL')" 
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Conectar IOL
+                        </button>
+                        <button onclick="openBrokerModal('BINANCE')" 
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Conectar Binance
+                        </button>
                     </div>
                 </div>
             </div>

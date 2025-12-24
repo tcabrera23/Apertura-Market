@@ -64,7 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-refresh]').forEach(btn => {
         btn.addEventListener('click', () => {
             const category = btn.getAttribute('data-refresh');
-            forceRefreshAssets(category);
+            if (category === 'broker') {
+                forceRefreshBrokerAssets();
+            } else {
+                forceRefreshAssets(category);
+            }
         });
     });
 
@@ -856,10 +860,15 @@ async function loadCustomWatchlists() {
 
 // Preload all data on startup
 async function preloadAllData() {
-    const categories = ['tracking', 'portfolio', 'crypto', 'argentina'];
+    const categories = ['tracking', 'portfolio', 'crypto', 'argentina', 'broker'];
 
     // Load all categories in parallel
-    await Promise.all(categories.map(category => loadAssets(category, true)));
+    await Promise.all(categories.map(category => {
+        if (category === 'broker') {
+            return loadBrokerAssets(true);
+        }
+        return loadAssets(category, true);
+    }));
 
     console.log('✅ All data preloaded successfully');
 }
@@ -869,10 +878,14 @@ function startBackgroundRefresh() {
     // Refresh every 2 minutes
     backgroundRefreshInterval = setInterval(() => {
         console.log('🔄 Background refresh started...');
-        const categories = ['tracking', 'portfolio', 'crypto', 'argentina'];
+        const categories = ['tracking', 'portfolio', 'crypto', 'argentina', 'broker'];
         categories.forEach(category => {
             if (isCacheExpired(category)) {
-                loadAssets(category, true);
+                if (category === 'broker') {
+                    loadBrokerAssets(true);
+                } else {
+                    loadAssets(category, true);
+                }
             }
         });
     }, CACHE_DURATION);
@@ -902,6 +915,29 @@ async function forceRefreshAssets(category) {
 
     btn.innerHTML = originalHTML;
     btn.disabled = false;
+}
+
+// Force refresh broker assets
+async function forceRefreshBrokerAssets() {
+    // Clear cache for broker
+    delete localCache.data['broker'];
+    delete localCache.timestamps['broker'];
+    saveCache(); // Update localStorage
+
+    // Reload with visual feedback
+    const btn = document.querySelector(`[data-refresh="broker"]`);
+    if (btn) {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: spin 1s linear infinite;"><path d="M17 10C17 13.866 13.866 17 10 17C6.134 17 3 13.866 3 10C3 6.134 6.134 3 10 3C12.8 3 15.2 4.8 16.3 7.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 3V7H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        btn.disabled = true;
+
+        await loadBrokerAssets(false);
+
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    } else {
+        await loadBrokerAssets(false);
+    }
 }
 
 // Set current date in Spanish format
@@ -967,7 +1003,11 @@ function initializeTabs() {
                 // Data should already be loaded from preload
                 const category = tabContent.getAttribute('data-category');
                 if (category && !currentData[category]) {
-                    loadAssets(category, false);
+                    if (category === 'broker') {
+                        loadBrokerAssets(false);
+                    } else {
+                        loadAssets(category, false);
+                    }
                 }
             }
         });
@@ -1543,3 +1583,257 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// ============================================================================
+// BROKER ASSETS LOADING
+// ============================================================================
+
+// Load broker assets from all connected brokers
+async function loadBrokerAssets(silent = false) {
+    const loadingEl = document.getElementById('broker-loading');
+    const tableEl = document.getElementById('broker-table');
+    const tableBody = document.getElementById('broker-tbody');
+    const emptyEl = document.getElementById('broker-empty');
+
+    // Check cache first (broker data is cached for 1 minute)
+    const brokerCacheKey = 'broker';
+    if (localCache.data[brokerCacheKey] && !isCacheExpired(brokerCacheKey)) {
+        console.log('Using cached broker data');
+        renderBrokerTable(localCache.data[brokerCacheKey], tableBody, tableEl, loadingEl, emptyEl);
+        return;
+    }
+
+    // Show loading state
+    if (!silent) {
+        if (loadingEl) loadingEl.style.display = 'flex';
+        if (tableEl) tableEl.style.display = 'none';
+        if (emptyEl) emptyEl.classList.add('hidden');
+    }
+
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('Authentication required');
+        }
+
+        // Get all broker connections
+        const connectionsResponse = await fetch(`${API_BASE_URL}/broker-connections`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!connectionsResponse.ok) {
+            if (connectionsResponse.status === 404 || connectionsResponse.status === 401) {
+                // No connections or not authenticated
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (tableEl) tableEl.style.display = 'none';
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            throw new Error('Error al cargar conexiones');
+        }
+
+        const connections = await connectionsResponse.json();
+
+        if (!connections || connections.length === 0) {
+            // No connections
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (tableEl) tableEl.style.display = 'none';
+            if (emptyEl) emptyEl.classList.remove('hidden');
+            localCache.data[brokerCacheKey] = [];
+            localCache.timestamps[brokerCacheKey] = Date.now();
+            saveCache();
+            return;
+        }
+
+        // Load portfolios from all active connections
+        const portfolioPromises = connections
+            .filter(conn => conn.is_active)
+            .map(conn => 
+                fetch(`${API_BASE_URL}/broker-connections/${conn.id}/portfolio`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        console.warn(`Error loading portfolio for ${conn.broker_name}:`, res.status);
+                        return null;
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data && data.portfolio) {
+                        return data.portfolio.map(asset => ({
+                            ...asset,
+                            connection_id: conn.id,
+                            broker_name: conn.broker_name
+                        }));
+                    }
+                    return [];
+                })
+                .catch(err => {
+                    console.error(`Error loading portfolio for ${conn.broker_name}:`, err);
+                    return [];
+                })
+            );
+
+        const portfolios = await Promise.all(portfolioPromises);
+        
+        // Combine all portfolios
+        const allAssets = portfolios.flat();
+
+        // Update cache (cache for 1 minute for broker data)
+        localCache.data[brokerCacheKey] = allAssets;
+        localCache.timestamps[brokerCacheKey] = Date.now();
+        saveCache();
+        currentData[brokerCacheKey] = allAssets;
+
+        // Render table
+        renderBrokerTable(allAssets, tableBody, tableEl, loadingEl, emptyEl);
+
+    } catch (error) {
+        console.error('Error loading broker assets:', error);
+        
+        // If we have cached data, keep showing it
+        if (localCache.data[brokerCacheKey]) {
+            console.log('Using cached broker data due to error');
+            renderBrokerTable(localCache.data[brokerCacheKey], tableBody, tableEl, loadingEl, emptyEl);
+        } else {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (tableEl) tableEl.style.display = 'none';
+            if (emptyEl) emptyEl.classList.remove('hidden');
+        }
+    }
+}
+
+// Render broker portfolio table
+function renderBrokerTable(assets, tableBody, tableEl, loadingEl, emptyEl) {
+    if (!tableBody) return;
+
+    // Clear table body
+    tableBody.innerHTML = '';
+
+    if (!assets || assets.length === 0) {
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (tableEl) tableEl.style.display = 'none';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+        return;
+    }
+
+    // Hide loading and empty, show table
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (emptyEl) emptyEl.classList.add('hidden');
+    if (tableEl) tableEl.style.display = 'block';
+
+    // Populate table
+    assets.forEach(asset => {
+        const row = createBrokerTableRow(asset);
+        tableBody.appendChild(row);
+    });
+
+    // Set up sorting
+    setupSorting('broker');
+}
+
+// Create broker table row
+function createBrokerTableRow(asset) {
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
+    row.setAttribute('data-broker', asset.broker || asset.broker_name || '');
+    row.setAttribute('data-name', asset.name || asset.ticker || '');
+    row.setAttribute('data-quantity', asset.quantity || 0);
+    row.setAttribute('data-avg_price', asset.avg_price || 0);
+    row.setAttribute('data-current_price', asset.current_price || 0);
+    row.setAttribute('data-market_value', asset.market_value || 0);
+    row.setAttribute('data-profit_loss', asset.profit_loss || 0);
+
+    // Broker badge
+    const brokerCell = document.createElement('td');
+    brokerCell.className = 'px-4 py-3';
+    const brokerName = asset.broker || asset.broker_name || 'UNKNOWN';
+    const brokerColor = brokerName === 'IOL' ? 'blue' : 'yellow';
+    brokerCell.innerHTML = `
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-${brokerColor}-100 dark:bg-${brokerColor}-900 text-${brokerColor}-800 dark:text-${brokerColor}-200">
+            ${brokerName}
+        </span>
+    `;
+    row.appendChild(brokerCell);
+
+    // Asset name
+    const nameCell = document.createElement('td');
+    nameCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
+    nameCell.innerHTML = `
+        <div class="font-semibold">${asset.name || asset.ticker || 'N/A'}</div>
+        <div class="text-sm text-gray-500 dark:text-gray-400">${asset.ticker || ''}</div>
+    `;
+    row.appendChild(nameCell);
+
+    // Quantity
+    const quantityCell = document.createElement('td');
+    quantityCell.className = 'px-4 py-3 text-gray-900 dark:text-white';
+    quantityCell.textContent = (asset.quantity || 0).toLocaleString('es-AR', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 8 
+    });
+    row.appendChild(quantityCell);
+
+    // Average price
+    const avgPriceCell = document.createElement('td');
+    avgPriceCell.className = 'px-4 py-3 text-gray-900 dark:text-white';
+    avgPriceCell.textContent = asset.avg_price > 0 
+        ? `$${(asset.avg_price || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : 'N/A';
+    row.appendChild(avgPriceCell);
+
+    // Current price
+    const currentPriceCell = document.createElement('td');
+    currentPriceCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
+    currentPriceCell.textContent = `$${(asset.current_price || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    row.appendChild(currentPriceCell);
+
+    // Market value
+    const marketValueCell = document.createElement('td');
+    marketValueCell.className = 'px-4 py-3 font-semibold text-gray-900 dark:text-white';
+    marketValueCell.textContent = `$${(asset.market_value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    row.appendChild(marketValueCell);
+
+    // Profit/Loss
+    const profitLossCell = document.createElement('td');
+    profitLossCell.className = 'px-4 py-3';
+    const profitLoss = asset.profit_loss || 0;
+    const profitLossPct = asset.profit_loss_pct || 0;
+    const profitLossClass = profitLoss >= 0 ? 'text-green-500 dark:text-green-400' : 'text-red-500 dark:text-red-400';
+    
+    profitLossCell.innerHTML = `
+        <div class="font-semibold ${profitLossClass}">
+            $${profitLoss.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        ${profitLossPct !== 0 ? `
+            <div class="text-sm ${profitLossClass}">
+                (${profitLossPct >= 0 ? '+' : ''}${profitLossPct.toFixed(2)}%)
+            </div>
+        ` : ''}
+    `;
+    row.appendChild(profitLossCell);
+
+    return row;
+}
+
+// Global function to open broker modal with pre-selected broker
+window.openBrokerModal = function(brokerName) {
+    const modal = document.getElementById('brokerConnectionModal');
+    const brokerSelect = document.getElementById('brokerSelect');
+    
+    if (modal && brokerSelect) {
+        modal.classList.remove('hidden');
+        brokerSelect.value = brokerName;
+        
+        // Trigger change event to show correct credentials
+        const event = new Event('change');
+        brokerSelect.dispatchEvent(event);
+    }
+};

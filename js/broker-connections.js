@@ -37,13 +37,12 @@ async function checkPremiumStatus() {
     }
 }
 
-// Show/hide broker tab based on subscription
+// Show/hide broker tab based on subscription (always show now)
 async function updateBrokerTabVisibility() {
-    const isPremium = await checkPremiumStatus();
     const brokerTabBtn = document.getElementById('brokerTabBtn');
     
     if (brokerTabBtn) {
-        brokerTabBtn.style.display = isPremium ? 'block' : 'none';
+        brokerTabBtn.style.display = 'block'; // Always show broker tab
     }
 }
 
@@ -51,11 +50,7 @@ async function updateBrokerTabVisibility() {
 async function initBrokerConnections() {
     await updateBrokerTabVisibility();
     
-    if (!isPremiumUser) {
-        console.log('Broker connections feature requires premium subscription');
-        return;
-    }
-
+    // Always initialize, but premium features may be limited
     setupBrokerEventListeners();
     await loadBrokerConnections();
 }
@@ -195,6 +190,19 @@ async function createBrokerConnection() {
         alert('Broker conectado exitosamente!');
         closeBrokerModalFunc();
         await loadBrokerConnections();
+        
+        // Reload broker assets if broker tab is active
+        if (typeof loadBrokerAssets === 'function') {
+            // Clear cache to force refresh
+            if (typeof localCache !== 'undefined') {
+                delete localCache.data['broker'];
+                delete localCache.timestamps['broker'];
+                if (typeof saveCache === 'function') {
+                    saveCache();
+                }
+            }
+            await loadBrokerAssets(false);
+        }
     } catch (error) {
         console.error('Error creating broker connection:', error);
         alert(error.message || 'Error al conectar broker');
@@ -341,6 +349,19 @@ window.deleteBrokerConnection = async function(connectionId) {
 
         alert('Conexión eliminada exitosamente');
         await loadBrokerConnections();
+        
+        // Reload broker assets if broker tab is active
+        if (typeof loadBrokerAssets === 'function') {
+            // Clear cache to force refresh
+            if (typeof localCache !== 'undefined') {
+                delete localCache.data['broker'];
+                delete localCache.timestamps['broker'];
+                if (typeof saveCache === 'function') {
+                    saveCache();
+                }
+            }
+            await loadBrokerAssets(false);
+        }
     } catch (error) {
         console.error('Error deleting broker connection:', error);
         alert(error.message || 'Error al eliminar conexión');
@@ -369,6 +390,19 @@ window.syncBrokerPortfolio = async function(connectionId) {
         
         // Reload all portfolios to show updated data
         await loadBrokerConnections();
+        
+        // Reload broker assets if broker tab is active
+        if (typeof loadBrokerAssets === 'function') {
+            // Clear cache to force refresh
+            if (typeof localCache !== 'undefined') {
+                delete localCache.data['broker'];
+                delete localCache.timestamps['broker'];
+                if (typeof saveCache === 'function') {
+                    saveCache();
+                }
+            }
+            await loadBrokerAssets(false);
+        }
         
         alert('Portafolio sincronizado exitosamente!');
     } catch (error) {
@@ -466,6 +500,17 @@ function renderBrokerPortfolio(assets) {
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     initBrokerConnections();
+    
+    // Also initialize when broker tab is clicked
+    const brokerTabBtn = document.getElementById('brokerTabBtn');
+    if (brokerTabBtn) {
+        brokerTabBtn.addEventListener('click', () => {
+            // Load broker assets when tab is clicked
+            if (typeof loadBrokerAssets === 'function') {
+                loadBrokerAssets(false);
+            }
+        });
+    }
 });
 
 
