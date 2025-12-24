@@ -295,6 +295,105 @@
         </div>
     </div>
 
+    <!-- Backtest Modal -->
+    <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="backtestModal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Backtest de Regla</h3>
+                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" onclick="document.getElementById('backtestModal').classList.add('hidden'); document.body.style.overflow = '';">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Fecha Inicio</label>
+                        <input type="date" id="backtestStartDate" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Fecha Fin</label>
+                        <input type="date" id="backtestEndDate" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Capital Inicial</label>
+                        <input type="number" id="backtestInitialCapital" value="10000" step="100" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+                <button onclick="runBacktest()" id="backtestSubmitBtn" class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-semibold">
+                    Ejecutar Backtest
+                </button>
+                <div id="backtestResults" class="mt-6"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Execution Settings Modal -->
+    <div class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" id="executionSettingsModal">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-2xl font-bold text-gray-900 dark:text-white">Configuración de Ejecución Automática</h3>
+                <button class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" onclick="document.getElementById('executionSettingsModal').classList.add('hidden'); document.body.style.overflow = '';">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-6">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="executionEnabled" class="w-5 h-5 text-green-600 rounded">
+                    <label for="executionEnabled" class="text-gray-900 dark:text-white font-semibold">Habilitar Ejecución Automática</label>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Tipo de Ejecución</label>
+                    <select id="executionType" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="ALERT_ONLY">Solo Alerta (Email)</option>
+                        <option value="BUY">Compra Automática</option>
+                        <option value="SELL">Venta Automática</option>
+                        <option value="SIMULATION">Simulación (Paper Trading)</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Broker Connection</label>
+                    <select id="executionBrokerConnection" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">Selecciona un broker</option>
+                    </select>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Conecta un broker en la pestaña "Broker" del dashboard</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Cantidad</label>
+                    <input type="number" id="executionQuantity" step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Cantidad a comprar/vender">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Cooldown (minutos)</label>
+                    <input type="number" id="executionCooldown" value="60" min="1" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Tiempo de espera entre ejecuciones de la misma regla</p>
+                </div>
+                
+                <div class="flex gap-4">
+                    <button onclick="saveExecutionSettings()" class="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-semibold">
+                        Guardar Configuración
+                    </button>
+                    <button onclick="testRuleExecution(document.getElementById('executionSettingsModal').getAttribute('data-rule-id'))" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold">
+                        Probar Ahora
+                    </button>
+                </div>
+                
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                    <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>⚠️ Advertencia:</strong> La ejecución automática ejecutará órdenes reales en tu broker. 
+                        Asegúrate de probar primero con backtesting y usar el modo simulación antes de activar ejecución real.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Chat Widget -->
     <div id="chatWidget" class="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <!-- Chat Button -->

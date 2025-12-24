@@ -168,6 +168,27 @@ async function loadRules() {
     }
 }
 
+async function loadBrokerConnections() {
+    try {
+        const token = getAuthToken();
+        if (!token) return [];
+        
+        const response = await fetch(`${getApiBaseUrl()}/broker-connections`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            return await response.json();
+        }
+        return [];
+    } catch (error) {
+        console.error('Error loading broker connections:', error);
+        return [];
+    }
+}
+
 function createRuleCard(rule) {
     const card = document.createElement('div');
     card.className = 'bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 flex justify-between items-center hover:shadow-xl hover:scale-[1.02] transition-all';
@@ -180,16 +201,35 @@ function createRuleCard(rule) {
         'max_distance': 'Distancia del máximo'
     };
 
+    const executionEnabled = rule.execution_enabled || false;
+    const executionType = rule.execution_type || 'ALERT_ONLY';
+    const executionBadge = executionEnabled ? 
+        `<span class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs font-semibold">⚡ ${executionType === 'BUY' ? 'Compra Auto' : executionType === 'SELL' ? 'Venta Auto' : 'Simulación'}</span>` : 
+        '';
+
     card.innerHTML = `
         <div class="flex-1">
             <div class="font-bold text-lg text-gray-900 dark:text-white mb-2">${rule.name || 'Regla sin nombre'}</div>
-            <div class="flex flex-wrap gap-3">
+            <div class="flex flex-wrap gap-3 items-center">
                 <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">${typeLabels[rule.rule_type] || rule.type || rule.rule_type}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">📊 ${rule.ticker}</span>
                 <span class="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">🎯 ${rule.value_threshold || rule.value}</span>
+                ${executionBadge}
             </div>
         </div>
         <div class="ml-4 flex items-center gap-2">
+            <button class="px-3 py-2 flex items-center gap-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors text-sm font-semibold" onclick="openBacktestModal('${rule.id}')" title="Backtest">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Backtest
+            </button>
+            <button class="px-3 py-2 flex items-center gap-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors text-sm font-semibold" onclick="openExecutionSettingsModal('${rule.id}')" title="Ejecución Automática">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Auto
+            </button>
             <button class="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors" onclick="editRule('${rule.id}')" title="Editar">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" fill="currentColor"/>
@@ -603,3 +643,235 @@ function getTypeLabel(type) {
 
 // Make sendChatMessage available globally
 window.sendChatMessage = sendChatMessage;
+
+// ============================================
+// BACKTESTING FUNCTIONS
+// ============================================
+
+async function openBacktestModal(ruleId) {
+    const modal = document.getElementById('backtestModal');
+    if (modal) {
+        modal.setAttribute('data-rule-id', ruleId);
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        
+        // Set default dates (last 6 months)
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - 6);
+        
+        document.getElementById('backtestStartDate').value = startDate.toISOString().split('T')[0];
+        document.getElementById('backtestEndDate').value = endDate.toISOString().split('T')[0];
+    }
+}
+
+async function runBacktest() {
+    const modal = document.getElementById('backtestModal');
+    const ruleId = modal.getAttribute('data-rule-id');
+    const startDate = document.getElementById('backtestStartDate').value;
+    const endDate = document.getElementById('backtestEndDate').value;
+    const initialCapital = parseFloat(document.getElementById('backtestInitialCapital').value) || 10000;
+    
+    if (!startDate || !endDate) {
+        alert('Por favor, completa todas las fechas');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('backtestSubmitBtn');
+    const resultsDiv = document.getElementById('backtestResults');
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Ejecutando backtest...';
+    resultsDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div><p class="mt-4 text-gray-600 dark:text-gray-400">Ejecutando backtest...</p></div>';
+    
+    try {
+        const token = getAuthToken();
+        const response = await fetch(`${getApiBaseUrl()}/rules/${ruleId}/backtest`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate,
+                initial_capital: initialCapital
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al ejecutar backtest');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.results) {
+            const r = result.results;
+            resultsDiv.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Total Ejecuciones</div>
+                            <div class="text-2xl font-bold text-green-600 dark:text-green-400">${r.total_executions || 0}</div>
+                        </div>
+                        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Retorno Total</div>
+                            <div class="text-2xl font-bold ${(r.total_return || 0) >= 0 ? 'text-green-600' : 'text-red-600'}">${(r.total_return || 0).toFixed(2)}%</div>
+                        </div>
+                        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Win Rate</div>
+                            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">${(r.win_rate || 0).toFixed(1)}%</div>
+                        </div>
+                        <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+                            <div class="text-sm text-gray-600 dark:text-gray-400">Max Drawdown</div>
+                            <div class="text-2xl font-bold text-orange-600 dark:text-orange-400">${(r.max_drawdown || 0).toFixed(2)}%</div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                        <div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Capital Final</div>
+                        <div class="text-3xl font-bold text-gray-900 dark:text-white">$${(r.final_capital || 0).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Ganancia/Pérdida: $${(r.total_profit_loss || 0).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            resultsDiv.innerHTML = `<div class="text-red-500 text-center py-4">Error: ${result.error || 'Error desconocido'}</div>`;
+        }
+    } catch (error) {
+        console.error('Error running backtest:', error);
+        resultsDiv.innerHTML = `<div class="text-red-500 text-center py-4">Error: ${error.message}</div>`;
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Ejecutar Backtest';
+    }
+}
+
+// ============================================
+// EXECUTION SETTINGS FUNCTIONS
+// ============================================
+
+async function openExecutionSettingsModal(ruleId) {
+    const modal = document.getElementById('executionSettingsModal');
+    if (modal) {
+        modal.setAttribute('data-rule-id', ruleId);
+        
+        // Load rule data
+        try {
+            const token = getAuthToken();
+            const response = await fetch(`${getApiBaseUrl()}/rules`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const rules = await response.json();
+                const rule = rules.find(r => r.id === ruleId);
+                
+                if (rule) {
+                    document.getElementById('executionEnabled').checked = rule.execution_enabled || false;
+                    document.getElementById('executionType').value = rule.execution_type || 'ALERT_ONLY';
+                    document.getElementById('executionQuantity').value = rule.quantity || '';
+                    document.getElementById('executionCooldown').value = rule.cooldown_minutes || 60;
+                    
+                    // Load broker connections
+                    const brokerConnections = await loadBrokerConnections();
+                    const brokerSelect = document.getElementById('executionBrokerConnection');
+                    brokerSelect.innerHTML = '<option value="">Selecciona un broker</option>';
+                    brokerConnections.forEach(conn => {
+                        const option = document.createElement('option');
+                        option.value = conn.id;
+                        option.textContent = `${conn.broker_name} ${conn.is_active ? '(Activo)' : '(Inactivo)'}`;
+                        if (rule.broker_connection_id === conn.id) {
+                            option.selected = true;
+                        }
+                        brokerSelect.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error loading rule for execution settings:', error);
+        }
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+async function saveExecutionSettings() {
+    const modal = document.getElementById('executionSettingsModal');
+    const ruleId = modal.getAttribute('data-rule-id');
+    
+    const settings = {
+        execution_enabled: document.getElementById('executionEnabled').checked,
+        execution_type: document.getElementById('executionType').value,
+        broker_connection_id: document.getElementById('executionBrokerConnection').value || null,
+        quantity: parseFloat(document.getElementById('executionQuantity').value) || null,
+        cooldown_minutes: parseInt(document.getElementById('executionCooldown').value) || 60
+    };
+    
+    try {
+        const token = getAuthToken();
+        const response = await fetch(`${getApiBaseUrl()}/rules/${ruleId}/execution-settings`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al guardar configuración');
+        }
+        
+        alert('Configuración de ejecución guardada exitosamente');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+        loadRules(); // Reload rules to show updated status
+    } catch (error) {
+        console.error('Error saving execution settings:', error);
+        alert(`Error: ${error.message}`);
+    }
+}
+
+async function testRuleExecution(ruleId) {
+    if (!confirm('¿Estás seguro de ejecutar esta regla ahora? Esto ejecutará una orden real en tu broker.')) {
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        const response = await fetch(`${getApiBaseUrl()}/rules/${ruleId}/execute`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al ejecutar regla');
+        }
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('Regla ejecutada exitosamente');
+        } else {
+            alert(`Regla no se pudo ejecutar: ${result.message || 'Condición no cumplida'}`);
+        }
+    } catch (error) {
+        console.error('Error testing rule execution:', error);
+        alert(`Error: ${error.message}`);
+    }
+}
+
+// Make functions globally available
+window.openBacktestModal = openBacktestModal;
+window.runBacktest = runBacktest;
+window.openExecutionSettingsModal = openExecutionSettingsModal;
+window.saveExecutionSettings = saveExecutionSettings;
+window.testRuleExecution = testRuleExecution;

@@ -188,6 +188,87 @@ class ConexionBinance:
             logger.error(f"Excepción inesperada al obtener portfolio de Binance: {str(e)}")
             return None
     
+    async def ejecutar_orden(self, symbol: str, quantity: float, side: str, order_type: str = "MARKET", price: Optional[float] = None) -> Optional[Dict]:
+        """
+        Ejecuta una orden de compra o venta en Binance
+        
+        Args:
+            symbol: Par de trading (ej: "BTCUSDT", "ETHUSDT")
+            quantity: Cantidad a comprar/vender
+            side: "BUY" o "SELL"
+            order_type: Tipo de orden ("MARKET" o "LIMIT")
+            price: Precio límite (requerido si order_type es "LIMIT")
+        
+        Returns:
+            Diccionario con información de la orden ejecutada o None si hay error
+        """
+        try:
+            endpoint = "/api/v3/order"
+            timestamp = int(datetime.now().timestamp() * 1000)
+            
+            # Construir parámetros
+            params = {
+                "symbol": symbol.upper(),
+                "side": side.upper(),
+                "type": order_type.upper(),
+                "quantity": quantity,
+                "timestamp": timestamp
+            }
+            
+            if order_type.upper() == "LIMIT":
+                if not price:
+                    logger.error("Precio requerido para orden LIMIT")
+                    return {
+                        "success": False,
+                        "error": "Precio requerido para orden LIMIT",
+                        "status": "FAILED"
+                    }
+                params["price"] = price
+                params["timeInForce"] = "GTC"  # Good Till Cancel
+            
+            # Crear query string y firmar
+            query_string = "&".join([f"{k}={v}" for k, v in sorted(params.items())])
+            signature = self._generar_firma(query_string)
+            query_string += f"&signature={signature}"
+            
+            url = f"{self.BASE_URL}{endpoint}?{query_string}"
+            headers = {
+                "X-MBX-APIKEY": self.api_key
+            }
+            
+            response = requests.post(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"Orden {side} ejecutada exitosamente en Binance: {quantity} {symbol}")
+                return {
+                    "success": True,
+                    "order_id": str(data.get("orderId", "")),
+                    "ticker": symbol,
+                    "quantity": quantity,
+                    "type": side,
+                    "price": float(data.get("price", 0)) or float(data.get("executedQty", 0) * data.get("price", 0)),
+                    "status": data.get("status", "FILLED"),
+                    "broker_response": data
+                }
+            else:
+                error_data = response.json() if response.headers.get("content-type", "").startswith("application/json") else {"msg": response.text}
+                logger.error(f"Error ejecutando orden en Binance: {response.status_code} - {error_data}")
+                return {
+                    "success": False,
+                    "error": error_data.get("msg", f"Error {response.status_code}"),
+                    "status": "FAILED",
+                    "broker_response": error_data
+                }
+                
+        except Exception as e:
+            logger.error(f"Excepción al ejecutar orden en Binance: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "status": "FAILED"
+            }
+    
     def obtener_info(self) -> Dict:
         """
         Obtiene información sobre la conexión

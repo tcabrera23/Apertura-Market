@@ -40,6 +40,7 @@ import hmac
 import hashlib
 from conexion_iol import ConexionIOL, get_iol_access_token, get_iol_portfolio
 from conexion_binance import ConexionBinance, get_binance_portfolio
+from rule_execution import RuleEvaluator, BacktestEngine
 
 # Load environment variables
 load_dotenv()
@@ -1769,6 +1770,452 @@ async def delete_rule(rule_id: str, user = Depends(get_current_user)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting rule: {str(e)}")
+
+# ============================================
+# RULE EXECUTION AND BACKTESTING ENDPOINTS
+# ============================================
+
+class BacktestRequest(BaseModel):
+    start_date: str
+    end_date: str
+    initial_capital: float = 10000
+
+@app.post("/api/rules/{rule_id}/backtest")
+async def backtest_rule(rule_id: str, backtest_request: BacktestRequest, user = Depends(get_current_user)):
+    """Run a backtest for a rule"""
+    try:
+        # Get rule
+        rule_response = supabase.table("rules") \
+            .select("*") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data or len(rule_response.data) == 0:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        rule = rule_response.data[0]
+        
+        # Check if user has active paid subscription for backtesting
+        sub_response = supabase.table("subscriptions") \
+            .select("*, subscription_plans(*)") \
+            .eq("user_id", user.id) \
+            .eq("status", "active") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        
+        if not sub_response.data:
+            raise HTTPException(
+                status_code=403,
+                detail="Backtesting requires an active paid subscription"
+            )
+        
+        plan = sub_response.data[0].get("subscription_plans", {})
+        if plan.get("name") == "free":
+            raise HTTPException(
+                status_code=403,
+                detail="Backtesting is only available for Plus and Pro plans"
+            )
+        
+        # Create backtest record
+        backtest_data = {
+            "rule_id": rule_id,
+            "user_id": user.id,
+            "start_date": backtest_request.start_date,
+            "end_date": backtest_request.end_date,
+            "initial_capital": backtest_request.initial_capital,
+            "status": "RUNNING"
+        }
+        
+        backtest_response = supabase.table("rule_backtests").insert(backtest_data).execute()
+        backtest_id = backtest_response.data[0]["id"]
+        
+        # Run backtest asynchronously
+        try:
+            backtest_engine = BacktestEngine()
+            results = await backtest_engine.run_backtest(
+                rule,
+                backtest_request.start_date,
+                backtest_request.end_date,
+                backtest_request.initial_capital
+            )
+            
+            if results.get("success"):
+                # Update backtest with results
+                update_data = {
+                    "status": "COMPLETED",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "total_executions": results.get("total_executions", 0),
+                    "successful_executions": results.get("successful_executions", 0),
+                    "failed_executions": results.get("failed_executions", 0),
+                    "final_capital": results.get("final_capital"),
+                    "total_return": results.get("total_return"),
+                    "total_profit_loss": results.get("total_profit_loss"),
+                    "max_drawdown": results.get("max_drawdown"),
+                    "win_rate": results.get("win_rate"),
+                    "profit_factor": results.get("profit_factor"),
+                    "sharpe_ratio": results.get("sharpe_ratio"),
+                    "execution_details": results.get("execution_details", []),
+                    "daily_equity_curve": results.get("daily_equity_curve", [])
+                }
+                
+                supabase.table("rule_backtests") \
+                    .update(update_data) \
+                    .eq("id", backtest_id) \
+                    .execute()
+                
+                return {
+                    "success": True,
+                    "backtest_id": backtest_id,
+                    "results": results
+                }
+            else:
+                # Update with error
+                supabase.table("rule_backtests") \
+                    .update({
+                        "status": "FAILED",
+                        "error_message": results.get("error", "Unknown error"),
+                        "completed_at": datetime.now(timezone.utc).isoformat()
+                    }) \
+                    .eq("id", backtest_id) \
+                    .execute()
+                
+                raise HTTPException(status_code=500, detail=results.get("error", "Backtest failed"))
+                
+        except Exception as e:
+            # Update with error
+            supabase.table("rule_backtests") \
+                .update({
+                    "status": "FAILED",
+                    "error_message": str(e),
+                    "completed_at": datetime.now(timezone.utc).isoformat()
+                }) \
+                .eq("id", backtest_id) \
+                .execute()
+            
+            raise HTTPException(status_code=500, detail=f"Error running backtest: {str(e)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in backtest endpoint: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error running backtest: {str(e)}")
+
+@app.get("/api/rules/{rule_id}/backtests")
+async def get_rule_backtests(rule_id: str, user = Depends(get_current_user)):
+    """Get all backtests for a rule"""
+    try:
+        # Verify rule belongs to user
+        rule_response = supabase.table("rules") \
+            .select("id") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        # Get backtests
+        backtests_response = supabase.table("rule_backtests") \
+            .select("*") \
+            .eq("rule_id", rule_id) \
+            .order("created_at", desc=True) \
+            .execute()
+        
+        return backtests_response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching backtests: {str(e)}")
+
+@app.post("/api/rules/{rule_id}/execute")
+async def execute_rule(rule_id: str, user = Depends(get_current_user)):
+    """Manually trigger rule execution (for testing)"""
+    try:
+        # Get rule
+        rule_response = supabase.table("rules") \
+            .select("*") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data or len(rule_response.data) == 0:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        rule = rule_response.data[0]
+        
+        if not rule.get("execution_enabled"):
+            raise HTTPException(status_code=400, detail="Rule execution is not enabled")
+        
+        if rule.get("execution_type") == "ALERT_ONLY":
+            raise HTTPException(status_code=400, detail="Rule is set to ALERT_ONLY, cannot execute order")
+        
+        # Evaluate rule
+        evaluator = RuleEvaluator()
+        condition_met, current_data = await evaluator.evaluate_rule(rule)
+        
+        if not condition_met:
+            return {
+                "success": False,
+                "message": "Rule condition not met",
+                "current_data": current_data
+            }
+        
+        # Check cooldown
+        last_execution = rule.get("last_execution_at")
+        cooldown_minutes = rule.get("cooldown_minutes", 60)
+        if last_execution:
+            try:
+                last_exec = datetime.fromisoformat(last_execution.replace('Z', '+00:00'))
+                if (datetime.now(timezone.utc) - last_exec).total_seconds() < (cooldown_minutes * 60):
+                    return {
+                        "success": False,
+                        "message": f"Rule is in cooldown period ({cooldown_minutes} minutes)"
+                    }
+            except Exception as e:
+                logger.warning(f"Error parsing last_execution_at: {str(e)}")
+        
+        # Get broker connection if exists
+        broker_connection = None
+        broker_connection_id = rule.get("broker_connection_id")
+        if broker_connection_id:
+            broker_response = supabase.table("broker_connections") \
+                .select("*") \
+                .eq("id", broker_connection_id) \
+                .eq("user_id", user.id) \
+                .execute()
+            
+            if broker_response.data and len(broker_response.data) > 0:
+                broker_connection = broker_response.data[0]
+        
+        # Execute order if broker connection exists
+        execution_result = None
+        
+        if broker_connection and rule.get("execution_type") in ["BUY", "SELL"]:
+            broker_name = broker_connection.get("broker_name")
+            ticker = rule.get("ticker")
+            quantity = float(rule.get("quantity", 0))
+            execution_type = rule.get("execution_type")
+            
+            # Decrypt credentials
+            if broker_name == "IOL":
+                username = decrypt_api_key(broker_connection.get("username_encrypted"))
+                password = decrypt_api_key(broker_connection.get("password_encrypted"))
+                conexion = ConexionIOL(username, password)
+                execution_result = await conexion.ejecutar_orden(ticker, quantity, execution_type)
+                
+            elif broker_name == "BINANCE":
+                api_key = decrypt_api_key(broker_connection.get("api_key_encrypted"))
+                api_secret = decrypt_api_key(broker_connection.get("api_secret_encrypted"))
+                conexion = ConexionBinance(api_key, api_secret)
+                # Convert ticker to Binance format (add USDT if needed)
+                symbol = ticker if "USDT" in ticker else f"{ticker}USDT"
+                execution_result = await conexion.ejecutar_orden(symbol, quantity, execution_type)
+        
+        # Create execution record
+        execution_data = {
+            "rule_id": rule_id,
+            "user_id": user.id,
+            "broker_connection_id": broker_connection.get("id") if broker_connection else None,
+            "execution_type": rule.get("execution_type", "ALERT_ONLY"),
+            "ticker": rule.get("ticker"),
+            "quantity": rule.get("quantity"),
+            "price": current_data.get("current_price") if current_data else None,
+            "total_amount": (rule.get("quantity", 0) * current_data.get("current_price")) if current_data else None,
+            "status": "EXECUTED" if execution_result and execution_result.get("success") else "FAILED",
+            "error_message": execution_result.get("error") if execution_result and not execution_result.get("success") else None,
+            "broker_response": execution_result,
+            "broker_order_id": execution_result.get("order_id") if execution_result else None,
+            "triggered_at": datetime.now(timezone.utc).isoformat(),
+            "executed_at": datetime.now(timezone.utc).isoformat() if execution_result and execution_result.get("success") else None
+        }
+        
+        execution_response = supabase.table("rule_executions").insert(execution_data).execute()
+        
+        # Update rule's last_execution_at
+        supabase.table("rules") \
+            .update({"last_execution_at": datetime.now(timezone.utc).isoformat()}) \
+            .eq("id", rule_id) \
+            .execute()
+        
+        return {
+            "success": execution_result.get("success") if execution_result else False,
+            "execution": execution_response.data[0] if execution_response.data else None,
+            "message": "Order executed successfully" if execution_result and execution_result.get("success") else "Execution failed"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing rule: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error executing rule: {str(e)}")
+
+@app.get("/api/rules/{rule_id}/executions")
+async def get_rule_executions(rule_id: str, user = Depends(get_current_user), limit: int = Query(50, ge=1, le=100)):
+    """Get execution history for a rule"""
+    try:
+        # Verify rule belongs to user
+        rule_response = supabase.table("rules") \
+            .select("id") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        # Get executions
+        executions_response = supabase.table("rule_executions") \
+            .select("*") \
+            .eq("rule_id", rule_id) \
+            .order("triggered_at", desc=True) \
+            .limit(limit) \
+            .execute()
+        
+        return executions_response.data or []
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching executions: {str(e)}")
+
+@app.get("/api/rules/{rule_id}/execution-stats")
+async def get_rule_execution_stats(rule_id: str, user = Depends(get_current_user)):
+    """Get execution statistics for a rule"""
+    try:
+        # Verify rule belongs to user
+        rule_response = supabase.table("rules") \
+            .select("id") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        # Call RPC function for stats
+        stats_response = supabase.rpc("get_rule_execution_stats", {"p_rule_id": rule_id}).execute()
+        
+        if stats_response.data and len(stats_response.data) > 0:
+            return stats_response.data[0]
+        else:
+            return {
+                "total_executions": 0,
+                "successful_executions": 0,
+                "failed_executions": 0,
+                "total_profit_loss": 0,
+                "avg_profit_loss": 0,
+                "last_execution_at": None
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching execution stats: {str(e)}")
+
+class RuleExecutionUpdate(BaseModel):
+    execution_enabled: Optional[bool] = None
+    execution_type: Optional[str] = None
+    broker_connection_id: Optional[str] = None
+    quantity: Optional[float] = None
+    max_execution_amount: Optional[float] = None
+    stop_loss_percent: Optional[float] = None
+    take_profit_percent: Optional[float] = None
+    cooldown_minutes: Optional[int] = None
+
+@app.patch("/api/rules/{rule_id}/execution-settings")
+async def update_rule_execution_settings(rule_id: str, settings: RuleExecutionUpdate, user = Depends(get_current_user)):
+    """Update execution settings for a rule"""
+    try:
+        # Verify rule belongs to user
+        rule_response = supabase.table("rules") \
+            .select("id") \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not rule_response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        # Check if user has active paid subscription
+        if settings.execution_enabled and settings.execution_type != "ALERT_ONLY":
+            sub_response = supabase.table("subscriptions") \
+                .select("*, subscription_plans(*)") \
+                .eq("user_id", user.id) \
+                .eq("status", "active") \
+                .order("created_at", desc=True) \
+                .limit(1) \
+                .execute()
+            
+            if not sub_response.data:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Automatic execution requires an active paid subscription"
+                )
+            
+            plan = sub_response.data[0].get("subscription_plans", {})
+            if plan.get("name") == "free":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Automatic execution is only available for Plus and Pro plans"
+                )
+        
+        # Build update data
+        update_data = {}
+        if settings.execution_enabled is not None:
+            update_data["execution_enabled"] = settings.execution_enabled
+        if settings.execution_type is not None:
+            if settings.execution_type not in ["ALERT_ONLY", "BUY", "SELL", "SIMULATION"]:
+                raise HTTPException(status_code=400, detail="Invalid execution_type")
+            update_data["execution_type"] = settings.execution_type
+        if settings.broker_connection_id is not None:
+            # Verify broker connection belongs to user
+            broker_response = supabase.table("broker_connections") \
+                .select("id") \
+                .eq("id", settings.broker_connection_id) \
+                .eq("user_id", user.id) \
+                .execute()
+            
+            if not broker_response.data:
+                raise HTTPException(status_code=404, detail="Broker connection not found")
+            
+            update_data["broker_connection_id"] = settings.broker_connection_id
+        if settings.quantity is not None:
+            update_data["quantity"] = settings.quantity
+        if settings.max_execution_amount is not None:
+            update_data["max_execution_amount"] = settings.max_execution_amount
+        if settings.stop_loss_percent is not None:
+            update_data["stop_loss_percent"] = settings.stop_loss_percent
+        if settings.take_profit_percent is not None:
+            update_data["take_profit_percent"] = settings.take_profit_percent
+        if settings.cooldown_minutes is not None:
+            update_data["cooldown_minutes"] = settings.cooldown_minutes
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+        
+        # Update rule
+        response = supabase.table("rules") \
+            .update(update_data) \
+            .eq("id", rule_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        
+        return {
+            "message": "Execution settings updated successfully",
+            "rule": response.data[0]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating execution settings: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error updating execution settings: {str(e)}")
 
 # ============================================
 # ASSET SEARCH ENDPOINT
